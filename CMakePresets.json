@@ -1,0 +1,42 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Desktop development",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "BUILD_TESTING": "ON" }
+    },
+    {
+      "name": "headless",
+      "inherits": "dev",
+      "cacheVariables": { "OPENECE_BUILD_GUI": "OFF" }
+    },
+    {
+      "name": "sanitize",
+      "inherits": "headless",
+      "binaryDir": "${sourceDir}/build/sanitize-clang",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "OPENECE_ENABLE_SANITIZERS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "headless", "configurePreset": "headless" },
+    { "name": "sanitize", "configurePreset": "sanitize" }
+  ],
+  "testPresets": [
+    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
+    { "name": "headless", "configurePreset": "headless", "output": { "outputOnFailure": true } },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize",
+      "environment": { "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1" },
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

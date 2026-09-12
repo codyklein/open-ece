@@ -1,0 +1,5 @@
+add_library(openece_core STATIC src/sampled_signal.cpp)
+add_library(OpenECE::core ALIAS openece_core)
+target_compile_features(openece_core PUBLIC cxx_std_20)
+target_include_directories(openece_core PUBLIC include)
+target_link_libraries(openece_core PRIVATE openece_options)
