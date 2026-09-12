@@ -1,6 +1,6 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
-add_executable(openece_tests signal_test.cpp fft_test.cpp)
+add_executable(openece_tests signal_test.cpp fft_test.cpp window_test.cpp)
 target_link_libraries(openece_tests PRIVATE OpenECE::signals OpenECE::dsp GTest::gtest_main openece_options)
 gtest_discover_tests(openece_tests DISCOVERY_MODE PRE_TEST)
 

@@ -3,6 +3,7 @@
 #include <QMainWindow>
 
 class QDoubleSpinBox;
+class QComboBox;
 class QLabel;
 
 namespace openece::gui {
@@ -15,11 +16,15 @@ class MainWindow final : public QMainWindow {
 
   private:
     void generate();
+    void change_phase_unit();
 
     // All widgets are owned by the QObject parent tree; these are observing pointers.
     QDoubleSpinBox* amplitude_;
     QDoubleSpinBox* frequency_;
     QDoubleSpinBox* phase_;
+    QComboBox* phase_unit_;
+    QComboBox* window_;
+    bool phase_in_radians_ = false;
     QDoubleSpinBox* sample_rate_;
     QDoubleSpinBox* duration_;
     QLabel* status_;

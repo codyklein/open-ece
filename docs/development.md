@@ -27,16 +27,19 @@ git diff --check
 ```
 
 Numerical tests use GoogleTest and CTest discovery. The Qt Test workflow checks
-initial data, all five controls, plot values, invalid input, recovery, and the
-desktop sample limit. It is a functional smoke/integration test, not a comprehensive
+initial data, all five numeric controls, plot values, invalid input, recovery, and
+the desktop sample limit. It also exercises window selection and gain display,
+unchanged time samples, degree/radian input, range-endpoint round trips, and
+conversion of pending phase text before its units change. It is a functional smoke/integration test, not a comprehensive
 accessibility or visual regression suite. For a local screenshot during that test:
 
 ```bash
 QT_QPA_PLATFORM=offscreen OPENECE_SCREENSHOT="$PWD/build/dev/workbench.png" ./build/dev/tests/openece_gui_tests
 ```
 
-Sanitizer tests intentionally use Clang and a headless preset so diagnostics concern the
-engineering code rather than third-party GUI runtime allocations. Compiler changes
+The standard sanitizer preset uses Clang and a headless build to keep numerical
+checks independent of Qt. A separate GUI sanitizer build exercises the full workflow
+as well; third-party system libraries themselves are not rebuilt with instrumentation. Compiler changes
 belong in separate build directories. Optional tools such as clang-tidy can consume
 the generated `compile_commands.json`; they are not required build dependencies.
 
@@ -56,22 +59,62 @@ The standard compiler-warning builds and clang-format check were clean. This is 
 baseline on one development machine, not a portability or long-term numerical
 certification. CI and broader platform validation remain roadmap work.
 
+## v0.2 validation
+
+The windowing/phase-unit milestone was verified on the same Fedora toolchain:
+
+| Configuration | Result |
+| --- | --- |
+| GCC desktop (`dev`) | 28 numerical tests + GUI workflow passed |
+| GCC headless (`headless`) | 28 numerical tests passed |
+| Clang desktop (`build/clang-desktop`) | 28 numerical tests + GUI workflow passed |
+| Clang headless (`build/clang`) | 28 numerical tests passed |
+| Clang ASan/UBSan headless (`sanitize`) | 28 numerical tests passed |
+| Clang ASan/UBSan desktop (`build/sanitize-gui`) | 28 numerical tests + GUI workflow passed |
+
+The workflow contains five functional Qt test methods (plus Qt's setup/cleanup).
+Sanitizer runs retained leak detection and produced no findings. The updated desktop
+was launched and its offscreen rendering inspected. No additional packages were needed.
+
+To reproduce the additional desktop configurations:
+
+```bash
+cmake -S . -B build/clang-desktop -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++
+cmake --build build/clang-desktop -j 4
+ctest --test-dir build/clang-desktop --output-on-failure
+
+cmake -S . -B build/sanitize-gui -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++ -DOPENECE_ENABLE_SANITIZERS=ON
+cmake --build build/sanitize-gui -j 4
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ctest --test-dir build/sanitize-gui --output-on-failure
+```
+
 ## Understand these before the next feature
 
 - Trace a button click through `MainWindow::generate`, `generate_sine`,
-  `amplitude_spectrum`, and the Qwt plot adapter. Identify the owner of each buffer.
-- Explain why a sample span cannot outlive its record, and how Qt ownership differs
-  from a raw pointer that owns heap memory. Examine the deleted rvalue accessor.
-- Work an eight-point FFT by hand: bit reversal, butterfly stages, twiddle sign,
-  and why its cost grows as O(N log N).
-- Predict a 1-unit, 8 Hz sine at 1024 Hz for one second: 1024 samples, 1 Hz FFT
-  spacing, amplitude 1 in bin 8, Nyquist at 512 Hz.
-- Change the frequency to 8.5 Hz and explain the leakage. Then change duration
-  to 2 seconds and explain why the result differs.
-- Explain why the normalization divides by the original record length, why only
-  interior one-sided bins double, and why an FFT magnitude is not automatically PSD.
-- Find which test would fail if the FFT sign, normalization, phase units, or last
-  sample timestamp were wrong. Prefer tests that catch a plausible engineering mistake.
+  `amplitude_spectrum`, and the Qwt adapter. Identify every owned buffer and copy.
+- Explain how `window_coefficients(Window, L)` stays independent of Qt and why the
+  window length is the original L rather than padded N. There is no window-aware FFT.
+- Work an eight-point FFT by hand: bit reversal, butterfly stages, and twiddle sign.
+- Predict a 1-unit, 8 Hz sine sampled at 1024 Hz for one second: bin 8 has amplitude
+  1 with both windows, but periodic Hann adds adjacent main-lobe bins of amplitude 0.5.
+- Repeat the coherent/off-bin comparison in `numerics.md`. Explain why Hann can
+  reduce distant sidelobes while increasing some bins close to the tone.
+- Derive S=sum(w), G=S/L, endpoint scaling, and why amplitude correction is different
+  from power/PSD normalization. Explain the limits of correcting off-bin or short records.
+- Read `MainWindow::change_phase_unit()`: pending text is committed with the old
+  unit, converted, and rounded only to the displayed precision. Qt signals are blocked
+  during range/value updates so intermediate clamping does not produce spurious edits.
+- Find which tests catch a symmetric Hann denominator, gain based on padded N,
+  doubled DC/Nyquist, changed source samples, or a degree value reinterpreted as radians.
 
-The next design discussion should focus on rectangular versus Hann windows,
-coherent gain, and what the UI should claim about amplitude and frequency resolution.
+## Remaining design concerns
+
+Weights add one O(L) temporary allocation per analysis; there is no cache or streaming
+buffer reuse. This favors inspectable coefficients and simple ownership for now.
+Spectrum metadata remains a public value struct whose consistency callers must preserve.
+GUI calculations remain synchronous and capped at 65,536 samples. Phase conversions
+have the documented display rounding; the GUI's previous-unit flag must stay aligned
+with its selector. These concerns do not require a generic window or units framework.
+
+The proposed next milestone is FIR/convolution composition. It is not implemented
+as part of windowing or phase-unit work.

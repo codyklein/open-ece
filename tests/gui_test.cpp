@@ -3,6 +3,7 @@
 
 #include <qwt_plot_curve.h>
 
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include <QPushButton>
@@ -10,6 +11,8 @@
 #include <QtTest>
 
 #include <cmath>
+#include <numbers>
+#include <vector>
 
 class WorkbenchTest : public QObject {
     Q_OBJECT
@@ -21,6 +24,9 @@ class WorkbenchTest : public QObject {
         auto* status = window.findChild<QLabel*>("status");
         QVERIFY(status);
         QVERIFY(status->text().startsWith("Ready"));
+        QCOMPARE(window.findChild<QComboBox*>("phase_unit")->currentText(), QString("Degrees"));
+        QCOMPARE(window.findChild<QComboBox*>("spectral_window")->currentText(),
+                 QString("Rectangular"));
         auto* time = window.findChild<QwtPlot*>("time_plot");
         auto* spectrum = window.findChild<QwtPlot*>("spectrum_plot");
         QVERIFY(time);
@@ -54,6 +60,96 @@ class WorkbenchTest : public QObject {
         QCOMPARE(tabs->count(), 2);
         tabs->setCurrentIndex(1);
         QCOMPARE(tabs->currentIndex(), 1);
+    }
+
+    void switchesWindowsWithoutChangingTimeSamples() {
+        openece::gui::MainWindow window;
+        auto* selection = window.findChild<QComboBox*>("spectral_window");
+        auto* status = window.findChild<QLabel*>("status");
+        auto* summary = window.findChild<QLabel*>("summary");
+        auto* button = window.findChild<QPushButton*>("generate");
+        auto* time = window.findChild<QwtPlot*>("time_plot");
+        auto* spectrum = window.findChild<QwtPlot*>("spectrum_plot");
+        auto* time_curve =
+            static_cast<QwtPlotCurve*>(time->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
+        auto* spectrum_curve =
+            static_cast<QwtPlotCurve*>(spectrum->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
+        std::vector<QPointF> original_time, original_spectrum;
+        for (std::size_t i = 0; i < time_curve->dataSize(); ++i) {
+            original_time.push_back(time_curve->sample(static_cast<int>(i)));
+        }
+        for (std::size_t i = 0; i < spectrum_curve->dataSize(); ++i) {
+            original_spectrum.push_back(spectrum_curve->sample(static_cast<int>(i)));
+        }
+        selection->setCurrentIndex(1);
+        QVERIFY(status->text().startsWith("Parameters changed"));
+        button->click();
+        QVERIFY(status->text().startsWith("Ready"));
+        QVERIFY(summary->text().contains("Hann (periodic)"));
+        QVERIFY(summary->text().contains("Coherent gain: 0.5"));
+        QCOMPARE(time_curve->dataSize(), original_time.size());
+        for (std::size_t i = 0; i < original_time.size(); ++i) {
+            QCOMPARE(time_curve->sample(static_cast<int>(i)), original_time[i]);
+        }
+        QVERIFY(std::abs(spectrum_curve->sample(8).y() - 1.0) < 1e-12);
+        QVERIFY(std::abs(spectrum_curve->sample(7).y() - 0.5) < 1e-12);
+        selection->setCurrentIndex(0);
+        button->click();
+        QVERIFY(summary->text().contains("Rectangular"));
+        for (std::size_t i = 0; i < original_spectrum.size(); ++i) {
+            QCOMPARE(spectrum_curve->sample(static_cast<int>(i)), original_spectrum[i]);
+        }
+    }
+
+    void convertsPhaseUnitsAndAcceptsRadians() {
+        openece::gui::MainWindow window;
+        auto* phase = window.findChild<QDoubleSpinBox*>("phase");
+        auto* units = window.findChild<QComboBox*>("phase_unit");
+        auto* button = window.findChild<QPushButton*>("generate");
+        auto* plot = window.findChild<QwtPlot*>("time_plot");
+        auto* curve = static_cast<QwtPlotCurve*>(plot->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
+        for (double degrees : {60.0, -135.0, 360.0, -360.0}) {
+            phase->setValue(degrees);
+            button->click();
+            const double before = curve->sample(0).y();
+            units->setCurrentIndex(1);
+            QVERIFY(std::abs(phase->value() - degrees * std::numbers::pi / 180.0) < 1e-11);
+            QVERIFY(std::abs(phase->maximum() - 2.0 * std::numbers::pi) < 1e-11);
+            QVERIFY(std::abs(phase->minimum() + 2.0 * std::numbers::pi) < 1e-11);
+            button->click();
+            QVERIFY(std::abs(curve->sample(0).y() - before) < 1e-11);
+            units->setCurrentIndex(0);
+            QVERIFY(std::abs(phase->value() - degrees) < 1e-7);
+            QCOMPARE(phase->maximum(), 360.0);
+            QCOMPARE(phase->minimum(), -360.0);
+        }
+        units->setCurrentIndex(1);
+        phase->setValue(-std::numbers::pi / 6.0);
+        window.findChild<QComboBox*>("spectral_window")->setCurrentIndex(1);
+        button->click();
+        QVERIFY(std::abs(curve->sample(0).y() + 0.5) < 1e-11);
+        units->setCurrentIndex(0);
+        QVERIFY(std::abs(phase->value() + 30.0) < 1e-7);
+        button->click();
+        QVERIFY(std::abs(curve->sample(0).y() + 0.5) < 1e-9);
+    }
+
+    void unitSwitchCommitsPendingPhaseTextInOldUnits() {
+        openece::gui::MainWindow window;
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto* phase = window.findChild<QDoubleSpinBox*>("phase");
+        auto* units = window.findChild<QComboBox*>("phase_unit");
+        phase->setFocus();
+        phase->selectAll();
+        QTest::keyClicks(phase, "45");
+        // Keyboard tracking is off: the conversion must explicitly commit pending text.
+        units->setCurrentIndex(1);
+        QVERIFY(std::abs(phase->value() - std::numbers::pi / 4.0) < 1e-11);
+        phase->selectAll();
+        QTest::keyClicks(phase, "-1.5");
+        units->setCurrentIndex(0);
+        QVERIFY(std::abs(phase->value() - (-1.5 * 180.0 / std::numbers::pi)) < 1e-8);
     }
 
     void rejectsInvalidInputAndRecovers() {

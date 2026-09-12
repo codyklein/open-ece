@@ -11,21 +11,23 @@ delivery promises; later work should be revised as actual requirements emerge.
 - [x] Explicit time and spectrum conventions, validation, numerical and GUI tests.
 - [x] CMake targets/presets and architecture/development documentation.
 
-## v0.2 — Trustworthy spectrum analysis (recommended next)
+## v0.2 — Spectral windows and phase units (implemented)
 
-Add selectable rectangular and Hann windows with documented coherent-gain
-correction, bin spacing, and record-length limits on resolving power. Demonstrate
-bin-centered and off-bin tones side by side. Keep amplitude, RMS, and power/PSD
-quantities distinct; do not label an amplitude spectrum as PSD.
+- [x] Selectable Rectangular and periodic Hann windows in the Qt-independent DSP layer.
+- [x] Coherent-gain compensation with explicit DC/Nyquist conventions.
+- [x] Coefficient, amplitude, padding, short-record, and sidelobe-leakage tests.
+- [x] GUI window selector and displayed window/gain; original time samples preserved.
+- [x] Degrees/Radians phase selector, defaulting to Degrees and converting existing values.
+- [x] GUI tests for selectors, phase round trips, and pending text conversion.
+- [x] Documented coherent/off-bin experiments, main-lobe tradeoff, and amplitude limits.
 
-Acceptance: window coefficients and normalization tested against independent
-references; DC/Nyquist treatment preserved; the UI identifies the selected window
-and never suggests zero-padding increases physical resolution.
+The implemented comparison uses the existing plot with selectable windows; simultaneous
+comparison views remain optional future presentation work. RMS and PSD are not implemented.
 
 Before publishing: choose the project license and add hosted CI using the existing
 CMake/CTest commands. Add a release validation record and screenshot.
 
-## v0.3 — First connected DSP operation
+## v0.3 — First connected DSP operation (proposed next; not started)
 
 Implement direct convolution and a small FIR filter interface. Compose:
 **generator → FIR → FFT** with input/output time and spectral views. Keep operations

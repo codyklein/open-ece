@@ -4,12 +4,14 @@
 #include <openece/dsp/fft.hpp>
 #include <openece/signals/sine.hpp>
 
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTextBrowser>
@@ -44,19 +46,38 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     auto* layout = new QHBoxLayout(central);
 
     auto* controls = new QGroupBox("Sine generator", central);
-    controls->setMaximumWidth(350);
+    controls->setMaximumWidth(400);
     auto* left = new QVBoxLayout(controls);
     auto* form = new QFormLayout;
     amplitude_ = field(controls, "amplitude", 0.0, 1e6, 1.0, 4);
     frequency_ = field(controls, "frequency", 0.0, 5e8, 8.0, 4, " Hz");
-    phase_ = field(controls, "phase", -360.0, 360.0, 0.0, 2, "°");
+    phase_ = field(controls, "phase", -360.0, 360.0, 0.0, 8, "°");
+    phase_unit_ = new QComboBox(controls);
+    phase_unit_->setObjectName("phase_unit");
+    phase_unit_->setAccessibleName("Phase unit");
+    phase_unit_->addItems({"Degrees", "Radians"});
+    phase_unit_->setToolTip(
+        "Changing units converts the displayed phase; Generate updates the plots.");
+    auto* phase_row = new QWidget(controls);
+    auto* phase_layout = new QHBoxLayout(phase_row);
+    phase_layout->setContentsMargins(0, 0, 0, 0);
+    phase_layout->addWidget(phase_, 1);
+    phase_layout->addWidget(phase_unit_);
+    phase_row->setFocusProxy(phase_);
+    window_ = new QComboBox(controls);
+    window_->setObjectName("spectral_window");
+    window_->addItem("Rectangular", static_cast<int>(dsp::Window::Rectangular));
+    window_->addItem("Hann (periodic)", static_cast<int>(dsp::Window::Hann));
+    window_->setToolTip(
+        "Hann reduces sidelobes at the cost of a wider main lobe. Only the spectrum is windowed.");
     sample_rate_ = field(controls, "sample_rate", 1.0, 1e9, 1024.0, 4, " Hz");
     duration_ = field(controls, "duration", 0.000001, 1e6, 1.0, 6, " s");
     form->addRow("&Amplitude", amplitude_);
     form->addRow("&Frequency", frequency_);
-    form->addRow("&Phase", phase_);
+    form->addRow("&Phase", phase_row);
     form->addRow("Sample &rate", sample_rate_);
     form->addRow("&Duration", duration_);
+    form->addRow("Spectral &window", window_);
     left->addLayout(form);
     auto* button = new QPushButton("&Generate and analyze", controls);
     button->setObjectName("generate");
@@ -94,17 +115,28 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     help->setHtml(
         "<h2>Reading the plots</h2>"
         "<p>The generator samples x[n] = A sin(2π f n / fs + φ), starting at t = 0. "
-        "The phase control uses degrees; the engineering library uses radians.</p>"
+        "Phase defaults to degrees. Selecting Radians converts the displayed value and range; "
+        "switching back converts to degrees. Conversion rounds to 8 decimal places in degrees "
+        "and 12 in radians. The engineering library always uses radians.</p>"
         "<p>The sample count L is fs × requested duration rounded to the nearest integer "
         "(half upward). The actual record duration is L/fs; its last sample is at (L−1)/fs. "
         "Lines connect discrete samples; they are not an analog reconstruction.</p>"
         "<p>The forward FFT uses exp(−j2πkn/N) and no normalization. Records are "
-        "zero-padded to the next power of two, N. The plot shows |X[k]|/L, doubled "
+        "windowed before zero-padding to the next power of two, N. The plot shows "
+        "|Xw[k]|/sum(w), doubled "
         "for positive-frequency bins except Nyquist. DC and Nyquist are not doubled.</p>"
         "<p>Bins lie at k fs/N, from DC to fs/2 (DC only for one sample). "
         "This is a peak-amplitude spectrum, not RMS, power, PSD, or dB.</p>"
-        "<p>A rectangular window is used. Frequencies that do not complete an integer "
-        "number of cycles in the record leak across bins. Zero-padding provides denser "
+        "<p>Rectangular uses unit weights. Periodic Hann uses w[n] = 0.5 − 0.5 cos(2πn/L). "
+        "For one sample both windows use weight 1. Coherent gain is sum(w)/L: 1 for "
+        "Rectangular and 0.5 for Hann with L &gt; 1. Dividing by sum(w) compensates tone "
+        "amplitude.</p>"
+        "<p>Hann reduces distant sidelobes but broadens the main lobe. It changes only spectral "
+        "analysis; the time plot shows the original samples. Coherent-gain correction does not "
+        "remove off-bin amplitude error or overlap near DC/Nyquist. Very short records are "
+        "especially limited. Windowing can spread DC/Nyquist into adjacent bins.</p>"
+        "<p>Frequencies that do not complete an integer number of cycles in the record leak "
+        "across bins. Zero-padding provides denser "
         "frequency sampling; it does not increase the record's resolving power. "
         "The tallest bin is not always the input amplitude.</p>"
         "<p>At DC and Nyquist, the sampled sine depends on phase: a zero-phase sine "
@@ -119,14 +151,35 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             status_->setText("Parameters changed. Generate to update the displayed result.");
         });
     }
+    connect(window_, &QComboBox::currentIndexChanged, this, [this] {
+        status_->setText("Parameters changed. Generate to update the displayed result.");
+    });
+    connect(phase_unit_, &QComboBox::currentIndexChanged, this, [this] { change_phase_unit(); });
     generate();
+}
+
+void MainWindow::change_phase_unit() {
+    // Commit any pending text using the OLD units before changing range/precision.
+    phase_->interpretText();
+    const double radians =
+        phase_in_radians_ ? phase_->value() : phase_->value() * std::numbers::pi / 180.0;
+    phase_in_radians_ = phase_unit_->currentIndex() == 1;
+    const QSignalBlocker blocker(phase_);
+    phase_->setDecimals(phase_in_radians_ ? 12 : 8);
+    const double limit = phase_in_radians_ ? 2.0 * std::numbers::pi : 360.0;
+    phase_->setRange(-limit, limit);
+    phase_->setSuffix(phase_in_radians_ ? " rad" : "°");
+    phase_->setSingleStep(phase_in_radians_ ? 0.1 : 1.0);
+    phase_->setValue(phase_in_radians_ ? radians : radians * 180.0 / std::numbers::pi);
+    status_->setText("Parameters changed. Phase converted to selected units; Generate to update.");
 }
 
 void MainWindow::generate() {
     try {
-        const signals::SineParameters parameters{amplitude_->value(), frequency_->value(),
-                                                 phase_->value() * std::numbers::pi / 180.0,
-                                                 sample_rate_->value(), duration_->value()};
+        const signals::SineParameters parameters{
+            amplitude_->value(), frequency_->value(),
+            phase_in_radians_ ? phase_->value() : phase_->value() * std::numbers::pi / 180.0,
+            sample_rate_->value(), duration_->value()};
         const double count =
             std::floor(parameters.sample_rate_hz * parameters.duration_seconds + 0.5);
         if (count > 65536.0) {
@@ -134,7 +187,8 @@ void MainWindow::generate() {
                 "Use a shorter duration or lower sample rate (maximum 65,536 samples).");
         }
         const auto signal = signals::generate_sine(parameters);
-        const auto spectrum = dsp::amplitude_spectrum(signal);
+        const auto spectrum = dsp::amplitude_spectrum(
+            signal, static_cast<dsp::Window>(window_->currentData().toInt()));
         std::vector<double> times(signal.size());
         for (std::size_t i = 0; i < times.size(); ++i) {
             times[i] = signal.time_seconds(i);
@@ -149,13 +203,16 @@ void MainWindow::generate() {
         const double peak = *std::ranges::max_element(spectrum.amplitudes);
         spectrum_plot_->set_samples(frequencies, spectrum.amplitudes, signal.sample_rate_hz() / 2.0,
                                     0.0, peak > 1e-12 ? peak * 1.1 : 1.0);
-        summary_->setText(QString("Displayed record\n%1 samples · %2 s\nFFT length: %3\n"
-                                  "Bin spacing: %4 Hz\nNyquist: %5 Hz\nRectangular window")
-                              .arg(static_cast<qulonglong>(signal.size()))
-                              .arg(signal.duration_seconds(), 0, 'g', 8)
-                              .arg(static_cast<qulonglong>(spectrum.fft_size))
-                              .arg(spectrum.bin_width_hz(), 0, 'g', 8)
-                              .arg(signal.sample_rate_hz() / 2.0, 0, 'g', 8));
+        summary_->setText(
+            QString("Displayed record\n%1 samples · %2 s\nFFT length: %3\n"
+                    "Bin spacing: %4 Hz\nNyquist: %5 Hz\nWindow: %6\nCoherent gain: %7")
+                .arg(static_cast<qulonglong>(signal.size()))
+                .arg(signal.duration_seconds(), 0, 'g', 8)
+                .arg(static_cast<qulonglong>(spectrum.fft_size))
+                .arg(spectrum.bin_width_hz(), 0, 'g', 8)
+                .arg(signal.sample_rate_hz() / 2.0, 0, 'g', 8)
+                .arg(window_->currentText())
+                .arg(spectrum.coherent_gain, 0, 'g', 8));
         status_->setText("Ready — plots match the current parameters.");
     } catch (const std::exception& error) {
         time_plot_->clear();

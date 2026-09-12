@@ -9,12 +9,14 @@ OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.1 foundation
+## Current status: v0.2 spectral windows and phase units
 
 - Qt 6 desktop application with amplitude, frequency, phase, sample-rate, and duration controls.
 - Time-domain plot and one-sided, linear peak-amplitude spectrum; rectangle zoom.
 - Owning, uniformly sampled real-signal representation with validated inputs.
-- Our own sine generator and iterative radix-2 FFT; rectangular window and explicit zero-padding.
+- Our own sine generator and iterative radix-2 FFT; explicit zero-padding.
+- Selectable Rectangular/periodic Hann windows with coherent-gain amplitude correction.
+- Degrees/Radians phase entry; switching units converts the existing value.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
@@ -70,6 +72,16 @@ controls and select **Generate and analyze**. Plots retain the previous result
 while controls are being edited; the status says when an update is pending.
 Invalid generation requests clear the plots and display the reason.
 
+**Spectral window** defaults to Rectangular, preserving v0.1 results. Hann reduces
+sidelobes at the cost of a wider main lobe. The summary identifies the selected
+window and its coherent gain. The time plot always shows the original samples.
+
+**Phase** defaults to Degrees. The adjacent selector converts the current value
+and range between ±360 degrees and ±2π radians; it does not reinterpret the number.
+Conversion rounds to the displayed precision (8 decimal places in degrees, 12 in
+radians). Select Generate after editing or switching units. The signal library
+still accepts radians only.
+
 Drag a rectangle on a plot to zoom. Right-click steps back; Ctrl+right-click
 returns to the full view. The **Conventions** tab explains the plots.
 
@@ -108,7 +120,7 @@ into each build directory. Build artifacts are ignored by Git.
 ```text
 core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
-dsp/        forward FFT and amplitude spectrum → core
+dsp/        windows, forward FFT, and amplitude spectrum → core
 gui/        Qt Widgets + Qwt; consumes signals and dsp
 tests/      independent numerical checks and desktop workflow test
 docs/       architecture decisions, mathematical conventions, development guide
@@ -132,8 +144,11 @@ Amplitudes have no physical unit metadata yet. The numerical record/FFT limit is
 event thread. This does not establish a real-time latency guarantee.
 
 The FFT accepts power-of-two lengths. The spectrum convenience function pads
-other record lengths. Rectangular-window leakage is expected, and zero-padding
-does not improve resolving power. This is not a power spectrum or PSD. Above-Nyquist
+other record lengths after applying weights over the original record. Spectrum
+amplitudes divide by the sum of weights; only interior one-sided bins are doubled.
+Hann reduces distant leakage, but cannot remove off-bin amplitude error or resolve
+arbitrarily close tones. Zero-padding does not improve resolving power. This is
+not a power spectrum or PSD. Above-Nyquist
 generator frequencies are rejected. Full engineering details are in the numerics document.
 
 The project license has not been selected yet. Dependencies retain their own licenses;

@@ -89,6 +89,23 @@ of 65,536 samples bounds allocation and processing; a numerical library limit of
 resource policies, not mathematical restrictions of sampling. Real-time or larger
 workloads should introduce worker execution with cancellation after measuring them.
 
+## Spectral windows and phase entry (v0.2)
+
+`dsp/window.hpp` exposes a two-value `Window` enum and a coefficient generator.
+`amplitude_spectrum(signal, window)` applies those weights in its own complex buffer
+before zero-padding. The default is Rectangular. `fft()` knows nothing about windows,
+and the original `SampledSignal` remains reusable by the time plot or other operations.
+The spectrum carries its window choice and coherent gain as result metadata.
+
+Periodic Hann and singleton behavior are explicit numerical contracts in `numerics.md`.
+There is no window class hierarchy, plugin interface, or new dependency. The coefficient
+function makes analytical testing possible without involving the FFT or GUI.
+
+Phase-unit selection belongs to `MainWindow`. The spin box and adjacent selector display
+one phase value, converting it when the unit changes. The signal API continues to take
+radians. A previous-unit flag lets pending text be interpreted before the new range and
+precision are installed. No unit enumeration has been added to the engineering library.
+
 ## Extension rule
 
 Add the next algorithm as a Qt-independent function or focused class with tests.

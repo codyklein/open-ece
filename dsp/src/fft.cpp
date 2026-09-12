@@ -3,6 +3,7 @@
 #include <bit>
 #include <cmath>
 #include <numbers>
+#include <numeric>
 #include <stdexcept>
 #include <utility>
 
@@ -59,16 +60,22 @@ std::vector<std::complex<double>> fft(std::span<const std::complex<double>> inpu
     return output;
 }
 
-AmplitudeSpectrum amplitude_spectrum(const SampledSignal& signal) {
+AmplitudeSpectrum amplitude_spectrum(const SampledSignal& signal, Window window) {
+    const auto weights = window_coefficients(window, signal.size());
+    const double normalization = std::accumulate(weights.begin(), weights.end(), 0.0);
     const auto size = std::bit_ceil(signal.size());
     std::vector<std::complex<double>> padded(size, 0.0);
     for (std::size_t i = 0; i < signal.size(); ++i) {
-        padded[i] = signal.samples()[i];
+        padded[i] = signal.samples()[i] * weights[i];
     }
     const auto transformed = fft(padded);
-    AmplitudeSpectrum spectrum{{}, signal.sample_rate_hz(), signal.size(), size};
+    AmplitudeSpectrum spectrum{{},
+                               signal.sample_rate_hz(),
+                               signal.size(),
+                               size,
+                               window,
+                               normalization / static_cast<double>(signal.size())};
     spectrum.amplitudes.reserve(size / 2 + 1);
-    const double normalization = static_cast<double>(signal.size());
     for (std::size_t k = 0; k <= size / 2; ++k) {
         const bool paired_bin = k != 0 && k != size / 2;
         // Scale components before taking the magnitude to avoid unnecessary overflow.
