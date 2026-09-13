@@ -104,6 +104,51 @@ Leak detection remained enabled. The sandbox prevented LeakSanitizer process
 inspection, so the sanitizer suite was rerun outside it and passed with no findings.
 The offscreen workbench screenshot was inspected for control and plot layout.
 
+## v0.3 validation
+
+The convolution/FIR milestone was implemented and checked in three increments:
+convolution with analytical/reference tests (34 numerical tests), FIR/design/
+response and signal integration (44 numerical tests), then GUI comparisons and
+workflow coverage (46 CTest entries). The final validation matrix is:
+
+| Configuration | Result |
+| --- | --- |
+| GCC desktop (`dev`) | 44 numerical tests + GUI workflow + phase parser passed |
+| GCC headless (`headless`) | 44 numerical tests passed |
+| Clang desktop (`build/clang-desktop`) | 44 numerical tests + GUI workflow + phase parser passed |
+| Clang headless (`build/clang`) | 44 numerical tests passed |
+| Clang ASan/UBSan headless (`sanitize`) | 44 numerical tests passed |
+| Clang ASan/UBSan desktop (`build/sanitize-gui`) | 44 numerical tests + GUI workflow + phase parser passed |
+
+The 16 new numerical tests use hand results, an independent output-side
+long-double convolution, complex Horner-polynomial and analytical response
+references, the existing FFT, and a hand-windowed filtered-signal DFT. The
+129-tap, 80 Hz cutoff two-tone regression at fs=1024 Hz verifies 16 Hz passband
+gain and 256 Hz attenuation over a fully immersed interval. Response tests cover
+P=2 endpoints, arbitrary grids, maximum point count, work rejection, invalid
+rates, and overflow. The GUI suite now has eleven functional methods (plus Qt's
+setup/cleanup), including causal impulse display, independent spectrum grids,
+rate-driven redesign, window independence, finite dB flooring, bypass, limits,
+invalid input, and recovery.
+
+GCC/Clang builds and clang-format/diff checks were clean. Leak detection remained
+enabled; sanitizer tests ran outside the process-inspection sandbox and reported
+no findings. The Qt offscreen platform emits its expected `propagateSizeHints`
+warning. Original/filtered and response renderings were visually inspected,
+including colored legend labels and full-record axes. No packages were added.
+Existing core, sine, FFT, windowing, and phase-parser implementations are unchanged.
+
+To reproduce the FIR screenshots after building `dev`:
+
+```bash
+QT_QPA_PLATFORM=offscreen OPENECE_FIR_SCREENSHOT="$PWD/build/dev/fir" ./build/dev/tests/openece_gui_tests firOutputLimitAndScreenshots
+```
+
+This writes `fir-signals.png` and `fir-response.png` in the ignored build directory.
+CTest logs are also local build artifacts. Numerical tests establish correctness;
+the screenshots check presentation only. All configurations use the existing
+commands above and in README; no new validation tooling is required.
+
 ## Understand these before the next feature
 
 - Trace a button click through `MainWindow::generate`, `generate_sine`,
@@ -123,6 +168,16 @@ The offscreen workbench screenshot was inspected for control and plot layout.
 - Find which tests catch a symmetric Hann denominator, gain based on padded N,
   doubled DC/Nyquist, changed source samples, or a degree value reinterpreted as radians.
 
+- Work `[1,2,3] * [0.5,0.5]` by hand, including the first and final samples.
+- Explain why 63 taps add 62 samples of record length but only 31 samples of
+  linear-phase delay. Find both quantities in the GUI summary.
+- Trace `apply_fir_full` into `convolve_full` and then into the unchanged spectrum
+  function. Identify which record length sets each normalization denominator.
+- Explain why symmetric Hamming design and periodic Hann analysis have different
+  formulas and purposes, and why arbitrary FIR taps are not normalized.
+- Compare a steady-state two-tone projection with the finite-record spectrum.
+  Explain why their amplitudes can differ, and why a dB response floor is only visual.
+
 ## Remaining design concerns
 
 Weights add one O(L) temporary allocation per analysis; there is no cache or streaming
@@ -132,5 +187,8 @@ GUI calculations remain synchronous and capped at 65,536 samples. Phase conversi
 have floating-point roundoff; the GUI's previous-unit flag must stay aligned
 with its selector. These concerns do not require a generic window or units framework.
 
-The proposed next milestone is FIR/convolution composition. It is not implemented
-as part of windowing or phase-unit work.
+FIR/convolution composition is implemented in v0.3. No later milestone is started.
+The generator still produces a single sine; two-tone composition exists only in
+numerical regression data. Convolution/response are direct algorithms with explicit
+work caps, and MainWindow still coordinates synchronous local values. Future
+performance/state work should follow a measured need.

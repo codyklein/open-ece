@@ -3,16 +3,18 @@
 An extensible desktop engineering workbench for learning and connecting Electrical
 and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
-starts with one working vertical slice: **sine generator → FFT → plots**.
+starts with one working vertical slice: **sine generator → optional FIR → FFT → comparison plots**.
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.2.1 phase expressions
+## Current status: v0.3 convolution and FIR filtering
 
 - Qt 6 desktop application with amplitude, frequency, phase, sample-rate, and duration controls.
-- Time-domain plot and one-sided, linear peak-amplitude spectrum; rectangle zoom.
+- Original/filtered time-domain and one-sided peak-amplitude spectrum comparisons; rectangle zoom.
+- Full causal convolution, owned FIR coefficients, and a Hamming-windowed sinc low-pass designer.
+- Filter magnitude response in dB with explicit uncompensated linear-phase delay.
 - Owning, uniformly sampled real-signal representation with validated inputs.
 - Our own sine generator and iterative radix-2 FFT; explicit zero-padding.
 - Selectable Rectangular/periodic Hann windows with coherent-gain amplitude correction.
@@ -90,6 +92,28 @@ the results; a failed unit switch keeps the previous unit. Inputs are limited to
 128 characters and rejected outside the range, without wrapping. The signal
 library still accepts radians only.
 
+**Filter** defaults to Off, preserving the unfiltered workflow. Select **FIR low-pass
+(Hamming)**, choose a cutoff strictly below Nyquist and an odd tap count (3–511),
+then Generate. The designed coefficients sum to one. Cutoff is the ideal sinc
+cutoff, not a guaranteed exact −3 dB frequency. More taps trade a narrower
+transition for more delay and computation.
+
+The time and spectrum plots overlay **Original** and **Filtered** with legends.
+Filtering uses full zero-extended convolution: N input samples and M taps produce
+N+M−1 samples at the same rate, starting at t=0. Duration extends by (M−1)/fs;
+the designed filter's (M−1)/2-sample delay remains visible. Nothing is cropped or
+shifted. The full output must fit the 65,536-sample desktop limit. The summary
+shows both records' duration, FFT length, bin spacing, and coherent gain, plus
+delay and duration extension. Short inputs are identified when no fully immersed
+interval exists.
+
+**Filter response** shows 20 log10(|H(f)|) at 1025 points from DC through Nyquist,
+with a −120 dB display floor for |H| ≤ 10⁻⁶. It describes the coefficients, while
+signal spectra describe finite records with startup/tail effects and different
+normalization lengths. Their peak ratio need not equal the response gain. See
+[numerics.md](docs/numerics.md#full-convolution-and-fir-filtering) for equations and
+reproducible examples. The response remains independent of the spectral-window selector.
+
 Drag a rectangle on a plot to zoom. Right-click steps back; Ctrl+right-click
 returns to the full view. The **Conventions** tab explains the plots.
 
@@ -128,9 +152,9 @@ into each build directory. Build artifacts are ignored by Git.
 ```text
 core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
-dsp/        windows, forward FFT, and amplitude spectrum → core
+dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
 gui/        Qt Widgets + Qwt; consumes signals and dsp
-tests/      independent numerical checks and desktop workflow test
+tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```
 
@@ -149,7 +173,8 @@ Read [architecture.md](docs/architecture.md) for decisions and alternatives,
 Records are finite, real, single-channel, uniformly sampled, and begin at zero.
 Amplitudes have no physical unit metadata yet. The numerical record/FFT limit is
 1,048,576 samples; the synchronous GUI accepts at most 65,536 to bound work on the
-event thread. This does not establish a real-time latency guarantee.
+event thread. Direct convolution and response evaluation each have a 64-million
+product budget. This does not establish a real-time latency guarantee.
 
 The FFT accepts power-of-two lengths. The spectrum convenience function pads
 other record lengths after applying weights over the original record. Spectrum

@@ -159,6 +159,130 @@ maximum distant amplitude is less than 10% of Rectangular's and the sum of squar
 distant amplitudes is less than 1%. These are scoped regression thresholds for this
 example, not general guarantees or a PSD/power measurement.
 
+## Full convolution and FIR filtering
+
+For input x of length N and causal taps h of length M:
+
+```text
+y[n] = Σ(k=0 to M-1) h[k] x[n-k],       n = 0, ..., N+M-2
+x[n] = 0 outside 0, ..., N-1
+output length = N+M-1
+output sample rate = input sample rate fs
+output duration = (N+M-1)/fs = input duration + (M-1)/fs
+last output sample time = (N+M-2)/fs
+```
+
+`convolve_full` returns an owned vector; `apply_fir_full` returns an owned
+`SampledSignal`. Both inputs remain unchanged. Records begin at t=0. There is no
+cropping, reflection, periodic wrapping, delay compensation, resampling, or
+streaming state. This is linear convolution, not circular convolution or correlation.
+See the [DSP Guide's finite convolution definition](https://dspguide.com/ch6/4.htm).
+
+Examples: `[1,2,3] * [0.5,0.5] = [0.5,1.5,2.5,1.5]`; convolving an impulse `[1]`
+returns the taps themselves. With N≥M, indices M−1 through N−1 are fully immersed
+in the finite input. The first M−1 samples contain startup behavior, and the final
+M−1 samples contain the ending tail. When N<M, these boundary regions overlap;
+there is no fully immersed interval. A finite sine is not presumed to have existed
+before the record or to continue afterward. Boundary transients are real results
+of this chosen zero extension, not an FFT error.
+
+`FirCoefficients` contains nonempty finite real taps h[0..M−1], with no rate or
+normalization. `h[0]` multiplies the current input, `h[1]` the previous one. DC gain
+is sum(h); general coefficients may amplify, invert, or reject DC. The filter is
+applied at the input's rate. Reusing coefficients at another rate shifts their
+frequency interpretation in Hz. This type does not promise symmetry or constant delay.
+
+Convolution rejects empty/nonfinite inputs, output above 1,048,576 samples, or
+N×M above 64,000,000 products. Size checks precede arithmetic/allocation. FIR tap
+count is bounded by 1,048,576; the full result must also satisfy `SampledSignal`'s
+finite-duration contract. Invalid requests throw `std::invalid_argument`; detected
+nonfinite arithmetic throws `std::overflow_error`. Standard double roundoff and
+underflow remain possible. There is no compensated summation or universal relative
+error bound, especially near cancellation zeros.
+
+## Low-pass design and delay
+
+`design_lowpass(M, cutoff_hz, fs)` accepts odd M≥3 up to the coefficient limit,
+finite positive fs, and representable normalized cutoff r=cutoff_hz/fs in (0,0.5).
+For D=(M−1)/2 and sinc(u)=sin(πu)/(πu), sinc(0)=1:
+
+```text
+ideal[k] = 2r sinc(2r(k-D))
+w[k] = 0.54 - 0.46 cos(2πk/(M-1))
+a[k] = ideal[k] w[k]
+h[k] = a[k] / sum(a)
+```
+
+This is **symmetric Hamming** for FIR design, with denominator M−1. It is entirely
+separate from **periodic Hann** for signal spectral analysis, whose denominator
+is record length L. The designer constructs mirrored pairs explicitly and
+normalizes only the designed coefficients to unity DC gain (to roundoff).
+Nonrepresentable normalization is rejected. See the
+[DSP Guide's windowed-sinc construction](https://dspguide.com/ch16/2.htm).
+
+For M=3 and r=1/4, the unnormalized coefficients are `[0.08/π, 0.5, 0.08/π]`.
+Divide all three by `0.5+0.16/π`. This independent analytical case tests the sinc,
+Hamming endpoints, and normalization.
+
+Symmetric real coefficients imply linear phase with delay D samples, or D/fs
+seconds, wherever response phase is defined. Phase can jump by π as the real
+zero-phase response changes sign; group delay is undefined at exact response
+zeros. Odd M gives an integer D. The GUI displays this known design delay and
+leaves the filtered curve on its causal time axis. Duration extension is **2D/fs**,
+not D/fs; these describe different things. Arbitrary nonsymmetric FIR coefficients
+do not inherit this constant-delay claim.
+
+The cutoff is the ideal sinc cutoff. Finite length and windowing produce a
+transition band, ripple, and imperfect rejection; cutoff is not guaranteed to be
+the exact −3 dB frequency. More taps usually narrow the transition at the cost of
+increased delay and computation. No attenuation/passband specification is solved,
+and no filter order is chosen automatically.
+
+## Filter frequency response and spectrum comparisons
+
+`frequency_response(filter, fs, P)` evaluates:
+
+```text
+f[p] = (fs/2) p/(P-1),                  p = 0, ..., P-1
+H[p] = Σ(k=0 to M-1) h[k] exp(-jπ p k/(P-1))
+H[0] = sum(h[k])
+H[P-1] = sum((-1)^k h[k])
+```
+
+P must be from 2 to 1,048,576 inclusive and M×P≤64,000,000. P=2 evaluates only
+DC and Nyquist. Arbitrary allowed P is supported, not only powers of two. The rate
+must be finite and positive with positive representable spacing `(fs/2)/(P−1)`.
+The endpoints are real sums, avoiding spurious trigonometric imaginary residuals.
+Invalid requests throw `std::invalid_argument`; nonfinite complex components or
+magnitude throw `std::overflow_error`.
+
+This is an unnormalized complex transfer response: no signal window, division by
+record length/coherent gain, or one-sided doubling. The API preserves complex
+phase. The GUI uses P=1025 and plots `20 log10(max(|H|, 10^-6))`, with a **−120 dB
+display floor** for zeros and smaller magnitudes. The floor changes only plotting,
+never coefficients, filtering, or API response values. Connecting grid points is
+a visual aid; this fixed grid can miss narrow extrema and is not a specification check.
+
+Each original/filtered signal spectrum retains the existing per-record windowing
+and amplitude normalization. Full convolution changes length, duration, often FFT
+grid, and normalization denominator. A filtered transient record's tallest-bin
+ratio is therefore not a direct measurement of |H|. In particular, the raw linear
+convolution transform identity Y=XH does not imply an identical relationship
+between independently windowed and normalized amplitude plots.
+
+For a visual experiment, use fs=1000 Hz, duration=0.25 s, frequency=100 Hz,
+phase=0°, 63 taps, cutoff=64 Hz. Inspect the attenuated middle of the output,
+startup/tail, 31-sample delay and 62 ms duration extension. Change frequency to
+16 Hz to inspect a passband example; increase duration to reduce the relative
+importance of boundaries. The response tab describes the coefficients in both cases.
+
+The numerical two-tone regression uses fs=1024 Hz, 129 taps, cutoff=80 Hz, and
+`sin(2π16n/fs)+0.5 sin(2π256n/fs)`. Orthogonal projections on 2048 fully immersed
+output samples verify passband amplitude within 0.01 of one and stopband amplitude
+below 0.001, and agree with independent response evaluation. These are scoped
+regression thresholds for this design, not general filter guarantees. The GUI
+continues to generate one sine at a time.
+
 ## Plot interpretation and validation
 
 Time plots connect every sample with straight segments; these are a visual aid,
@@ -177,3 +301,12 @@ GUI tests check window selection, preserved time data, phase units and conversio
 pending expressions, π insertion, invalid input retention, and recovery. Parser
 tests cover the grammar, limits, and repeated unit conversions. Tolerances reflect floating-point calculations;
 they are not a universal error bound or a substitute for future validation.
+
+Convolution tests include analytical impulses, delay, silence, unequal lengths,
+linearity, commutativity, a separate output-side long-double reference, limits,
+and overflow. FIR tests add ownership, unnormalized arbitrary taps, rate/origin/
+duration, analytical and Horner-polynomial responses, agreement with the existing
+FFT, response-grid validation, symmetric design/delay, two-tone attenuation, and
+filtered spectra against a hand-windowed DFT. GUI checks cover causal impulse
+plots, independent spectrum grids, dB flooring, redesign after rate changes,
+window independence, bypass, full output limits, invalid input, and recovery.
