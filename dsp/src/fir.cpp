@@ -40,7 +40,9 @@ FirCoefficients design_lowpass(std::size_t tap_count, double cutoff_hz, double s
         const double hamming =
             0.54 - 0.46 * std::cos(2.0 * std::numbers::pi * static_cast<double>(k) /
                                    static_cast<double>(tap_count - 1));
-        taps[k] = taps[tap_count - 1 - k] = (2.0 * r) * sinc * hamming;
+        // The common 2*r factor cancels in DC normalization. Omit it to avoid
+        // underflowing coefficients when a positive cutoff/fs is subnormal.
+        taps[k] = taps[tap_count - 1 - k] = sinc * hamming;
     }
     const double sum = std::accumulate(taps.begin(), taps.end(), 0.0);
     if (!std::isfinite(sum) || sum <= 0.0) {

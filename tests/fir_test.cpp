@@ -129,6 +129,21 @@ TEST(Lowpass, ThreeTapAnalyticalHammingSincAndRateScaling) {
               std::vector(scaled.taps().begin(), scaled.taps().end()));
 }
 
+TEST(Lowpass, PositiveSubnormalCutoffRetainsNormalizedHammingLimit) {
+    const double cutoff = std::numeric_limits<double>::denorm_min();
+    ASSERT_GT(cutoff, 0.);
+    const auto filter = design_lowpass(3, cutoff, 1.);
+    // As cutoff/fs approaches zero, sinc approaches one. The normalized
+    // three-point Hamming window is [0.08, 1, 0.08] / 1.16, not a pure delay.
+    const std::vector expected{.08 / 1.16, 1. / 1.16, .08 / 1.16};
+    ASSERT_EQ(filter.size(), expected.size());
+    for (std::size_t k = 0; k < expected.size(); ++k) {
+        EXPECT_NEAR(filter.taps()[k], expected[k], 1e-15);
+    }
+    EXPECT_DOUBLE_EQ(filter.taps()[0], filter.taps()[2]);
+    EXPECT_NEAR(std::accumulate(filter.taps().begin(), filter.taps().end(), 0.), 1., 1e-15);
+}
+
 TEST(Lowpass, SymmetryUnityDcAndVisibleImpulseDelay) {
     for (std::size_t count : {3U, 31U, 63U, 511U}) {
         const auto filter = design_lowpass(count, 100., 1000.);
