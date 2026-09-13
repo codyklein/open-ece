@@ -29,9 +29,9 @@ published binary archives and checks their upstream checksums. Tool version and
 Qt version/architecture are pinned; Python's transitive package dependencies and
 hosted VS patch updates are not a byte-for-byte toolchain lock.
 
-Open a **Developer PowerShell for VS 2022** targeting x64. If necessary, import
-Visual Studio's developer shell through its supported shortcut, select x64, and
-run PowerShell 7 (`pwsh`) from it; confirm `$env:VSCMD_ARG_TGT_ARCH` is `x64`.
+Open **x64 Native Tools Command Prompt for VS 2022**, then run `pwsh` to enter
+PowerShell 7 with that compiler environment. Alternatively use a VS 2022 Developer
+PowerShell explicitly targeting x64. Confirm `$env:VSCMD_ARG_TGT_ARCH` is `x64`.
 All commands below run from the repository root in that shell.
 
 ```powershell
@@ -68,7 +68,9 @@ Normal CMake configuration **never downloads anything**. The explicit bootstrap
 verifies SHA-256-pinned Qwt and GoogleTest ZIPs before extracting them into the
 ignored `build/windows-deps` directory. Re-running rechecks the archives and
 reuses installations only when the script/toolchain/Qt fingerprint matches and
-all installed outputs still match their recorded hashes. A missing or changed
+all installed outputs still match their recorded hashes. CI caches this verified
+dependency directory by bootstrap-script hash, Qt version and MSVC toolset; the
+bootstrap still checks a restored cache before reusing it. A missing or changed
 output triggers an incremental rebuild. A corrupt downloaded archive fails
 clearly; remove that archive and retry. Source directories are a local build
 cache, not intended for manual editing. When deliberately changing toolchains,
@@ -82,7 +84,7 @@ script stages headers and the discovered DLL/import-library pairs, and writes
 `OpenECEQwtArtifacts.cmake`. OpenECE consumes that map through `Qwt::Qwt`; packaging
 uses the exact Release target file, not an assumed DLL basename. GoogleTest is
 installed through upstream CMake with `gtest_force_shared_crt=ON`, both configs,
-and no GoogleMock. Third-party code stays outside version control.
+a distinct Debug library postfix, and no GoogleMock. Third-party code stays outside version control.
 
 Fedora continues to use `dnf` and `Qt6Qwt6` pkg-config discovery. Windows uses
 standard Qt/GTest CMake package discovery and `QWT_ROOT`; no package-management
@@ -138,7 +140,7 @@ replacement. Translations and the unused software OpenGL renderer are excluded.
 CI uploads `OpenECE-v0.3.1-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
-requires a native OpenECE window, verifies loaded Qt/Qwt modules come from the
+requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
 ZIP, and closes it normally. Existing numerical and offscreen GUI tests run
 unchanged beforehand; the startup check does not replace them. No GitHub Release
 is published automatically. CTest, configure and plugin-loader diagnostics are

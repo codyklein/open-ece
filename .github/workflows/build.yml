@@ -48,6 +48,7 @@ jobs:
   windows:
     name: Windows MSVC 2022 / Qt 6.8.3 / Debug and Release
     runs-on: windows-2022
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
@@ -61,12 +62,27 @@ jobs:
           python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 --archives qtbase --outputdir "$env:RUNNER_TEMP/Qt"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           "QT_ROOT=$env:RUNNER_TEMP/Qt/6.8.3/msvc2022_64" >> $env:GITHUB_ENV
+      - name: Restore pinned dependency build
+        id: dependencies
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: build/windows-deps
+          key: windows-x64-qt6.8.3-msvc${{ env.VCToolsVersion }}-${{ hashFiles('scripts/windows/bootstrap.ps1') }}
       - name: Bootstrap pinned Qwt and GoogleTest
         shell: pwsh
         run: ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
       - name: Verify bootstrap reuse
         shell: pwsh
-        run: ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
+        run: |
+          $stamp = (Get-Item build/windows-deps/bootstrap-state.json).LastWriteTimeUtc
+          ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
+          if ((Get-Item build/windows-deps/bootstrap-state.json).LastWriteTimeUtc -ne $stamp) { throw 'Bootstrap rebuilt intact dependencies.' }
+      - name: Save verified dependency build
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: build/windows-deps
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
       - name: Configure
         run: cmake --preset windows
       - name: Build and test Debug
@@ -103,6 +119,7 @@ jobs:
     name: Packaged app / fresh Windows runner without Qt SDK
     needs: windows
     runs-on: windows-2022
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

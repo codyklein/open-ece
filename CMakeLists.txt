@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 project(OpenECE VERSION 0.3.1 LANGUAGES CXX)
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW) # Honor standard uppercase dependency *_ROOT hints.
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

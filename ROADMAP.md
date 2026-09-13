@@ -24,8 +24,8 @@ delivery promises; later work should be revised as actual requirements emerge.
 The implemented comparison uses the existing plot with selectable windows; simultaneous
 comparison views remain optional future presentation work. RMS and PSD are not implemented.
 
-Before publishing: choose the project license and add hosted CI using the existing
-CMake/CTest commands. Add a release validation record and screenshot.
+The project license still needs to be selected. Hosted CMake/CTest CI and portable
+Windows packaging are addressed in v0.3.1; see the platform development guides.
 
 ## v0.2.1 — Phase expressions (implemented)
 
@@ -46,6 +46,14 @@ CMake/CTest commands. Add a release validation record and screenshot.
 The generator remains a single sine; the two-tone case is a numerical regression.
 IIR, streaming/stateful filtering, automatic delay compensation, and general filter
 design are outside this milestone.
+
+## v0.3.1 — Windows portability, validation and packaging
+
+- Windows x86_64 / VS 2022 / Qt 6.8.3 build and test presets.
+- Explicit checksum-pinned Qwt/GoogleTest bootstrap; Fedora system packages retained.
+- Fedora 44 GCC/Clang and sanitizer CI; Windows MSVC Debug/Release CI.
+- Release ZIP with Qt/Qwt/CRT runtime deployment and independent Windows startup check.
+- Separate Windows build/package documentation; unchanged engineering APIs and numerics.
 
 ## v0.4 — Reproducible experiments
 

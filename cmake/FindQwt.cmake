@@ -3,7 +3,7 @@
 if(NOT QWT_ROOT AND NOT WIN32)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(Qwt REQUIRED IMPORTED_TARGET Qt6Qwt6>=${Qwt_FIND_VERSION})
-    add_library(Qwt::Qwt INTERFACE IMPORTED)
+    add_library(Qwt::Qwt INTERFACE IMPORTED GLOBAL)
     set_target_properties(Qwt::Qwt PROPERTIES
         INTERFACE_LINK_LIBRARIES PkgConfig::Qwt)
     return()
@@ -28,7 +28,7 @@ find_package_handle_standard_args(Qwt REQUIRED_VARS Qwt_INCLUDE_DIR
     Qwt_LIBRARY_RELEASE Qwt_LIBRARY_DEBUG Qwt_RUNTIME_RELEASE Qwt_RUNTIME_DEBUG
     VERSION_VAR Qwt_VERSION)
 if(Qwt_FOUND)
-    add_library(Qwt::Qwt SHARED IMPORTED)
+    add_library(Qwt::Qwt SHARED IMPORTED GLOBAL)
     set_target_properties(Qwt::Qwt PROPERTIES
         IMPORTED_CONFIGURATIONS "Debug;Release"
         IMPORTED_IMPLIB_RELEASE "${Qwt_LIBRARY_RELEASE}"

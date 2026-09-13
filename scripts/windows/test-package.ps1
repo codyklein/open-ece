@@ -40,9 +40,15 @@ try {
     foreach ($module in $qtModules) {
         if (!$module.FileName.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw "External dependency loaded: $($module.FileName)" }
     }
+    foreach ($name in @('msvcp140.dll', 'vcruntime140.dll')) {
+        $runtime = @($modules | Where-Object { $_.ModuleName -eq $name })
+        if ($runtime.Count -ne 1 -or !$runtime[0].FileName.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Release CRT was not loaded from the package: $name"
+        }
+    }
     if (!$process.CloseMainWindow() -or !$process.WaitForExit(10000)) { throw 'Application did not close normally.' }
     if ($process.ExitCode -ne 0) { throw "Application exit code: $($process.ExitCode)" }
-    Write-Host 'PASS: packaged application opened a native Windows window, loaded packaged Qt/Qwt modules, and closed normally.'
+    Write-Host 'PASS: packaged application opened a native Windows window, loaded packaged Qt/Qwt/CRT modules, and closed normally.'
 } finally {
     if ($process -and !$process.HasExited) { $process.Kill(); $process.WaitForExit() }
     foreach ($variable in $variables) { [Environment]::SetEnvironmentVariable($variable, $saved[$variable], 'Process') }

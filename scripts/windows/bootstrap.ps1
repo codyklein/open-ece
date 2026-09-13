@@ -90,7 +90,7 @@ CONFIG += $($config.ToLowerInvariant())
     Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/src/*.h" "$DependenciesRoot/qwt/include" -Force
     $manifest | Set-Content "$DependenciesRoot/qwt/OpenECEQwtArtifacts.cmake"
 } finally { $env:QWT_LOCAL_PRI = $oldLocalPri }
-Run 'cmake.exe' @('-S', "$DependenciesRoot/sources/googletest-1.17.0", '-B', "$DependenciesRoot/build/gtest", '-G', 'Visual Studio 17 2022', '-A', 'x64', '-Dgtest_force_shared_crt=ON', '-DBUILD_GMOCK=OFF', '-DINSTALL_GTEST=ON', "-DCMAKE_INSTALL_PREFIX=$DependenciesRoot/gtest")
+Run 'cmake.exe' @('-S', "$DependenciesRoot/sources/googletest-1.17.0", '-B', "$DependenciesRoot/build/gtest", '-G', 'Visual Studio 17 2022', '-A', 'x64', '-Dgtest_force_shared_crt=ON', '-DCMAKE_DEBUG_POSTFIX=d', '-DBUILD_GMOCK=OFF', '-DINSTALL_GTEST=ON', "-DCMAKE_INSTALL_PREFIX=$DependenciesRoot/gtest")
 foreach ($config in @('Debug', 'Release')) {
     Run 'cmake.exe' @('--build', "$DependenciesRoot/build/gtest", '--config', $config, '--parallel', '4')
     Run 'cmake.exe' @('--install', "$DependenciesRoot/build/gtest", '--config', $config)
