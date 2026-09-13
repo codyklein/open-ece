@@ -39,6 +39,23 @@ class PhaseInputTest : public QObject {
         QVERIFY(std::abs(format_phase(radians, false).toDouble() - degrees) < 1e-12);
     }
 
+    void unicodeAndLocaleIndependentParsing() {
+        // Explicit UTF-8 bytes independently check the compiler's source encoding.
+        const QString pi = QString::fromUtf8("\xCF\x80");
+        QCOMPARE(QString("π"), pi);
+        QCOMPARE(parse_phase(pi + "/2", true), std::numbers::pi / 2.0);
+        const QLocale previous;
+        struct RestoreLocale {
+            QLocale locale;
+            ~RestoreLocale() { QLocale::setDefault(locale); }
+        } restore{previous};
+        QLocale::setDefault(QLocale(QLocale::German, QLocale::Germany));
+        QCOMPARE(parse_phase("1.25", true), 1.25);
+        QCOMPARE(parse_phase(".5*pi", true), std::numbers::pi / 2.0);
+        QCOMPARE(format_phase(1.25, true), QString("1.25"));
+        QVERIFY_THROWS_EXCEPTION(std::invalid_argument, (void)parse_phase("1,25", true));
+    }
+
     void decimalsAndRoundTrips() {
         QCOMPARE(parse_phase(" 1.25 ", true), 1.25);
         QCOMPARE(parse_phase(" - .5 ", true), -0.5);

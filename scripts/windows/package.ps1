@@ -1,0 +1,81 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)][string]$QtRoot,
+    [string]$BuildDir = "$PSScriptRoot/../../build/windows",
+    [string]$DependenciesRoot = "$PSScriptRoot/../../build/windows-deps",
+    [string]$OutputDir = "$PSScriptRoot/../../build/packages"
+)
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+function Run([string]$Program, [string[]]$Arguments) {
+    & $Program @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Program failed ($LASTEXITCODE)" }
+}
+$QtRoot = (Resolve-Path $QtRoot).Path
+$BuildDir = (Resolve-Path $BuildDir).Path
+$DependenciesRoot = (Resolve-Path $DependenciesRoot).Path
+$OutputDir = [IO.Path]::GetFullPath($OutputDir)
+if ((& "$QtRoot/bin/qmake.exe" -query QT_VERSION) -ne '6.8.3') { throw 'Package with Qt 6.8.3.' }
+# CMake remains the single source of the application version.
+$cache = Get-Content "$BuildDir/CMakeCache.txt" -Raw
+$version = [regex]::Match($cache, '(?m)^CMAKE_PROJECT_VERSION:STATIC=(.+)$').Groups[1].Value.Trim()
+if (!$version) { throw 'Cannot read OpenECE version from CMake cache.' }
+$name = "OpenECE-v$version-windows-x86_64"
+# Always stage into a fresh directory; stale Debug DLLs cannot survive a rerun.
+$staging = Join-Path $OutputDir ([guid]::NewGuid().ToString())
+$destination = Join-Path $staging $name
+New-Item -ItemType Directory -Force $destination | Out-Null
+Run 'cmake.exe' @('--build', $BuildDir, '--config', 'Release', '--parallel', '4')
+Run 'cmake.exe' @('--install', $BuildDir, '--config', 'Release', '--prefix', $destination, '--component', 'Unspecified')
+$qwtRuntime = (Get-Content "$BuildDir/qwt-runtime-Release.txt" -Raw).Trim()
+if (!(Test-Path (Join-Path $destination ([IO.Path]::GetFileName($qwtRuntime))))) { throw 'Release Qwt runtime was not installed.' }
+$oldPath = $env:PATH
+try {
+    $env:PATH = "$QtRoot/bin;$([IO.Path]::GetDirectoryName($qwtRuntime));$oldPath"
+    # Scan both binaries: Qwt also uses Qt PrintSupport/Concurrent.
+    Run "$QtRoot/bin/windeployqt.exe" @('--release', '--compiler-runtime', '--no-translations', '--no-opengl-sw', '--dir', $destination, "$destination/openece.exe", (Join-Path $destination ([IO.Path]::GetFileName($qwtRuntime))))
+} finally { $env:PATH = $oldPath }
+if (!(Test-Path "$destination/vcruntime140.dll") -or !(Test-Path "$destination/msvcp140.dll")) {
+    Write-Host 'Qt deployed a redistributable installer; adding app-local Release CRT through CMake discovery.'
+    Run 'cmake.exe' @('--install', $BuildDir, '--config', 'Release', '--prefix', $destination, '--component', 'CompilerRuntimeFallback')
+}
+foreach ($required in @('openece.exe', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll', 'platforms/qwindows.dll', 'vcruntime140.dll', 'msvcp140.dll')) {
+    if (!(Test-Path "$destination/$required")) { throw "Missing packaged runtime: $required" }
+}
+$debugQwt = (Get-Content "$BuildDir/qwt-runtime-Debug.txt" -Raw).Trim()
+if (Test-Path (Join-Path $destination ([IO.Path]::GetFileName($debugQwt)))) { throw 'Debug Qwt in Release package.' }
+if (Get-ChildItem $destination -Recurse -File | Where-Object { $_.Name -match '^(Qt6.*d|qwindowsd|msvcp\d+d|vcruntime\d+d)\.dll$' }) { throw 'Debug runtime in Release package.' }
+@'
+[Paths]
+Prefix=.
+Plugins=.
+'@ | Set-Content "$destination/qt.conf"
+Copy-Item "$PSScriptRoot/../../packaging/README-windows.txt" "$destination/README.txt"
+Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
+$notices = "$destination/licenses"
+New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt" | Out-Null
+Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/COPYING" "$notices/Qwt/"
+Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/GoogleTest/"
+# Preserve Qt's own license texts and bundled third-party attribution. The
+# checksum-pinned source archive is acquired explicitly at packaging time only.
+$qtArchive = "$DependenciesRoot/downloads/qtbase-everywhere-src-6.8.3.tar.xz"
+$qtHash = '56001b905601bb9023d399f3ba780d7fa940f3e4861e496a7c490331f49e0b80'
+if (!(Test-Path $qtArchive)) {
+    Invoke-WebRequest 'https://download.qt.io/official_releases/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz' -OutFile "$qtArchive.partial"
+    if ((Get-FileHash "$qtArchive.partial").Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
+    Move-Item "$qtArchive.partial" $qtArchive -Force
+}
+if ((Get-FileHash $qtArchive).Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
+$entries = & tar.exe -tf $qtArchive
+if ($LASTEXITCODE -ne 0) { throw 'Cannot list Qt source archive.' }
+$licenseEntries = @($entries | Where-Object { $_ -match '/(LICENSE[^/]*|COPYING[^/]*|NOTICE[^/]*|qt_attribution\.json|AUTHORS[^/]*)$' -or $_ -match '/LICENSES/[^/]+$' })
+if ($licenseEntries.Count -lt 10) { throw 'Qt license archive unexpectedly incomplete.' }
+# One file at a time avoids the Windows command-line length limit.
+foreach ($entry in $licenseEntries) { Run 'tar.exe' @('-xf', $qtArchive, '-C', "$notices/Qt", $entry) }
+Get-ChildItem $destination -Recurse -File | ForEach-Object {
+    "$((Get-FileHash $_.FullName).Hash.ToLowerInvariant())  $([IO.Path]::GetRelativePath($destination, $_.FullName).Replace('\', '/'))"
+} | Set-Content "$destination/SHA256SUMS.txt"
+$zip = Join-Path $OutputDir "$name.zip"
+Compress-Archive -Path $destination -DestinationPath $zip -Force
+Write-Host "Created $zip"
+Get-ChildItem $destination -Recurse -File | Select-Object FullName, Length

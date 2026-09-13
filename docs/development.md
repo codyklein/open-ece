@@ -59,7 +59,7 @@ passed. The desktop executable was launched, and an offscreen rendering was insp
 
 The standard compiler-warning builds and clang-format check were clean. This is a
 baseline on one development machine, not a portability or long-term numerical
-certification. CI and broader platform validation remain roadmap work.
+certification. This historical baseline predates the v0.3.1 CI matrix.
 
 ## v0.2 validation
 
@@ -192,3 +192,12 @@ The generator still produces a single sine; two-tone composition exists only in
 numerical regression data. Convolution/response are direct algorithms with explicit
 work caps, and MainWindow still coordinates synchronous local values. Future
 performance/state work should follow a measured need.
+
+## v0.3.1 portability validation
+
+See [Windows development and packaging](windows.md) for the pinned toolchain,
+bootstrap, presets, deployment and CI matrix. Fedora continues using its system
+packages. The pipeline exercises all numerical tests without changing tolerances,
+plus the existing Qt workflows and explicit UTF-8, locale, and Unicode-path checks.
+MSVC uses `/W4 /utf-8`; Linux warning and sanitizer flags are unchanged. Windows
+runtime tests execute on real hosted Windows runners, not cross-compilation.
