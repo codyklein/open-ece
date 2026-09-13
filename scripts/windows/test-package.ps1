@@ -11,7 +11,7 @@ $executables = @(Get-ChildItem $Destination -Recurse -Filter openece.exe)
 if ($executables.Count -ne 1) { throw 'Expected one packaged application.' }
 $exe = $executables[0].FullName
 $root = $executables[0].DirectoryName
-$variables = @('PATH', 'QT_PLUGIN_PATH', 'QT_QPA_PLATFORM_PLUGIN_PATH', 'QT_QPA_PLATFORM', 'QTDIR', 'QT_ROOT', 'QWT_ROOT', 'QML2_IMPORT_PATH', 'QML_IMPORT_PATH')
+$variables = @('PATH', 'QT_PLUGIN_PATH', 'QT_QPA_PLATFORM_PLUGIN_PATH', 'QT_QPA_PLATFORM', 'QTDIR', 'QT_ROOT', 'QWT_ROOT', 'QML2_IMPORT_PATH', 'QML_IMPORT_PATH', 'QT_DEBUG_PLUGINS')
 $saved = @{}
 foreach ($variable in $variables) {
     $saved[$variable] = [Environment]::GetEnvironmentVariable($variable, 'Process')
@@ -46,6 +46,5 @@ try {
 } finally {
     if ($process -and !$process.HasExited) { $process.Kill(); $process.WaitForExit() }
     foreach ($variable in $variables) { [Environment]::SetEnvironmentVariable($variable, $saved[$variable], 'Process') }
-    Remove-Item Env:QT_DEBUG_PLUGINS -ErrorAction SilentlyContinue
     Get-ChildItem $Destination -Filter '*.log' | ForEach-Object { Write-Host $_.Name; Get-Content $_.FullName }
 }

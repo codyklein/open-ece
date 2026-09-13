@@ -19,14 +19,14 @@ if ($env:VSCMD_ARG_TGT_ARCH -ne 'x64') { throw 'Use a VS 2022 x64 developer shel
 Get-Command cl.exe, nmake.exe, cmake.exe -ErrorAction Stop | Out-Null
 New-Item -ItemType Directory -Force "$DependenciesRoot/downloads", "$DependenciesRoot/sources" | Out-Null
 $archives = @(
-    @{ Name='qwt-6.3.0'; Directory='qwt-6.3.0'; Url='https://sourceforge.net/projects/qwt/files/qwt/6.3.0/qwt-6.3.0.zip/download'; Hash='268d8d41974d263014fea13168324452f41e02880db573794f559995a4e11331' },
+    @{ Name='qwt-6.3.0'; Directory='qwt-6.3.0'; Url='https://downloads.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip'; Hash='268d8d41974d263014fea13168324452f41e02880db573794f559995a4e11331' },
     @{ Name='googletest-1.17.0'; Directory='googletest-1.17.0'; Url='https://codeload.github.com/google/googletest/zip/refs/tags/v1.17.0'; Hash='40d4ec942217dcc84a9ebe2a68584ada7d4a33a8ee958755763278ea1c5e18ff' }
 )
 foreach ($archive in $archives) {
     $zip = "$DependenciesRoot/downloads/$($archive.Name).zip"
     if (!(Test-Path $zip)) {
         Invoke-WebRequest $archive.Url -OutFile "$zip.partial"
-        if ((Get-FileHash "$zip.partial" -Algorithm SHA256).Hash -ne $archive.Hash) { throw "Checksum mismatch: $zip.partial" }
+        if ((Get-FileHash "$zip.partial" -Algorithm SHA256).Hash -ne $archive.Hash) { throw "Checksum mismatch: $zip.partial (received $((Get-FileHash "$zip.partial").Hash), $((Get-Item "$zip.partial").Length) bytes)" }
         Move-Item "$zip.partial" $zip -Force
     }
     if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne $archive.Hash) { throw "Checksum mismatch: $zip; remove the corrupt archive and retry." }

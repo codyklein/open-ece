@@ -68,7 +68,7 @@ if (!(Test-Path $qtArchive)) {
 if ((Get-FileHash $qtArchive).Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
 $entries = & tar.exe -tf $qtArchive
 if ($LASTEXITCODE -ne 0) { throw 'Cannot list Qt source archive.' }
-$licenseEntries = @($entries | Where-Object { $_ -match '/(LICENSE[^/]*|COPYING[^/]*|NOTICE[^/]*|qt_attribution\.json|AUTHORS[^/]*)$' -or $_ -match '/LICENSES/[^/]+$' })
+$licenseEntries = @($entries | Where-Object { $_ -match '/(LICEN[CS]E[^/]*|COPYING[^/]*|NOTICE[^/]*|README[^/]*|FTL.TXT|copyright[^/]*|qt_attribution\.json|AUTHORS[^/]*)$' -or $_ -match '/LICENSES/[^/]+$' })
 if ($licenseEntries.Count -lt 10) { throw 'Qt license archive unexpectedly incomplete.' }
 # One file at a time avoids the Windows command-line length limit.
 foreach ($entry in $licenseEntries) { Run 'tar.exe' @('-xf', $qtArchive, '-C', "$notices/Qt", $entry) }
