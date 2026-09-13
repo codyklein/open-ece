@@ -21,11 +21,19 @@ change the rate. L must be between 1 and 1,048,576 (65,536 in the GUI).
 A is a nonnegative peak amplitude in unspecified sample units. It is not volts
 unless the caller explicitly interprets it as such. Frequency f is nonnegative
 and must satisfy `f <= fs/2`. φ is always in radians in C++. The GUI defaults to
-Degrees and also accepts Radians. Switching the adjacent unit selector commits any
-pending text in the old units, converts the value and range (±360° / ±2π rad), and
-rounds to 8 decimal places for degrees or 12 for radians. It preserves the phase
-to that display precision, rather than reinterpreting the old number. Generation
-converts degrees to radians at the GUI boundary; radian input passes through. All input parameters must be finite; rate and duration
+Degrees (±360) and also accepts Radians (±2π). The GUI parser accepts signed
+decimal literals, including scientific notation; Radians additionally accepts a
+signed decimal multiple of `pi`/`π`, optionally divided by a positive decimal
+(e.g. `3*pi/4`). Whitespace separates tokens; `pi` is case-insensitive. General
+arithmetic, nonfinite/unrepresentable literals, zero divisors, and out-of-range
+results are rejected. Input is limited to 128 characters; angles are not wrapped.
+
+Generate parses the current phase text. Switching units parses in the old unit
+before converting to decimal text with up to 17 significant digits, retaining
+double precision subject to floating-point conversion roundoff. Invalid text
+remains visible and clears the results; failed switches retain the old unit.
+Generation converts degrees to radians at the GUI boundary; radian input passes
+through. All input parameters must be finite; rate and duration
 must be strictly positive. Zero amplitude and zero frequency are valid.
 
 At f = 0, samples equal `A sin(φ)`. At Nyquist, samples equal
@@ -166,5 +174,6 @@ and nonfinite/overflow handling. Window tests add analytical periodic coefficien
 coherent gains, coherent-tone and endpoint normalization, original-record immutability,
 short records, a hand-weighted padded DFT oracle, and distant-sidelobe comparisons.
 GUI tests check window selection, preserved time data, phase units and conversions,
-and pending phase text. Tolerances reflect floating-point calculations;
+pending expressions, π insertion, invalid input retention, and recovery. Parser
+tests cover the grammar, limits, and repeated unit conversions. Tolerances reflect floating-point calculations;
 they are not a universal error bound or a substitute for future validation.

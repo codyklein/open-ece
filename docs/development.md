@@ -27,10 +27,12 @@ git diff --check
 ```
 
 Numerical tests use GoogleTest and CTest discovery. The Qt Test workflow checks
-initial data, all five numeric controls, plot values, invalid input, recovery, and
+initial data, all five signal controls, plot values, invalid input, recovery, and
 the desktop sample limit. It also exercises window selection and gain display,
 unchanged time samples, degree/radian input, range-endpoint round trips, and
-conversion of pending phase text before its units change. It is a functional smoke/integration test, not a comprehensive
+conversion of pending phase expressions before units change, π insertion, invalid
+text retention, and recovery. A separate Qt Test suite checks the parser grammar
+and range limits. These are functional tests, not a comprehensive
 accessibility or visual regression suite. For a local screenshot during that test:
 
 ```bash
@@ -88,6 +90,20 @@ cmake --build build/sanitize-gui -j 4
 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ctest --test-dir build/sanitize-gui --output-on-failure
 ```
 
+## v0.2.1 validation
+
+The phase-expression update passed all 30 CTest entries in GCC desktop (`dev`)
+and Clang ASan/UBSan desktop (`build/sanitize-gui`): 28 numerical tests, the GUI
+workflow, and the phase parser suite. The GUI suite has eight functional methods;
+the parser covers 14 pi-expression cases plus decimals, round trips, malformed
+input, and range rejection. Deprecated Qt exception assertions were replaced;
+the updated targets build without compiler warnings and pass clang-format and
+`git diff --check`.
+
+Leak detection remained enabled. The sandbox prevented LeakSanitizer process
+inspection, so the sanitizer suite was rerun outside it and passed with no findings.
+The offscreen workbench screenshot was inspected for control and plot layout.
+
 ## Understand these before the next feature
 
 - Trace a button click through `MainWindow::generate`, `generate_sine`,
@@ -101,9 +117,9 @@ UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ctest --test-dir build/sanitize
   reduce distant sidelobes while increasing some bins close to the tone.
 - Derive S=sum(w), G=S/L, endpoint scaling, and why amplitude correction is different
   from power/PSD normalization. Explain the limits of correcting off-bin or short records.
-- Read `MainWindow::change_phase_unit()`: pending text is committed with the old
-  unit, converted, and rounded only to the displayed precision. Qt signals are blocked
-  during range/value updates so intermediate clamping does not produce spurious edits.
+- Read `MainWindow::change_phase_unit()`: pending text is parsed with the old
+  unit and converted with 17 significant digits. Qt signals are blocked during text
+  updates and failed selector changes so rollback does not trigger another conversion.
 - Find which tests catch a symmetric Hann denominator, gain based on padded N,
   doubled DC/Nyquist, changed source samples, or a degree value reinterpreted as radians.
 
@@ -113,7 +129,7 @@ Weights add one O(L) temporary allocation per analysis; there is no cache or str
 buffer reuse. This favors inspectable coefficients and simple ownership for now.
 Spectrum metadata remains a public value struct whose consistency callers must preserve.
 GUI calculations remain synchronous and capped at 65,536 samples. Phase conversions
-have the documented display rounding; the GUI's previous-unit flag must stay aligned
+have floating-point roundoff; the GUI's previous-unit flag must stay aligned
 with its selector. These concerns do not require a generic window or units framework.
 
 The proposed next milestone is FIR/convolution composition. It is not implemented

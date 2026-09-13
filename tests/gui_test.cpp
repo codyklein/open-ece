@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QTabWidget>
 #include <QtTest>
@@ -45,7 +46,7 @@ class WorkbenchTest : public QObject {
         }
         window.findChild<QDoubleSpinBox*>("amplitude")->setValue(2.0);
         window.findChild<QDoubleSpinBox*>("frequency")->setValue(16.0);
-        window.findChild<QDoubleSpinBox*>("phase")->setValue(90.0);
+        window.findChild<QLineEdit*>("phase")->setText("90");
         window.findChild<QDoubleSpinBox*>("sample_rate")->setValue(512.0);
         window.findChild<QDoubleSpinBox*>("duration")->setValue(0.5);
         QVERIFY(status->text().startsWith("Parameters changed"));
@@ -103,33 +104,30 @@ class WorkbenchTest : public QObject {
 
     void convertsPhaseUnitsAndAcceptsRadians() {
         openece::gui::MainWindow window;
-        auto* phase = window.findChild<QDoubleSpinBox*>("phase");
+        auto* phase = window.findChild<QLineEdit*>("phase");
         auto* units = window.findChild<QComboBox*>("phase_unit");
         auto* button = window.findChild<QPushButton*>("generate");
         auto* plot = window.findChild<QwtPlot*>("time_plot");
         auto* curve = static_cast<QwtPlotCurve*>(plot->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
         for (double degrees : {60.0, -135.0, 360.0, -360.0}) {
-            phase->setValue(degrees);
+            phase->setText(QString::number(degrees, 'g', 17));
             button->click();
             const double before = curve->sample(0).y();
             units->setCurrentIndex(1);
-            QVERIFY(std::abs(phase->value() - degrees * std::numbers::pi / 180.0) < 1e-11);
-            QVERIFY(std::abs(phase->maximum() - 2.0 * std::numbers::pi) < 1e-11);
-            QVERIFY(std::abs(phase->minimum() + 2.0 * std::numbers::pi) < 1e-11);
+            QVERIFY(std::abs(phase->text().toDouble() - degrees * std::numbers::pi / 180.0) <
+                    1e-11);
             button->click();
             QVERIFY(std::abs(curve->sample(0).y() - before) < 1e-11);
             units->setCurrentIndex(0);
-            QVERIFY(std::abs(phase->value() - degrees) < 1e-7);
-            QCOMPARE(phase->maximum(), 360.0);
-            QCOMPARE(phase->minimum(), -360.0);
+            QVERIFY(std::abs(phase->text().toDouble() - degrees) < 1e-7);
         }
         units->setCurrentIndex(1);
-        phase->setValue(-std::numbers::pi / 6.0);
+        phase->setText("-pi/6");
         window.findChild<QComboBox*>("spectral_window")->setCurrentIndex(1);
         button->click();
         QVERIFY(std::abs(curve->sample(0).y() + 0.5) < 1e-11);
         units->setCurrentIndex(0);
-        QVERIFY(std::abs(phase->value() + 30.0) < 1e-7);
+        QVERIFY(std::abs(phase->text().toDouble() + 30.0) < 1e-7);
         button->click();
         QVERIFY(std::abs(curve->sample(0).y() + 0.5) < 1e-9);
     }
@@ -138,18 +136,103 @@ class WorkbenchTest : public QObject {
         openece::gui::MainWindow window;
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
-        auto* phase = window.findChild<QDoubleSpinBox*>("phase");
+        auto* phase = window.findChild<QLineEdit*>("phase");
         auto* units = window.findChild<QComboBox*>("phase_unit");
         phase->setFocus();
         phase->selectAll();
         QTest::keyClicks(phase, "45");
-        // Keyboard tracking is off: the conversion must explicitly commit pending text.
+        // The unit switch must read the current text without waiting for focus loss.
         units->setCurrentIndex(1);
-        QVERIFY(std::abs(phase->value() - std::numbers::pi / 4.0) < 1e-11);
+        QVERIFY(std::abs(phase->text().toDouble() - std::numbers::pi / 4.0) < 1e-11);
         phase->selectAll();
         QTest::keyClicks(phase, "-1.5");
         units->setCurrentIndex(0);
-        QVERIFY(std::abs(phase->value() - (-1.5 * 180.0 / std::numbers::pi)) < 1e-8);
+        QVERIFY(std::abs(phase->text().toDouble() - (-1.5 * 180.0 / std::numbers::pi)) < 1e-8);
+    }
+
+    void piInputGeneratesAndSwitchesUnits() {
+        openece::gui::MainWindow window;
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto* phase = window.findChild<QLineEdit*>("phase");
+        auto* units = window.findChild<QComboBox*>("phase_unit");
+        auto* button = window.findChild<QPushButton*>("generate");
+        auto* plot = window.findChild<QwtPlot*>("time_plot");
+        auto* curve = static_cast<QwtPlotCurve*>(plot->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
+        units->setCurrentIndex(1);
+        phase->setFocus();
+        phase->selectAll();
+        QTest::keyClicks(phase, "pi/2");
+        // Direct invocation does not rely on a focus change to commit input.
+        button->click();
+        QVERIFY(window.findChild<QLabel*>("status")->text().startsWith("Ready"));
+        QVERIFY(std::abs(curve->sample(0).y() - 1.0) < 1e-12);
+        QCOMPARE(phase->text(), QString("pi/2"));
+        units->setCurrentIndex(0);
+        QVERIFY(std::abs(phase->text().toDouble() - 90.0) < 1e-12);
+        units->setCurrentIndex(1);
+        phase->setText("3π/4");
+        units->setCurrentIndex(0);
+        QVERIFY(std::abs(phase->text().toDouble() - 135.0) < 1e-12);
+        units->setCurrentIndex(1);
+        phase->setText("-pi/2");
+        QTest::keyClick(phase, Qt::Key_Return);
+        QVERIFY(std::abs(curve->sample(0).y() + 1.0) < 1e-12);
+    }
+
+    void invalidPhaseIsRetainedAndUnitSwitchRollsBack() {
+        openece::gui::MainWindow window;
+        auto* phase = window.findChild<QLineEdit*>("phase");
+        auto* units = window.findChild<QComboBox*>("phase_unit");
+        auto* button = window.findChild<QPushButton*>("generate");
+        auto* status = window.findChild<QLabel*>("status");
+        auto* plot = window.findChild<QwtPlot*>("time_plot");
+        auto* curve = static_cast<QwtPlotCurve*>(plot->itemList(QwtPlotItem::Rtti_PlotCurve).at(0));
+        units->setCurrentIndex(1);
+        for (const QString& text :
+             {QString("pi/"), QString("pi/0"), QString("pi+1"), QString("3*pi")}) {
+            phase->setText(text);
+            button->click();
+            QVERIFY(status->text().startsWith("Cannot generate"));
+            QCOMPARE(curve->dataSize(), 0U);
+            QCOMPARE(phase->text(), text);
+            units->setCurrentIndex(0);
+            QCOMPARE(units->currentIndex(), 1);
+            QVERIFY(status->text().startsWith("Cannot change phase units"));
+            QCOMPARE(phase->text(), text);
+        }
+        phase->setText("pi");
+        units->setCurrentIndex(0);
+        QCOMPARE(units->currentIndex(), 0);
+        QVERIFY(std::abs(phase->text().toDouble() - 180.0) < 1e-12);
+        phase->setText("pi/2");
+        units->setCurrentIndex(1);
+        QCOMPARE(units->currentIndex(), 0);
+        QVERIFY(status->text().contains("Degrees accepts decimals"));
+        phase->setText("90");
+        button->click();
+        QVERIFY(status->text().startsWith("Ready"));
+        QVERIFY(std::abs(curve->sample(0).y() - 1.0) < 1e-12);
+    }
+
+    void piButtonInsertsAtCursorAndReplacesSelection() {
+        openece::gui::MainWindow window;
+        auto* phase = window.findChild<QLineEdit*>("phase");
+        auto* units = window.findChild<QComboBox*>("phase_unit");
+        auto* insert = window.findChild<QPushButton*>("insert_pi");
+        QVERIFY(!insert->isEnabled());
+        units->setCurrentIndex(1);
+        QVERIFY(insert->isEnabled());
+        phase->selectAll();
+        insert->click();
+        QCOMPARE(phase->text(), QString("π"));
+        phase->setText("3/4");
+        phase->setCursorPosition(1);
+        insert->click();
+        QCOMPARE(phase->text(), QString("3π/4"));
+        units->setCurrentIndex(0);
+        QVERIFY(!insert->isEnabled());
+        QVERIFY(std::abs(phase->text().toDouble() - 135.0) < 1e-12);
     }
 
     void rejectsInvalidInputAndRecovers() {
@@ -181,7 +264,7 @@ class WorkbenchTest : public QObject {
         QCOMPARE(curve->dataSize(), 65536U);
         frequency->setValue(0.0);
         window.findChild<QDoubleSpinBox*>("sample_rate")->setValue(1.0);
-        window.findChild<QDoubleSpinBox*>("phase")->setValue(90.0);
+        window.findChild<QLineEdit*>("phase")->setText("90");
         duration->setValue(1.0);
         button->click();
         QVERIFY(status->text().startsWith("Ready"));

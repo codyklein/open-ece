@@ -9,14 +9,14 @@ OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.2 spectral windows and phase units
+## Current status: v0.2.1 phase expressions
 
 - Qt 6 desktop application with amplitude, frequency, phase, sample-rate, and duration controls.
 - Time-domain plot and one-sided, linear peak-amplitude spectrum; rectangle zoom.
 - Owning, uniformly sampled real-signal representation with validated inputs.
 - Our own sine generator and iterative radix-2 FFT; explicit zero-padding.
 - Selectable Rectangular/periodic Hann windows with coherent-gain amplitude correction.
-- Degrees/Radians phase entry; switching units converts the existing value.
+- Degrees/Radians phase entry, including pi expressions and a π insertion button.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
@@ -48,7 +48,7 @@ sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbas
 | Qt 6 ≥ 6.4 Widgets | Desktop controls, layout, event loop, and widget ownership |
 | Qwt ≥ 6.2, built for Qt 6 | Scientific axes, curves, and zoom; no custom plotting infrastructure |
 | GoogleTest ≥ 1.12 | Numerical unit tests, discovered by CTest |
-| Qt Test (with Qt development packages) | Desktop integration test only |
+| Qt Test (with Qt development packages) | Phase parser and desktop integration tests |
 | pkg-config | Discover Fedora's `Qt6Qwt6` imported dependency |
 
 CMake uses system packages and never downloads dependencies. Qt/Qwt are optional
@@ -76,11 +76,19 @@ Invalid generation requests clear the plots and display the reason.
 sidelobes at the cost of a wider main lobe. The summary identifies the selected
 window and its coherent gain. The time plot always shows the original samples.
 
-**Phase** defaults to Degrees. The adjacent selector converts the current value
-and range between ±360 degrees and ±2π radians; it does not reinterpret the number.
-Conversion rounds to the displayed precision (8 decimal places in degrees, 12 in
-radians). Select Generate after editing or switching units. The signal library
-still accepts radians only.
+**Phase** defaults to Degrees, accepting decimals within ±360. Radians accepts
+decimals within ±2π or signed pi expressions such as `pi`, `pi/2`, `3*pi/4`,
+`3π/4`, and `-pi/2`. A decimal coefficient and positive decimal divisor are
+supported, including scientific notation. `pi` is case-insensitive; whitespace
+may separate tokens. Sums, parentheses, and general arithmetic are not supported.
+The **π** button is enabled in Radians and inserts at the cursor or replaces selected text.
+
+Generate (or Enter in the phase field) parses the current text immediately.
+Switching units first parses in the old unit, then converts to decimal text with
+up to 17 significant digits. Invalid input stays visible with an error and clears
+the results; a failed unit switch keeps the previous unit. Inputs are limited to
+128 characters and rejected outside the range, without wrapping. The signal
+library still accepts radians only.
 
 Drag a rectangle on a plot to zoom. Right-click steps back; Ctrl+right-click
 returns to the full view. The **Conventions** tab explains the plots.

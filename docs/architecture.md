@@ -101,10 +101,13 @@ Periodic Hann and singleton behavior are explicit numerical contracts in `numeri
 There is no window class hierarchy, plugin interface, or new dependency. The coefficient
 function makes analytical testing possible without involving the FFT or GUI.
 
-Phase-unit selection belongs to `MainWindow`. The spin box and adjacent selector display
-one phase value, converting it when the unit changes. The signal API continues to take
-radians. A previous-unit flag lets pending text be interpreted before the new range and
-precision are installed. No unit enumeration has been added to the engineering library.
+Phase-unit selection belongs to `MainWindow`. A `QLineEdit` retains pending and
+invalid text; `phase_input` owns the bounded decimal/pi grammar and conversion
+formatting within the GUI module. Generate and unit switching use the same parser.
+A previous-unit flag lets text be parsed before changing the selector's unit; on
+failure the selector rolls back with signals blocked. The π button inserts text
+using the line edit's cursor and selection. The signal API continues to take
+radians; no expression parser or unit enumeration enters the engineering library.
 
 ## Extension rule
 

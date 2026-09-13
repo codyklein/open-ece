@@ -27,6 +27,12 @@ comparison views remain optional future presentation work. RMS and PSD are not i
 Before publishing: choose the project license and add hosted CI using the existing
 CMake/CTest commands. Add a release validation record and screenshot.
 
+## v0.2.1 — Phase expressions (implemented)
+
+- [x] Decimal/pi phase parser with range checks and a radians-only π insertion button.
+- [x] Parse current text on Generate and unit switching; retain invalid input and roll back failed switches.
+- [x] Parser and GUI tests for expressions, conversions, insertion, and error recovery.
+
 ## v0.3 — First connected DSP operation (proposed next; not started)
 
 Implement direct convolution and a small FIR filter interface. Compose:

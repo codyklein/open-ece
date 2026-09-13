@@ -3,7 +3,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(Qwt REQUIRED IMPORTED_TARGET Qt6Qwt6>=6.2)
 
 # Internal GUI library allows integration tests to exercise the same workbench as main().
-add_library(openece_workbench STATIC main_window.cpp plot_widget.cpp)
+add_library(openece_workbench STATIC main_window.cpp plot_widget.cpp phase_input.cpp)
 target_include_directories(openece_workbench PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(openece_workbench
     PUBLIC Qt6::Widgets PkgConfig::Qwt

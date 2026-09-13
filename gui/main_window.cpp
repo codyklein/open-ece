@@ -1,4 +1,5 @@
 #include "main_window.hpp"
+#include "phase_input.hpp"
 #include "plot_widget.hpp"
 
 #include <openece/dsp/fft.hpp>
@@ -10,6 +11,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSplitter>
@@ -19,7 +21,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 #include <stdexcept>
 #include <vector>
 
@@ -51,7 +52,16 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     auto* form = new QFormLayout;
     amplitude_ = field(controls, "amplitude", 0.0, 1e6, 1.0, 4);
     frequency_ = field(controls, "frequency", 0.0, 5e8, 8.0, 4, " Hz");
-    phase_ = field(controls, "phase", -360.0, 360.0, 0.0, 8, "°");
+    phase_ = new QLineEdit("0", controls);
+    phase_->setObjectName("phase");
+    phase_->setToolTip(
+        "Degrees: decimal within ±360. Radians: decimal or pi/2, 3*pi/4, etc., within ±2*pi.");
+    pi_button_ = new QPushButton("π", controls);
+    pi_button_->setObjectName("insert_pi");
+    pi_button_->setAccessibleName("Insert pi");
+    pi_button_->setToolTip("Insert π at the cursor, replacing selected text (Radians only).");
+    pi_button_->setFixedWidth(28);
+    pi_button_->setEnabled(false);
     phase_unit_ = new QComboBox(controls);
     phase_unit_->setObjectName("phase_unit");
     phase_unit_->setAccessibleName("Phase unit");
@@ -62,6 +72,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     auto* phase_layout = new QHBoxLayout(phase_row);
     phase_layout->setContentsMargins(0, 0, 0, 0);
     phase_layout->addWidget(phase_, 1);
+    phase_layout->addWidget(pi_button_);
     phase_layout->addWidget(phase_unit_);
     phase_row->setFocusProxy(phase_);
     window_ = new QComboBox(controls);
@@ -115,9 +126,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     help->setHtml(
         "<h2>Reading the plots</h2>"
         "<p>The generator samples x[n] = A sin(2π f n / fs + φ), starting at t = 0. "
-        "Phase defaults to degrees. Selecting Radians converts the displayed value and range; "
-        "switching back converts to degrees. Conversion rounds to 8 decimal places in degrees "
-        "and 12 in radians. The engineering library always uses radians.</p>"
+        "Phase defaults to Degrees (decimal, ±360). Radians accepts decimals or a signed "
+        "multiple of pi/π optionally divided by a positive decimal: pi, pi/2, 3*pi/4, "
+        "3π/4, -pi/2, 2*pi. The range is ±2π. Whitespace between tokens is allowed; "
+        "pi is case-insensitive. No sums, parentheses, or general expressions are supported. "
+        "The π button inserts at the cursor or replaces selected text.</p>"
+        "<p>Generate and unit switching parse the current text. Invalid text is retained with "
+        "an error; a failed unit switch keeps the previous unit. Valid switching converts "
+        "to decimal text with up to 17 significant digits. The library always receives radians.</p>"
         "<p>The sample count L is fs × requested duration rounded to the nearest integer "
         "(half upward). The actual record duration is L/fs; its last sample is at (L−1)/fs. "
         "Lines connect discrete samples; they are not an analog reconstruction.</p>"
@@ -146,11 +162,19 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     layout->addWidget(tabs, 1);
 
     connect(button, &QPushButton::clicked, this, [this] { generate(); });
-    for (auto* spin : {amplitude_, frequency_, phase_, sample_rate_, duration_}) {
+    for (auto* spin : {amplitude_, frequency_, sample_rate_, duration_}) {
         connect(spin, &QDoubleSpinBox::valueChanged, this, [this] {
             status_->setText("Parameters changed. Generate to update the displayed result.");
         });
     }
+    connect(phase_, &QLineEdit::textChanged, this, [this] {
+        status_->setText("Parameters changed. Generate to update the displayed result.");
+    });
+    connect(phase_, &QLineEdit::returnPressed, this, [this] { generate(); });
+    connect(pi_button_, &QPushButton::clicked, this, [this] {
+        phase_->insert("π");
+        phase_->setFocus();
+    });
     connect(window_, &QComboBox::currentIndexChanged, this, [this] {
         status_->setText("Parameters changed. Generate to update the displayed result.");
     });
@@ -159,27 +183,32 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 void MainWindow::change_phase_unit() {
-    // Commit any pending text using the OLD units before changing range/precision.
-    phase_->interpretText();
-    const double radians =
-        phase_in_radians_ ? phase_->value() : phase_->value() * std::numbers::pi / 180.0;
-    phase_in_radians_ = phase_unit_->currentIndex() == 1;
-    const QSignalBlocker blocker(phase_);
-    phase_->setDecimals(phase_in_radians_ ? 12 : 8);
-    const double limit = phase_in_radians_ ? 2.0 * std::numbers::pi : 360.0;
-    phase_->setRange(-limit, limit);
-    phase_->setSuffix(phase_in_radians_ ? " rad" : "°");
-    phase_->setSingleStep(phase_in_radians_ ? 0.1 : 1.0);
-    phase_->setValue(phase_in_radians_ ? radians : radians * 180.0 / std::numbers::pi);
-    status_->setText("Parameters changed. Phase converted to selected units; Generate to update.");
+    try {
+        const double radians = parse_phase(phase_->text(), phase_in_radians_);
+        const bool new_unit = phase_unit_->currentIndex() == 1;
+        const QString converted = format_phase(radians, new_unit);
+        phase_in_radians_ = new_unit;
+        const QSignalBlocker blocker(phase_);
+        phase_->setText(converted);
+        pi_button_->setEnabled(new_unit);
+        status_->setText(
+            "Parameters changed. Phase converted to selected units; Generate to update.");
+    } catch (const std::exception& error) {
+        const QSignalBlocker blocker(phase_unit_);
+        phase_unit_->setCurrentIndex(phase_in_radians_ ? 1 : 0);
+        time_plot_->clear();
+        spectrum_plot_->clear();
+        summary_->clear();
+        status_->setText(
+            QString("Cannot change phase units: %1").arg(QString::fromUtf8(error.what())));
+    }
 }
 
 void MainWindow::generate() {
     try {
-        const signals::SineParameters parameters{
-            amplitude_->value(), frequency_->value(),
-            phase_in_radians_ ? phase_->value() : phase_->value() * std::numbers::pi / 180.0,
-            sample_rate_->value(), duration_->value()};
+        const signals::SineParameters parameters{amplitude_->value(), frequency_->value(),
+                                                 parse_phase(phase_->text(), phase_in_radians_),
+                                                 sample_rate_->value(), duration_->value()};
         const double count =
             std::floor(parameters.sample_rate_hz * parameters.duration_seconds + 0.5);
         if (count > 65536.0) {
