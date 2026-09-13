@@ -33,15 +33,19 @@ CMake/CTest commands. Add a release validation record and screenshot.
 - [x] Parse current text on Generate and unit switching; retain invalid input and roll back failed switches.
 - [x] Parser and GUI tests for expressions, conversions, insertion, and error recovery.
 
-## v0.3 — First connected DSP operation (proposed next; not started)
+## v0.3 — Convolution and FIR filtering (implemented)
 
-Implement direct convolution and a small FIR filter interface. Compose:
-**generator → FIR → FFT** with input/output time and spectral views. Keep operations
-as explicit functions before introducing a graph editor.
+- [x] Qt-independent direct full convolution with zero extension and explicit resource limits.
+- [x] Owning FIR coefficients; full filtering preserves rate and t=0 origin.
+- [x] Odd-length symmetric Hamming-windowed sinc low-pass, normalized to unity DC gain.
+- [x] Complex frequency response on an inclusive DC–Nyquist grid.
+- [x] GUI original/filtered time and spectrum comparisons, response in dB, and visible delay.
+- [x] Analytical and independent reference tests, including two-tone numerical attenuation.
+- [x] Documented length, edge behavior, delay, normalization, and cutoff conventions.
 
-Acceptance: impulse response, passband/stopband examples, output length, boundary
-handling, delay, and units documented and independently tested. A two-tone input
-should demonstrate measurable attenuation rather than only a visually plausible plot.
+The generator remains a single sine; the two-tone case is a numerical regression.
+IIR, streaming/stateful filtering, automatic delay compensation, and general filter
+design are outside this milestone.
 
 ## v0.4 — Reproducible experiments
 

@@ -65,7 +65,7 @@ preserve their relationship. Physical units, timestamps, channel layouts, and
 complex signal records need a future design driven by actual consumers.
 
 Invalid domain inputs throw `std::invalid_argument`; sample indexing errors throw
-`std::out_of_range`; detected FFT arithmetic overflow throws `std::overflow_error`.
+`std::out_of_range`; detected DSP arithmetic overflow throws `std::overflow_error`.
 Allocation errors can also propagate. The GUI converts exceptions to a visible
 message and clears stale plots. No domain code displays dialogs or logs globally.
 
@@ -108,6 +108,52 @@ A previous-unit flag lets text be parsed before changing the selector's unit; on
 failure the selector rolls back with signals blocked. The π button inserts text
 using the line edit's cursor and selection. The signal API continues to take
 radians; no expression parser or unit enumeration enters the engineering library.
+
+## Convolution and FIR composition (v0.3)
+
+Two public headers extend `OpenECE::dsp`: `convolution.hpp` provides
+`convolve_full(span, span)`, and `fir.hpp` provides `FirCoefficients`,
+`apply_fir_full(signal, coefficients)`, `design_lowpass(taps, cutoff_hz, fs)`,
+and `frequency_response(coefficients, fs, points)`. No existing numerical API,
+window formula, or dependency edge changes. `SampledSignal` remains a finite,
+real record beginning at zero, which also describes full causal FIR output.
+
+`FirCoefficients` validates and owns a vector, exposes a const lvalue-only span,
+and performs no normalization. Copies own their data; moves transfer it. As with
+signals, use moved-from objects only for destruction or reassignment. Coefficients
+have no rate: their Hz interpretation belongs to the application rate. The low-pass
+designer uses Hz and a rate to build taps, and the GUI redesigns them on Generate.
+Only that designer normalizes to unity DC gain. Arbitrary taps need not be symmetric
+or have a frequency-independent group delay.
+
+Convolution is an input-side direct accumulation with zero extension and exactly
+N+M−1 samples. Filtering wraps its owned vector in a new `SampledSignal` at the
+input rate. There is no implicit crop or timing metadata attached to the record.
+FIR delay is a property of the coefficients, explained separately in the GUI.
+The designed symmetric filter has delay (M−1)/2 samples, left uncompensated.
+
+`FirFrequencyResponse` owns complex values and carries the rate. Its `bin_width_hz()`
+is (fs/2)/(P−1); callers must preserve the vector/metadata relationship. The response
+uses a direct trigonometric sum with real DC/Nyquist endpoint sums, independently
+of `fft()` and `amplitude_spectrum()`. This supports any allowed grid length and
+avoids confusing signal amplitude scaling with filter gain.
+
+Full output increases the observation length; each branch uses its own unchanged
+`amplitude_spectrum` call and metadata. `MainWindow` coordinates local owned values
+and passes copied samples to `PlotWidget`. The plot adapter lazily owns a second
+curve for comparison, shares axes across both datasets, and accepts independent
+frequency grids. Filter Off clears/hides comparison data and restores the existing
+single-curve path. A separate response tab uses a linear Hz axis and dB gain axis.
+The controls scroll on smaller windows; no model, graph engine, or worker framework
+is introduced for this one operation.
+
+The tradeoff is explicit O(NM) convolution and O(MP) response evaluation. Each is
+bounded at 64,000,000 products; output, coefficients and response-point counts
+also use the existing 1,048,576 resource bound. The GUI restricts taps to 511,
+response points to 1025, and full output to 65,536. Calculations remain synchronous,
+with temporary buffers and Qwt copies. These bounds are not latency guarantees.
+A worker/cancellation path, optimized convolution, and response caching should
+follow measurements and actual workload needs, not precede them.
 
 ## Extension rule
 
