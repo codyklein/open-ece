@@ -9,7 +9,7 @@ OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.3 convolution and FIR filtering
+## Current status: v0.3.1 Windows portability and packaging
 
 - Qt 6 desktop application with amplitude, frequency, phase, sample-rate, and duration controls.
 - Original/filtered time-domain and one-sided peak-amplitude spectrum comparisons; rectangle zoom.
@@ -56,9 +56,9 @@ sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbas
 CMake uses system packages and never downloads dependencies. Qt/Qwt are optional
 when building the numerical libraries. GoogleTest is optional when `BUILD_TESTING=OFF`.
 Other Linux distributions may use a different Qwt pkg-config module name; the
-current discovery is tested on Fedora. No cross-platform support is claimed yet.
+current discovery is tested on Fedora. Windows uses the separately documented pinned dependency bootstrap.
 
-## Build, test, run
+## Linux: build, test, run
 
 From the repository root:
 
@@ -146,6 +146,15 @@ ctest --test-dir build/clang --output-on-failure
 CTest runs the GUI integration test using Qt's offscreen platform automatically;
 normal application launches use the desktop. Compilation databases are written
 into each build directory. Build artifacts are ignored by Git.
+
+## Windows: build, test, run and package
+
+The v0.3.1 target is Windows 10 (1809+) / Windows 11 x86_64, Visual Studio 2022,
+and Qt 6.8.3. Follow [the Windows guide](docs/windows.md) for prerequisites,
+checksum-pinned Qwt/GoogleTest bootstrap, explicit Debug/Release presets, and
+portable ZIP creation. GitHub Actions uses Fedora 44 for GCC/Clang and actual
+Windows MSVC runners for tests and packaged startup. MinGW is not validated.
+No DSP behavior or public engineering API changes in this portability milestone.
 
 ## Architecture
 

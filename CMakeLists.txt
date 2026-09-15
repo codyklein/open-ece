@@ -1,19 +1,29 @@
 cmake_minimum_required(VERSION 3.24)
-project(OpenECE VERSION 0.3.0 LANGUAGES CXX)
+project(OpenECE VERSION 0.3.1 LANGUAGES CXX)
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW) # Honor standard uppercase dependency *_ROOT hints.
+endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(OPENECE_BUILD_GUI "Build the Qt desktop workbench" ON)
 option(OPENECE_ENABLE_SANITIZERS "Enable address and undefined behavior sanitizers" OFF)
 include(CTest)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Project flags are private to our targets, never imposed on dependencies/consumers.
 add_library(openece_options INTERFACE)
-target_compile_options(openece_options INTERFACE
-    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>)
+if(MSVC)
+    target_compile_options(openece_options INTERFACE /W4 /utf-8)
+else()
+    target_compile_options(openece_options INTERFACE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Wconversion;-Wshadow>)
+endif()
+if(WIN32)
+    target_compile_definitions(openece_options INTERFACE NOMINMAX)
+endif()
 if(OPENECE_ENABLE_SANITIZERS)
-    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    if(MSVC OR NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         message(FATAL_ERROR "Sanitizer configuration currently supports GCC and Clang")
     endif()
     target_compile_options(openece_options INTERFACE -fsanitize=address,undefined -fno-omit-frame-pointer)

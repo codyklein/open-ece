@@ -1,0 +1,38 @@
+OpenECE Windows runtime dependencies
+
+Qt 6.8.3 (Qt Base): copyright The Qt Company Ltd. and contributors.
+Dynamically linked Qt Core, GUI, Widgets and supporting Qt Base modules/plugins.
+Qt is available under LGPL version 3, GPL licenses, or commercial terms.
+This package uses the open-source shared-library distribution. Qt's original
+license texts and bundled component notices are preserved in
+licenses/Qt/Qt-6.8.3-NOTICES.txt,
+including attribution for third-party code such as zlib, libpng, libjpeg,
+FreeType, HarfBuzz, PCRE2 and bundled software rendering components where used.
+Some included notices cover source components not deployed by this application.
+Corresponding unmodified Qt Base 6.8.3 source:
+https://download.qt.io/official_releases/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz
+https://www.qt.io/licensing/open-source-lgpl-obligations
+Users may replace the dynamically linked LGPL libraries with compatible modified
+versions; reverse engineering for debugging modifications to those libraries is
+not restricted by this package. Qt's license terms govern those components.
+
+Qwt 6.3.0: copyright Josef Wilgen, Uwe Rathmann and contributors.
+Dynamically linked under the Qwt License 1.0 (LGPL 2.1 with Qwt exceptions).
+Original license: licenses/Qwt/COPYING.
+Unmodified source (build configuration supplied by scripts/windows/bootstrap.ps1):
+https://sourceforge.net/projects/qwt/files/qwt/6.3.0/qwt-6.3.0.zip/download
+
+GoogleTest 1.17.0: copyright Google LLC and contributors; BSD 3-Clause license.
+Used by development tests only; not linked into openece.exe.
+License retained in licenses/GoogleTest/LICENSE for build provenance.
+https://github.com/google/googletest/tree/v1.17.0
+
+Microsoft Visual C++ runtime: copyright Microsoft Corporation.
+Release redistributable runtime components supplied by Visual Studio 2022 and
+windeployqt/CMake deployment tooling; governed by Microsoft's applicable Visual
+Studio redistribution license, not Qt's or Qwt's licenses.
+https://visualstudio.microsoft.com/license-terms/
+https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+
+OpenECE's project license has not yet been selected. These notices describe
+third-party dependencies and do not relicense OpenECE or any dependency.

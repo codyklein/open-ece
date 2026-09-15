@@ -1,0 +1,136 @@
+name: Build, test and package
+on:
+  push:
+    branches: [main, feature/windows-support]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fedora:
+    name: Fedora 44 / ${{ matrix.compiler }} / ${{ matrix.gui }} / sanitizers=${{ matrix.sanitize }}
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+        gui: ['ON', 'OFF']
+        sanitize: ['OFF']
+        include:
+          - {compiler: clang++, gui: 'ON', sanitize: 'ON'}
+          - {compiler: clang++, gui: 'OFF', sanitize: 'ON'}
+    steps:
+      - name: Install Fedora system packages
+        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel clang-tools-extra
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Configure
+        run: cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DOPENECE_BUILD_GUI=${{ matrix.gui }} -DOPENECE_ENABLE_SANITIZERS=${{ matrix.sanitize }}
+      - name: Build
+        run: cmake --build build/ci --parallel 4
+      - name: Test
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build/ci --output-on-failure --output-junit results.xml
+      - name: Formatting and diff
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
+          git diff --check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: fedora-${{ matrix.compiler }}-gui-${{ matrix.gui }}-sanitize-${{ matrix.sanitize }}-logs
+          path: |
+            build/ci/Testing/
+            build/ci/results.xml
+            build/ci/CMakeFiles/CMakeConfigureLog.yaml
+  windows:
+    name: Windows MSVC 2022 / Qt 6.8.3 / Debug and Release
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
+        with:
+          arch: x64
+      - name: Acquire exact Qt SDK
+        shell: pwsh
+        run: |
+          python -m pip install aqtinstall==3.3.0
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 --archives qtbase --outputdir "$env:RUNNER_TEMP/Qt"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "QT_ROOT=$env:RUNNER_TEMP/Qt/6.8.3/msvc2022_64" >> $env:GITHUB_ENV
+      - name: Restore pinned dependency build
+        id: dependencies
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: build/windows-deps
+          key: windows-x64-qt6.8.3-msvc${{ env.VCToolsVersion }}-${{ hashFiles('scripts/windows/bootstrap.ps1') }}
+      - name: Bootstrap pinned Qwt and GoogleTest
+        shell: pwsh
+        run: ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
+      - name: Verify bootstrap reuse
+        shell: pwsh
+        run: |
+          $stamp = (Get-Item build/windows-deps/bootstrap-state.json).LastWriteTimeUtc
+          ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
+          if ((Get-Item build/windows-deps/bootstrap-state.json).LastWriteTimeUtc -ne $stamp) { throw 'Bootstrap rebuilt intact dependencies.' }
+      - name: Save verified dependency build
+        if: steps.dependencies.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: build/windows-deps
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
+      - name: Configure
+        run: cmake --preset windows
+      - name: Build and test Debug
+        shell: pwsh
+        run: |
+          cmake --build --preset windows-debug --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ctest --preset windows-debug --output-junit debug-results.xml
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build and test Release
+        shell: pwsh
+        run: |
+          cmake --build --preset windows-release --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ctest --preset windows-release --output-junit release-results.xml
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package Release
+        shell: pwsh
+        run: ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: OpenECE-v0.3.1-windows-x86_64
+          path: build/packages/OpenECE-v0.3.1-windows-x86_64.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-build-test-logs
+          path: |
+            build/windows/Testing/
+            build/windows/*results.xml
+            build/windows/CMakeFiles/CMakeConfigureLog.yaml
+  packaged-startup:
+    name: Packaged app / fresh Windows runner without Qt SDK
+    needs: windows
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: OpenECE-v0.3.1-windows-x86_64
+          path: build/artifact
+      - name: Extract and launch with sanitized environment
+        shell: pwsh
+        run: ./scripts/windows/test-package.ps1 -Archive build/artifact/OpenECE-v0.3.1-windows-x86_64.zip -Destination "$env:RUNNER_TEMP/OpenECE fresh π path"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-package-startup-logs
+          path: ${{ runner.temp }}/OpenECE fresh π path/*.log

@@ -8,11 +8,13 @@
 
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTabWidget>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include <cmath>
@@ -22,6 +24,20 @@
 class WorkbenchTest : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void screenshotPathWithSpacesAndUnicode() {
+        QTemporaryDir directory(QDir::tempPath() + "/OpenECE π path XXXXXX");
+        QVERIFY(directory.isValid());
+        openece::gui::MainWindow window;
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        const QString path = directory.filePath("signal π plot.png");
+        const QPixmap rendered = window.grab();
+        QVERIFY(rendered.save(path));
+        const QImage loaded(path);
+        QVERIFY(!loaded.isNull());
+        QCOMPARE(loaded.size(), rendered.size());
+    }
+
     void generatesAndUpdatesPlots() {
         openece::gui::MainWindow window;
         window.show();

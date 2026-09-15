@@ -17,3 +17,9 @@ if(OPENECE_BUILD_GUI)
     add_test(NAME phase_input COMMAND openece_phase_tests)
     set_tests_properties(phase_input PROPERTIES TIMEOUT 30)
 endif()
+
+if(WIN32 AND OPENECE_BUILD_GUI)
+    # These are development/test paths only; the ZIP is tested without them.
+    set_tests_properties(gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
+endif()

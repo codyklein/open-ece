@@ -1,18 +1,27 @@
 {
   "version": 5,
-  "cmakeMinimumRequired": { "major": 3, "minor": 24, "patch": 0 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
   "configurePresets": [
     {
       "name": "dev",
       "displayName": "Desktop development",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "BUILD_TESTING": "ON" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON"
+      }
     },
     {
       "name": "headless",
       "inherits": "dev",
-      "cacheVariables": { "OPENECE_BUILD_GUI": "OFF" }
+      "cacheVariables": {
+        "OPENECE_BUILD_GUI": "OFF"
+      }
     },
     {
       "name": "sanitize",
@@ -22,21 +31,90 @@
         "CMAKE_CXX_COMPILER": "clang++",
         "OPENECE_ENABLE_SANITIZERS": "ON"
       }
+    },
+    {
+      "name": "windows",
+      "displayName": "Windows x64 / Visual Studio 2022",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/windows",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT};${sourceDir}/build/windows-deps/gtest",
+        "QWT_ROOT": "${sourceDir}/build/windows-deps/qwt"
+      }
     }
   ],
   "buildPresets": [
-    { "name": "dev", "configurePreset": "dev" },
-    { "name": "headless", "configurePreset": "headless" },
-    { "name": "sanitize", "configurePreset": "sanitize" }
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "headless",
+      "configurePreset": "headless"
+    },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize"
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows",
+      "configuration": "Release"
+    }
   ],
   "testPresets": [
-    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
-    { "name": "headless", "configurePreset": "headless", "output": { "outputOnFailure": true } },
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "headless",
+      "configurePreset": "headless",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
     {
       "name": "sanitize",
       "configurePreset": "sanitize",
-      "environment": { "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1" },
-      "output": { "outputOnFailure": true }
+      "environment": {
+        "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

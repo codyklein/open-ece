@@ -45,7 +45,13 @@ Qwt handles scientific axes, curves, and interactive zoom. A small `PlotWidget`
 adapts owned numerical results to Qwt. This avoids building a plotting toolkit.
 [Qt Charts is deprecated](https://doc.qt.io/qt-6/qtcharts-overview.html), and Qt
 Graphs would bring a Qt Quick rendering path; neither is necessary for this slice.
-Fedora's Qt 6 Qwt package is found through `pkg-config`.
+Fedora's Qt 6 Qwt package is found through `pkg-config`. Both platforms consume
+`Qwt::Qwt`: Windows uses the explicit bootstrap's configuration-specific shared
+library/import-library map. Qt and GoogleTest use standard CMake package discovery.
+Windows dependency acquisition and runtime deployment are separate PowerShell
+scripts; ordinary CMake configure never uses the network. Compiler flags remain
+private to project targets. See [Windows build design](windows.md) for the pinned
+toolchain and portable ZIP deployment; the engineering dependency graph is unchanged.
 
 The internal `openece_workbench` target allows GUI integration tests to use the
 same implementation as the executable. It is not a public extension API.
