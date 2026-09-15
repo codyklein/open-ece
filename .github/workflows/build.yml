@@ -22,7 +22,7 @@ jobs:
           - {compiler: clang++, gui: 'OFF', sanitize: 'ON'}
     steps:
       - name: Install Fedora system packages
-        run: dnf install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel clang-tools-extra
+        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel clang-tools-extra
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Configure
         run: cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DOPENECE_BUILD_GUI=${{ matrix.gui }} -DOPENECE_ENABLE_SANITIZERS=${{ matrix.sanitize }}
