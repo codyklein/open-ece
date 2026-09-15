@@ -56,28 +56,10 @@ $notices = "$destination/licenses"
 New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt" | Out-Null
 Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/COPYING" "$notices/Qwt/"
 Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/GoogleTest/"
-# Preserve Qt's own license texts and bundled third-party attribution. The
-# checksum-pinned source archive is acquired explicitly at packaging time only.
-$qtArchive = "$DependenciesRoot/downloads/qtbase-everywhere-src-6.8.3.tar.xz"
-$qtHash = '56001b905601bb9023d399f3ba780d7fa940f3e4861e496a7c490331f49e0b80'
-if (!(Test-Path $qtArchive)) {
-    Write-Host 'Downloading checksum-pinned Qt Base source for license notices...'
-    Run 'curl.exe' @('--fail', '--location', '--retry', '2', '--connect-timeout', '30', '--max-time', '300', '--speed-time', '30', '--speed-limit', '1024', '--output', "$qtArchive.partial", 'https://download.qt.io/official_releases/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz')
-    if ((Get-FileHash "$qtArchive.partial").Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
-    Move-Item "$qtArchive.partial" $qtArchive -Force
-}
-if ((Get-FileHash $qtArchive).Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
-Write-Host 'Collecting Qt license and attribution files...'
-$entries = & tar.exe -tf $qtArchive
-if ($LASTEXITCODE -ne 0) { throw 'Cannot list Qt source archive.' }
-$licenseEntries = @($entries | Where-Object { $_ -match '/(LICEN[CS]E[^/]*|COPYING[^/]*|NOTICE[^/]*|README[^/]*|FTL.TXT|copyright[^/]*|qt_attribution\.json|AUTHORS[^/]*)$' -or $_ -match '/LICENSES/[^/]+$' })
-if ($licenseEntries.Count -lt 10) { throw 'Qt license archive unexpectedly incomplete.' }
-# A file list avoids Windows' command-line limit and decompresses the archive once.
-$licenseList = "$DependenciesRoot/downloads/qt-license-files.txt"
-$licenseEntries | Set-Content $licenseList -Encoding utf8
-Write-Host "Extracting $($licenseEntries.Count) notice files in one pass..."
-Run 'tar.exe' @('-xf', $qtArchive, '-C', "$notices/Qt", '-T', $licenseList)
-Get-ChildItem $destination -Recurse -File | ForEach-Object {
+# Notices are generated from the checksum-pinned upstream archive by the
+# maintainer utility; packaging does not download or process Qt sources.
+Copy-Item "$PSScriptRoot/../../packaging/Qt-6.8.3-NOTICES.txt" "$notices/Qt/"
+Get-ChildItem $destination -Recurse -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
     "$((Get-FileHash $_.FullName).Hash.ToLowerInvariant())  $([IO.Path]::GetRelativePath($destination, $_.FullName).Replace('\', '/'))"
 } | Set-Content "$destination/SHA256SUMS.txt"
 $zip = Join-Path $OutputDir "$name.zip"

@@ -130,12 +130,24 @@ OpenECE-v0.3.1-windows-x86_64/
     SHA256SUMS.txt
 ```
 
-Runtime notes and original Qwt/GoogleTest license texts are included. Packaging
-explicitly acquires and checksum-verifies Qt Base 6.8.3's source archive to retain
-its original license texts and third-party notices with source-relative paths;
-that download is reused on later runs. No Qt sources are compiled or vendored.
-The package notices link corresponding sources and explain shared-library
-replacement. Translations and the unused software OpenGL renderer are excluded.
+Runtime notes and original Qwt/GoogleTest license texts are included. Qt's license
+texts and third-party attribution are retained in the checked-in
+`packaging/Qt-6.8.3-NOTICES.txt`, with source-relative headings and the upstream
+archive checksum. Packaging copies this notice file without network access or
+processing the full Qt source archive. No Qt implementation sources are vendored.
+The notices link corresponding sources and explain shared-library replacement.
+Translations and the unused software OpenGL renderer are excluded.
+
+When updating the pinned Qt version, maintainers can regenerate the notices with
+Python 3 and the upstream source archive (the script verifies SHA-256 and checks
+that every attribution's referenced license is present):
+
+```powershell
+python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.3.tar.xz
+```
+
+The source URL and checksum are recorded in the generator and the notice file.
+This utility is not required for normal Windows builds or packaging.
 
 CI uploads `OpenECE-v0.3.1-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,

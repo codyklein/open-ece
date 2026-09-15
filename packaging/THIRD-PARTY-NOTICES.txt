@@ -4,7 +4,8 @@ Qt 6.8.3 (Qt Base): copyright The Qt Company Ltd. and contributors.
 Dynamically linked Qt Core, GUI, Widgets and supporting Qt Base modules/plugins.
 Qt is available under LGPL version 3, GPL licenses, or commercial terms.
 This package uses the open-source shared-library distribution. Qt's original
-license texts and bundled component notices are preserved in licenses/Qt,
+license texts and bundled component notices are preserved in
+licenses/Qt/Qt-6.8.3-NOTICES.txt,
 including attribution for third-party code such as zlib, libpng, libjpeg,
 FreeType, HarfBuzz, PCRE2 and bundled software rendering components where used.
 Some included notices cover source components not deployed by this application.
