@@ -47,7 +47,7 @@ The generator remains a single sine; the two-tone case is a numerical regression
 IIR, streaming/stateful filtering, automatic delay compensation, and general filter
 design are outside this milestone.
 
-## v0.3.1 — Windows portability, validation and packaging
+## v0.3.1 — Windows portability, validation and packaging (implemented)
 
 - Windows x86_64 / VS 2022 / Qt 6.8.3 build and test presets.
 - Explicit checksum-pinned Qwt/GoogleTest bootstrap; Fedora system packages retained.

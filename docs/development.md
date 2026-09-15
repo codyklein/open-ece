@@ -201,3 +201,36 @@ packages. The pipeline exercises all numerical tests without changing tolerances
 plus the existing Qt workflows and explicit UTF-8, locale, and Unicode-path checks.
 MSVC uses `/W4 /utf-8`; Linux warning and sanitizer flags are unchanged. Windows
 runtime tests execute on real hosted Windows runners, not cross-compilation.
+
+
+Validation on 2026-09-15 used Qt 6.8.3 and MSVC 2022 on the hosted Windows Server
+2022 x64 runner. [The complete CI run](https://github.com/codyklein/open-ece/actions/runs/34980745722)
+passed all eight jobs:
+
+| Configuration | Result |
+| --- | --- |
+| Fedora 44 GCC desktop / headless | 47 / 45 CTest entries passed |
+| Fedora 44 Clang desktop / headless | 47 / 45 CTest entries passed |
+| Fedora 44 Clang ASan/UBSan desktop / headless | 47 / 45 CTest entries passed |
+| Windows MSVC Debug / Release | 47 / 47 CTest entries passed; no skips |
+| Separate Windows packaged-app runner | Native window appeared; packaged Qt/Qwt/CRT modules loaded; normal exit |
+
+The local Fedora GCC/Clang desktop/headless and Clang ASan/UBSan suites also passed,
+with leak detection enabled and no sanitizer findings. Formatting and diff checks
+passed. The tests add explicit UTF-8 pi, locale independence and Unicode screenshot
+paths; no numerical tolerance or engineering implementation changed.
+
+The startup job extracts into `OpenECE fresh π path`, removes development paths
+and Qt plugin overrides, launches with an external working directory, and checks
+loaded module paths. The downloaded ZIP's SHA-256 file manifest was independently
+verified. The package contains Release artifacts, runtime notes and third-party
+notices. Windows 10/11 remain the desktop target; no manual test on those operating
+systems or on physical Windows hardware is claimed. MinGW remains unvalidated.
+
+Windows CI exposed and resolved Qwt imported-target visibility and GoogleTest
+Debug/Release filename collisions. Dependency downloads retain their pinned hashes
+and use official mirror fallbacks. Processing the full Qt source archive during
+Windows packaging stalled on the runner, so its license notices are generated once
+from the verified source archive and checked in as text; normal packaging is offline.
+The generator and archive provenance are documented in the Windows guide. App-local
+runtime and notice updates must be maintained when dependency versions change.

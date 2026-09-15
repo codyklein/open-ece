@@ -32,8 +32,9 @@ if (!(Test-Path (Join-Path $destination ([IO.Path]::GetFileName($qwtRuntime)))))
 $oldPath = $env:PATH
 try {
     $env:PATH = "$QtRoot/bin;$([IO.Path]::GetDirectoryName($qwtRuntime));$oldPath"
-    # Scan both binaries: Qwt also uses Qt PrintSupport/Concurrent.
-    Run "$QtRoot/bin/windeployqt.exe" @('--release', '--compiler-runtime', '--no-translations', '--no-opengl-sw', '--dir', $destination, "$destination/openece.exe", (Join-Path $destination ([IO.Path]::GetFileName($qwtRuntime))))
+    # Scan both binaries for their actual Qt dependencies. The raster-widget
+    # app needs neither a software OpenGL renderer nor runtime shader compilers.
+    Run "$QtRoot/bin/windeployqt.exe" @('--release', '--compiler-runtime', '--no-translations', '--no-opengl-sw', '--no-system-d3d-compiler', '--no-system-dxc-compiler', '--dir', $destination, "$destination/openece.exe", (Join-Path $destination ([IO.Path]::GetFileName($qwtRuntime))))
 } finally { $env:PATH = $oldPath }
 if (!(Test-Path "$destination/vcruntime140.dll") -or !(Test-Path "$destination/msvcp140.dll")) {
     Write-Host 'Qt deployed a redistributable installer; adding app-local Release CRT through CMake discovery.'

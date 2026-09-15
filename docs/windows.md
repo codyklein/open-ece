@@ -136,7 +136,9 @@ texts and third-party attribution are retained in the checked-in
 archive checksum. Packaging copies this notice file without network access or
 processing the full Qt source archive. No Qt implementation sources are vendored.
 The notices link corresponding sources and explain shared-library replacement.
-Translations and the unused software OpenGL renderer are excluded.
+Translations, the unused software OpenGL renderer, and optional Direct3D shader
+compilers are excluded using supported windeployqt switches; the application
+uses the ordinary raster widget canvas.
 
 When updating the pinned Qt version, maintainers can regenerate the notices with
 Python 3 and the upstream source archive (the script verifies SHA-256 and checks
