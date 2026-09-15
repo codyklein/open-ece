@@ -61,21 +61,27 @@ Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/Google
 $qtArchive = "$DependenciesRoot/downloads/qtbase-everywhere-src-6.8.3.tar.xz"
 $qtHash = '56001b905601bb9023d399f3ba780d7fa940f3e4861e496a7c490331f49e0b80'
 if (!(Test-Path $qtArchive)) {
-    Invoke-WebRequest 'https://download.qt.io/official_releases/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz' -OutFile "$qtArchive.partial"
+    Write-Host 'Downloading checksum-pinned Qt Base source for license notices...'
+    Run 'curl.exe' @('--fail', '--location', '--retry', '2', '--connect-timeout', '30', '--max-time', '300', '--speed-time', '30', '--speed-limit', '1024', '--output', "$qtArchive.partial", 'https://download.qt.io/official_releases/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz')
     if ((Get-FileHash "$qtArchive.partial").Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
     Move-Item "$qtArchive.partial" $qtArchive -Force
 }
 if ((Get-FileHash $qtArchive).Hash -ne $qtHash) { throw 'Qt source checksum mismatch.' }
+Write-Host 'Collecting Qt license and attribution files...'
 $entries = & tar.exe -tf $qtArchive
 if ($LASTEXITCODE -ne 0) { throw 'Cannot list Qt source archive.' }
 $licenseEntries = @($entries | Where-Object { $_ -match '/(LICEN[CS]E[^/]*|COPYING[^/]*|NOTICE[^/]*|README[^/]*|FTL.TXT|copyright[^/]*|qt_attribution\.json|AUTHORS[^/]*)$' -or $_ -match '/LICENSES/[^/]+$' })
 if ($licenseEntries.Count -lt 10) { throw 'Qt license archive unexpectedly incomplete.' }
-# One file at a time avoids the Windows command-line length limit.
-foreach ($entry in $licenseEntries) { Run 'tar.exe' @('-xf', $qtArchive, '-C', "$notices/Qt", $entry) }
+# A file list avoids Windows' command-line limit and decompresses the archive once.
+$licenseList = "$DependenciesRoot/downloads/qt-license-files.txt"
+$licenseEntries | Set-Content $licenseList -Encoding utf8
+Write-Host "Extracting $($licenseEntries.Count) notice files in one pass..."
+Run 'tar.exe' @('-xf', $qtArchive, '-C', "$notices/Qt", '-T', $licenseList)
 Get-ChildItem $destination -Recurse -File | ForEach-Object {
     "$((Get-FileHash $_.FullName).Hash.ToLowerInvariant())  $([IO.Path]::GetRelativePath($destination, $_.FullName).Replace('\', '/'))"
 } | Set-Content "$destination/SHA256SUMS.txt"
 $zip = Join-Path $OutputDir "$name.zip"
+Write-Host "Compressing $name..."
 Compress-Archive -Path $destination -DestinationPath $zip -Force
 Write-Host "Created $zip"
 Get-ChildItem $destination -Recurse -File | Select-Object FullName, Length
