@@ -24,6 +24,11 @@ if(OPENECE_BUILD_GUI)
     target_link_libraries(openece_digital_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
     add_test(NAME digital_gui_workflow COMMAND openece_digital_gui_tests)
     set_tests_properties(digital_gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    add_executable(openece_timing_gui_tests timing_gui_test.cpp)
+    set_target_properties(openece_timing_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_timing_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    add_test(NAME timing_gui_workflow COMMAND openece_timing_gui_tests)
+    set_tests_properties(timing_gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
     add_executable(openece_phase_tests phase_input_test.cpp)
     set_target_properties(openece_phase_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_phase_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -33,6 +38,6 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(gui_workflow digital_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(gui_workflow digital_gui_workflow timing_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()

@@ -140,8 +140,8 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         "gates, which can include downstream gates outside the cycle.</p>"
         "<p>Desktop limits: 8 inputs, 64 gates, 16 outputs, 8 pins per gate. "
         "Core limits: 64 inputs, 4096 gates, 256 outputs, 16384 references; tables at most "
-        "10 inputs / 1024 rows. No saving, constants, buses, Unknown/High-Z, clocks, "
-        "sequential logic, timing simulation or minimization in v0.4.</p>");
+        "10 inputs / 1024 rows. Timing and storage live in the separate Timing / Sequential tab. "
+        "No saving, constants, buses, Unknown/High-Z or minimization.</p>");
     right->addWidget(help, 1);
     for (auto* label : content->findChildren<QLabel*>())
         label->setWordWrap(true);
