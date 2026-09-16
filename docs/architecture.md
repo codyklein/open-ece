@@ -7,6 +7,8 @@ flowchart TD
     App[Desktop executable] --> UI[Internal workbench library]
     UI --> Signals[signals]
     UI --> DSP[dsp]
+    UI --> Digital[digital: standard library only]
+    DigitalTests[Logical GoogleTest tests] --> Digital
     UI --> Qt[Qt Widgets and Qwt]
     Signals --> Core[core]
     DSP --> Core
@@ -23,7 +25,7 @@ does not even search for Qt or Qwt.
 GUI targets use `QT_NO_KEYWORDS` and Qt's explicit `Q_SIGNALS`/`Q_SLOTS` spellings.
 This prevents Qt's optional `signals` macro from colliding with the C++ domain namespace.
 
-Three small engineering targets are slightly more CMake work than one monolithic
+Four small engineering targets are slightly more CMake work than one monolithic
 library, but make dependency direction visible and prevent accidental GUI coupling.
 Namespaced public headers and target-level include paths provide stable boundaries
 without claiming a stable ABI in v0.1. C++20 provides `std::span`, bit utilities,
@@ -107,7 +109,7 @@ Periodic Hann and singleton behavior are explicit numerical contracts in `numeri
 There is no window class hierarchy, plugin interface, or new dependency. The coefficient
 function makes analytical testing possible without involving the FFT or GUI.
 
-Phase-unit selection belongs to `MainWindow`. A `QLineEdit` retains pending and
+Phase-unit selection belongs to `SignalsDspView`. A `QLineEdit` retains pending and
 invalid text; `phase_input` owns the bounded decimal/pi grammar and conversion
 formatting within the GUI module. Generate and unit switching use the same parser.
 A previous-unit flag lets text be parsed before changing the selector's unit; on
@@ -145,7 +147,7 @@ of `fft()` and `amplitude_spectrum()`. This supports any allowed grid length and
 avoids confusing signal amplitude scaling with filter gain.
 
 Full output increases the observation length; each branch uses its own unchanged
-`amplitude_spectrum` call and metadata. `MainWindow` coordinates local owned values
+`amplitude_spectrum` call and metadata. `SignalsDspView` coordinates local owned values
 and passes copied samples to `PlotWidget`. The plot adapter lazily owns a second
 curve for comparison, shares axes across both datasets, and accepts independent
 frequency grids. Filter Off clears/hides comparison data and restores the existing
@@ -160,6 +162,34 @@ response points to 1025, and full output to 65,536. Calculations remain synchron
 with temporary buffers and Qwt copies. These bounds are not latency guarantees.
 A worker/cancellation path, optimized convolution, and response caching should
 follow measurements and actual workload needs, not precede them.
+
+## Digital Logic and domain composition (v0.4)
+
+`OpenECE::digital` is independent of all signal libraries and Qt. Its editable
+`CircuitDefinition` owns primary inputs, gates and output references. `Circuit`
+compiles an owned validated snapshot with stable node IDs, resolved indices and
+an iterative deterministic topological order. Evaluation and truth tables require
+that snapshot. The draft cannot mutate a compiled circuit. Results own values in
+declaration order; spans are only borrowed during calls. See [digital-logic.md](digital-logic.md)
+for the API, exact naming rules, gate semantics, cycle diagnostics and limits.
+
+`MainWindow` now only composes a sidebar and persistent stacked domain views.
+`SignalsDspView` contains the previous signal controls, generation, plots and help;
+its calculation path is unchanged. `DigitalLogicView` owns a possibly invalid draft
+and input assignments. Qt parents own each page and its widgets. Each explicit
+Evaluate/Table action constructs a local validated circuit; failed validation
+leaves the draft visible while clearing results. This small bounded editor does
+not need a separate generic controller or shared simulation hierarchy. A future
+schematic editor can produce the same core definition without changing evaluation.
+
+Two-state values and one driver per source fit v0.4. Explicit references support
+fan-out without a net-resolution layer. Cached topological ordering rejects all
+cycles rather than trying fixed points; diagnostics report blocked gates without
+claiming exact cycle membership. Truth tables cap inputs before exponential
+arithmetic and retain only primary inputs/outputs. Name and graph bounds are
+centralized in the digital core; the GUI imposes smaller bounds for synchronous use.
+No scheduler, bus representation, four-state semantics, or sequential placeholders
+are introduced. Timing and sequential simulation will need their own actual design.
 
 ## Extension rule
 

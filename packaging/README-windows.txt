@@ -1,4 +1,4 @@
-OpenECE v0.3.1 - Windows x86_64
+OpenECE v0.4.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -20,3 +20,7 @@ App-local dependencies do not update themselves. Obtain a rebuilt OpenECE ZIP
 when dependency security updates are incorporated. Numerical behavior is the
 same as v0.3: full causal FIR convolution, visible uncompensated group delay,
 and unchanged FFT/window normalization. No new engineering features are added.
+
+Use the sidebar to switch between Signals / DSP and Digital Logic.
+Digital Logic starts with an editable half-adder; Evaluate shows settled 0/1
+values and Generate truth table lists every input combination. Drafts are not saved.

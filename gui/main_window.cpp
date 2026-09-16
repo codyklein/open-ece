@@ -1,8 +1,8 @@
 #include "main_window.hpp"
+#include "digital_logic_view.hpp"
 #include "signals_dsp_view.hpp"
 
 #include <QHBoxLayout>
-#include <QLabel>
 #include <QListWidget>
 #include <QStackedWidget>
 
@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     auto* pages = new QStackedWidget(central);
     pages->setObjectName("domain_pages");
     pages->addWidget(new SignalsDspView(pages));
-    pages->addWidget(new QLabel("Digital Logic", pages));
+    pages->addWidget(new DigitalLogicView(pages));
     layout->addWidget(navigation);
     layout->addWidget(pages, 1);
     connect(navigation, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);

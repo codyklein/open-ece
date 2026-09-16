@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -151,7 +151,7 @@ commands above and in README; no new validation tooling is required.
 
 ## Understand these before the next feature
 
-- Trace a button click through `MainWindow::generate`, `generate_sine`,
+- Trace a button click through `SignalsDspView::generate`, `generate_sine`,
   `amplitude_spectrum`, and the Qwt adapter. Identify every owned buffer and copy.
 - Explain how `window_coefficients(Window, L)` stays independent of Qt and why the
   window length is the original L rather than padded N. There is no window-aware FFT.
@@ -162,7 +162,7 @@ commands above and in README; no new validation tooling is required.
   reduce distant sidelobes while increasing some bins close to the tone.
 - Derive S=sum(w), G=S/L, endpoint scaling, and why amplitude correction is different
   from power/PSD normalization. Explain the limits of correcting off-bin or short records.
-- Read `MainWindow::change_phase_unit()`: pending text is parsed with the old
+- Read `SignalsDspView::change_phase_unit()`: pending text is parsed with the old
   unit and converted with 17 significant digits. Qt signals are blocked during text
   updates and failed selector changes so rollback does not trigger another conversion.
 - Find which tests catch a symmetric Hann denominator, gain based on padded N,
@@ -187,10 +187,10 @@ GUI calculations remain synchronous and capped at 65,536 samples. Phase conversi
 have floating-point roundoff; the GUI's previous-unit flag must stay aligned
 with its selector. These concerns do not require a generic window or units framework.
 
-FIR/convolution composition is implemented in v0.3. No later milestone is started.
+FIR/convolution composition was implemented in v0.3; v0.4 adds the independent digital domain.
 The generator still produces a single sine; two-tone composition exists only in
 numerical regression data. Convolution/response are direct algorithms with explicit
-work caps, and MainWindow still coordinates synchronous local values. Future
+work caps, and SignalsDspView coordinates synchronous local values. Future
 performance/state work should follow a measured need.
 
 ## v0.3.1 portability validation
@@ -234,3 +234,32 @@ Windows packaging stalled on the runner, so its license notices are generated on
 from the verified source archive and checked in as text; normal packaging is offline.
 The generator and archive provenance are documented in the Windows guide. App-local
 runtime and notice updates must be maintained when dependency versions change.
+
+## v0.4 Digital Logic development
+
+The headless suite includes a separate `openece_digital_tests` binary linked only
+to `OpenECE::digital` and GoogleTest. Its 13 tests exhaustively check each gate
+through five pins, full-adder results against integer addition, a mux against
+selection, tied pins, fan-out, forward references, declaration ordering, snapshot
+ownership, exact names, invalid data, cycle diagnostics and inclusive limits.
+Truth-table rejection includes a 64-input circuit to catch unsafe exponential shifts.
+
+The existing Signals/DSP workflow suite is retained, with a new domain-persistence
+check. `digital_gui_workflow` contains seven functional methods for evaluation,
+truth-table rows, draft invalidation, missing-source preservation, cycles, NOT
+arity, Unicode/duplicate names, empty drafts, recovery and all GUI count limits.
+Qt tables defer deletion of removed cell widgets; tests process those deferred
+deletions between button actions, as the normal event loop does. Assertions are
+not weakened for Windows. All GUI suites run with the existing offscreen platform.
+
+To inspect the digital view after numerical tests pass:
+
+```bash
+QT_QPA_PLATFORM=offscreen OPENECE_DIGITAL_SCREENSHOT="$PWD/build/dev/digital.png" ./build/dev/tests/openece_digital_gui_tests halfAdderEvaluationTruthTableAndDomainPersistence
+```
+
+Trace a half-adder draft through validation, source resolution, Kahn's queue and
+owned output vectors. Explain why declaration order can differ from evaluation
+order, why a blocked gate need not belong to a cycle, and why three-input XNOR is
+not all-equal. Read [the contracts](digital-logic.md) before changing the model.
+The editable GUI draft and immutable validated circuit are deliberately distinct.
