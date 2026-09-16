@@ -3,14 +3,18 @@
 An extensible desktop engineering workbench for learning and connecting Electrical
 and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
-starts with one working vertical slice: **sine generator → optional FIR → FFT → comparison plots**.
+provides two domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
+**Digital Logic** (combinational circuits → evaluation → truth tables).
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.3.1 Windows portability and packaging
+## Current status: v0.4 combinational Digital Logic
 
+- Independent two-state digital core: seven gate kinds, validated acyclic circuits, bounded truth tables.
+- Digital Logic editor with input toggles, gate/source selectors, outputs, and an editable half-adder.
+- Persistent domain navigation; Windows portability and packaging retained.
 - Qt 6 desktop application with amplitude, frequency, phase, sample-rate, and duration controls.
 - Original/filtered time-domain and one-sided peak-amplitude spectrum comparisons; rectangle zoom.
 - Full causal convolution, owned FIR coefficients, and a Hamming-windowed sinc low-pass designer.
@@ -22,7 +26,8 @@ general simulator, real-time system, or validated measurement instrument.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
-No circuit, communications, hardware, persistence, or plugin features are implemented.
+No analog circuit analysis, sequential/timing logic, communications, hardware,
+persistence, or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
 ## Dependencies and Fedora setup
@@ -147,14 +152,31 @@ CTest runs the GUI integration test using Qt's offscreen platform automatically;
 normal application launches use the desktop. Compilation databases are written
 into each build directory. Build artifacts are ignored by Git.
 
+## Digital Logic
+
+Choose **Digital Logic** in the sidebar. The initial half-adder has A/B input
+checkboxes, XOR Sum and AND Carry. Edit names, add/remove nodes, select a gate to
+configure its type and pins, and connect named outputs to source IDs. Choose
+**Evaluate** or **Generate truth table**. Invalid drafts stay editable; missing
+sources and cycles cause explicit errors. Edits clear stale digital results.
+Switching domains preserves both pages' state.
+
+NOT takes one pin; AND/OR/NAND/NOR/XOR/XNOR take one or more. XOR means odd parity,
+XNOR even parity. Truth-table columns follow declaration order; rows count upward
+in binary with the first input most significant. The desktop allows 8 inputs,
+64 gates, 16 outputs and 8 pins per gate. The independent core has larger explicit
+limits and permits tables through 10 inputs (1024 rows). This is settled two-state
+combinational evaluation, without timing, feedback or sequential elements.
+See [Digital Logic conventions and API](docs/digital-logic.md).
+
 ## Windows: build, test, run and package
 
-The v0.3.1 target is Windows 10 (1809+) / Windows 11 x86_64, Visual Studio 2022,
+The Windows target remains Windows 10 (1809+) / Windows 11 x86_64, Visual Studio 2022,
 and Qt 6.8.3. Follow [the Windows guide](docs/windows.md) for prerequisites,
 checksum-pinned Qwt/GoogleTest bootstrap, explicit Debug/Release presets, and
 portable ZIP creation. GitHub Actions uses Fedora 44 for GCC/Clang and actual
 Windows MSVC runners for tests and packaged startup. MinGW is not validated.
-No DSP behavior or public engineering API changes in this portability milestone.
+The v0.4 digital module adds an independent API; existing DSP behavior and APIs are unchanged.
 
 ## Architecture
 
@@ -162,13 +184,15 @@ No DSP behavior or public engineering API changes in this portability milestone.
 core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
 dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
-gui/        Qt Widgets + Qwt; consumes signals and dsp
+digital/    two-state gates, validated combinational circuits and truth tables (stdlib only)
+gui/        domain navigation, SignalsDspView, DigitalLogicView; Qt Widgets + Qwt
 tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```
 
 Public engineering headers live under each library's `include/openece/` tree.
-The CMake targets are `OpenECE::core`, `OpenECE::signals`, and `OpenECE::dsp`.
+The CMake targets are `OpenECE::core`, `OpenECE::signals`, `OpenECE::dsp`, and
+`OpenECE::digital`. Digital Logic does not depend on the sampled-signal core.
 Neither signals nor DSP depends on the other. The GUI composes them, while `core`
 depends only on the C++ standard library. `openece_workbench` is an internal GUI
 library shared by the application executable and its integration test.

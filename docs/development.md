@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -151,7 +151,7 @@ commands above and in README; no new validation tooling is required.
 
 ## Understand these before the next feature
 
-- Trace a button click through `MainWindow::generate`, `generate_sine`,
+- Trace a button click through `SignalsDspView::generate`, `generate_sine`,
   `amplitude_spectrum`, and the Qwt adapter. Identify every owned buffer and copy.
 - Explain how `window_coefficients(Window, L)` stays independent of Qt and why the
   window length is the original L rather than padded N. There is no window-aware FFT.
@@ -162,7 +162,7 @@ commands above and in README; no new validation tooling is required.
   reduce distant sidelobes while increasing some bins close to the tone.
 - Derive S=sum(w), G=S/L, endpoint scaling, and why amplitude correction is different
   from power/PSD normalization. Explain the limits of correcting off-bin or short records.
-- Read `MainWindow::change_phase_unit()`: pending text is parsed with the old
+- Read `SignalsDspView::change_phase_unit()`: pending text is parsed with the old
   unit and converted with 17 significant digits. Qt signals are blocked during text
   updates and failed selector changes so rollback does not trigger another conversion.
 - Find which tests catch a symmetric Hann denominator, gain based on padded N,
@@ -187,10 +187,10 @@ GUI calculations remain synchronous and capped at 65,536 samples. Phase conversi
 have floating-point roundoff; the GUI's previous-unit flag must stay aligned
 with its selector. These concerns do not require a generic window or units framework.
 
-FIR/convolution composition is implemented in v0.3. No later milestone is started.
+FIR/convolution composition was implemented in v0.3; v0.4 adds the independent digital domain.
 The generator still produces a single sine; two-tone composition exists only in
 numerical regression data. Convolution/response are direct algorithms with explicit
-work caps, and MainWindow still coordinates synchronous local values. Future
+work caps, and SignalsDspView coordinates synchronous local values. Future
 performance/state work should follow a measured need.
 
 ## v0.3.1 portability validation
@@ -234,3 +234,66 @@ Windows packaging stalled on the runner, so its license notices are generated on
 from the verified source archive and checked in as text; normal packaging is offline.
 The generator and archive provenance are documented in the Windows guide. App-local
 runtime and notice updates must be maintained when dependency versions change.
+
+## v0.4 Digital Logic development
+
+The headless suite includes a separate `openece_digital_tests` binary linked only
+to `OpenECE::digital` and GoogleTest. Its 13 tests exhaustively check each gate
+through five pins, full-adder results against integer addition, a mux against
+selection, tied pins, fan-out, forward references, declaration ordering, snapshot
+ownership, exact names, invalid data, cycle diagnostics and inclusive limits.
+Truth-table rejection includes a 64-input circuit to catch unsafe exponential shifts.
+
+The existing Signals/DSP workflow suite is retained, with a new domain-persistence
+check. `digital_gui_workflow` contains seven functional methods for evaluation,
+truth-table rows, draft invalidation, missing-source preservation, cycles, NOT
+arity, Unicode/duplicate names, empty drafts, recovery and all GUI count limits.
+Qt tables defer deletion of removed cell widgets; tests process those deferred
+deletions between button actions, as the normal event loop does. Assertions are
+not weakened for Windows. All GUI suites run with the existing offscreen platform.
+
+To inspect the digital view after numerical tests pass:
+
+```bash
+QT_QPA_PLATFORM=offscreen OPENECE_DIGITAL_SCREENSHOT="$PWD/build/dev/digital.png" ./build/dev/tests/openece_digital_gui_tests halfAdderEvaluationTruthTableAndDomainPersistence
+```
+
+Trace a half-adder draft through validation, source resolution, Kahn's queue and
+owned output vectors. Explain why declaration order can differ from evaluation
+order, why a blocked gate need not belong to a cycle, and why three-input XNOR is
+not all-equal. Read [the contracts](digital-logic.md) before changing the model.
+The editable GUI draft and immutable validated circuit are deliberately distinct.
+
+### v0.4 validation results
+
+The [implementation CI run](https://github.com/codyklein/open-ece/actions/runs/35039610043)
+passed all eight jobs on September 15, 2026 (local development date):
+
+| Configuration | Result |
+| --- | --- |
+| Fedora 44 GCC desktop / headless | 61 / 58 CTest entries passed |
+| Fedora 44 Clang desktop / headless | 61 / 58 CTest entries passed |
+| Fedora 44 Clang ASan/UBSan desktop / headless | 61 / 58 CTest entries passed |
+| Windows Server 2022, MSVC 2022, Qt 6.8.3 Debug / Release | 61 / 61 passed; zero failures, skips or disabled tests |
+| Fresh Windows runner, packaged startup | Native window opened; packaged Qt/Qwt/CRT modules verified; normal exit |
+
+The local Fedora six-configuration matrix also passed, with leak detection enabled
+and no sanitizer findings. GCC/Clang builds, clang-format and diff checks were clean.
+The rendered Digital Logic page was inspected with the half-adder and its truth table.
+The Signals/DSP extraction was compared mechanically with the original implementation:
+only class/base/central-layout changes and an explicit tab object name were introduced;
+all numerical processing and existing test assertions remain unchanged.
+
+The Release artifact is `OpenECE-v0.4.0-windows-x86_64`, containing the same-named
+portable ZIP. Startup uses the existing fresh Unicode/space-containing extraction
+path and sanitized environment, without a Qt SDK or development paths. The existing
+runtime dependency, notice and checksum deployment process is unchanged. This is
+actual hosted Windows execution, not cross-compilation. Windows 10/11 physical
+desktop, high-DPI and accessibility checks remain manual work; MinGW is unvalidated.
+
+Remaining digital technical debt is bounded and explicit: calculations are synchronous,
+GUI drafts live in the view, structural edits rebuild small tables, and errors use
+exception text rather than a structured diagnostic API. A future editor may warrant
+a shared draft model and richer diagnostics. No scheduler or simulation framework
+is needed to address the current use case. Saving, undo/redo, schematic editing and
+sequential/timing behavior are outside v0.4, not partially implemented features.

@@ -4,6 +4,10 @@ add_executable(openece_tests signal_test.cpp fft_test.cpp window_test.cpp convol
 target_link_libraries(openece_tests PRIVATE OpenECE::signals OpenECE::dsp GTest::gtest_main openece_options)
 gtest_discover_tests(openece_tests DISCOVERY_MODE PRE_TEST)
 
+add_executable(openece_digital_tests digital_test.cpp)
+target_link_libraries(openece_digital_tests PRIVATE OpenECE::digital GTest::gtest_main openece_options)
+gtest_discover_tests(openece_digital_tests DISCOVERY_MODE PRE_TEST)
+
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     add_executable(openece_gui_tests gui_test.cpp)
@@ -11,6 +15,11 @@ if(OPENECE_BUILD_GUI)
     target_link_libraries(openece_gui_tests PRIVATE openece_workbench OpenECE::dsp Qt6::Test openece_options)
     add_test(NAME gui_workflow COMMAND openece_gui_tests)
     set_tests_properties(gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    add_executable(openece_digital_gui_tests digital_gui_test.cpp)
+    set_target_properties(openece_digital_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_digital_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    add_test(NAME digital_gui_workflow COMMAND openece_digital_gui_tests)
+    set_tests_properties(digital_gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
     add_executable(openece_phase_tests phase_input_test.cpp)
     set_target_properties(openece_phase_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_phase_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -20,6 +29,6 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(gui_workflow digital_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()

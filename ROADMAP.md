@@ -55,14 +55,20 @@ design are outside this milestone.
 - Release ZIP with Qt/Qwt/CRT runtime deployment and independent Windows startup check.
 - Separate Windows build/package documentation; unchanged engineering APIs and numerics.
 
-## v0.4 — Reproducible experiments
+## v0.4 — Combinational Digital Logic (implemented)
 
-Introduce a small versioned experiment format, save/load parameters, and data
-import/export with explicit sample-rate and unit metadata. Separate experiment
-state from widgets when persistence supplies a concrete reason to do so.
+- [x] Qt-independent two-state gate semantics and owning circuit definitions.
+- [x] Validated snapshots, stable IDs, forward references, deterministic topological evaluation.
+- [x] Explicit malformed-connection/cycle errors and bounded deterministic truth tables.
+- [x] Persistent Signals / DSP and Digital Logic views; minimal Signals extraction.
+- [x] Editable half-adder, node/pin selectors, toggles, outputs and truth-table GUI.
+- [x] Independent logical tests plus GUI draft/error-recovery workflows.
+- [x] Existing Fedora/Windows build, test and portable runtime workflows retained.
 
-Acceptance: round trips and malformed files tested; saved results identify all
-parameters needed to reproduce the analysis. Avoid silent unit conversions.
+No propagation delay, clocks, latches, flip-flops, FSMs, buses, Unknown/High-Z,
+constants, minimization, Karnaugh maps or HDL are included. These need separate
+requirements and correctness contracts. Experiment persistence is deferred from
+the earlier roadmap proposal; no save/load work is included in v0.4.
 
 ## Later — Expand only through useful connections
 
@@ -73,8 +79,10 @@ parameters needed to reproduce the analysis. Avoid silent unit conversions.
 3. Explore circuit analysis with established linear algebra; expose an appropriate
    response representation to the signals/DSP tools instead of coupling GUIs.
 4. Add communications models and simulated demodulation before live SDR input.
-5. Consider digital logic and FPGA/HDL integration around a specific interoperable
-   experiment, using existing toolchains where sensible.
+5. Extend combinational logic only through separately designed timing/sequential
+   requirements; consider FPGA/HDL interoperability when a concrete experiment needs it.
+6. Add versioned experiment persistence when round-trip and malformed-file contracts
+   are designed, with explicit sample-rate and unit metadata.
 
 A runtime plugin ABI, generic simulation scheduler, node editor, hardware drivers,
 and custom linear algebra are deliberately absent from the foundation. Each needs
