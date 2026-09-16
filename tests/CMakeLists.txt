@@ -4,6 +4,10 @@ add_executable(openece_tests signal_test.cpp fft_test.cpp window_test.cpp convol
 target_link_libraries(openece_tests PRIVATE OpenECE::signals OpenECE::dsp GTest::gtest_main openece_options)
 gtest_discover_tests(openece_tests DISCOVERY_MODE PRE_TEST)
 
+add_executable(openece_digital_tests digital_test.cpp)
+target_link_libraries(openece_digital_tests PRIVATE OpenECE::digital GTest::gtest_main openece_options)
+gtest_discover_tests(openece_digital_tests DISCOVERY_MODE PRE_TEST)
+
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     add_executable(openece_gui_tests gui_test.cpp)
