@@ -342,3 +342,176 @@ TEST(Timing, AgreesWithIndependentDiscreteTickReference) {
         EXPECT_EQ(simulate(def, r).traces, expected) << "trial " << trial;
     }
 }
+
+namespace {
+t::TimedCircuitDefinition storage(t::Element element) {
+    return {{{{1}, "D_or_S"}, {{2}, "clock_enable_or_R"}}, {element}, {{"Q", {3}}}};
+}
+t::SimulationRequest storage_request(std::uint64_t horizon = 30) {
+    auto r = request(horizon);
+    r.initial_inputs = {low, low};
+    r.initial_storage = {{{3}, low}};
+    r.observed = {{1}, {2}, {3}};
+    return r;
+}
+} // namespace
+TEST(TimingStorage, FlipFlopSamplesPreBatchDataAndPreservesCapturedPulses) {
+    const auto def = storage(t::DFlipFlop{{3}, {1}, {2}, t::Edge::Rising, {5}});
+    auto r = storage_request();
+    r.changes = {{{1}, {1}, high}, {{2}, {2}, high}, {{3}, {1}, low},   {{3}, {2}, low},
+                 {{4}, {2}, high}, {{8}, {2}, low},  {{10}, {1}, high}, {{10}, {2}, high}};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {7, high}, {9, low}}));
+    // No invented initial edge, even when clock is initially high.
+    r = storage_request();
+    r.initial_inputs = {high, high};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}}));
+    auto falling = storage(t::DFlipFlop{{3}, {1}, {2}, t::Edge::Falling, {2}});
+    r.changes = {{{5}, {2}, low}};
+    EXPECT_EQ(simulate(falling, r).traces[2].transitions, changes({{0, low}, {7, high}}));
+}
+TEST(TimingStorage, LatchTracksOpenHoldsClosedAndSamplesBeforeClosingBatch) {
+    const auto def = storage(t::DLatch{{3}, {1}, {2}, {5}});
+    auto r = storage_request();
+    r.changes = {{{1}, {2}, high}, {{2}, {1}, high}, {{3}, {1}, low},
+                 {{4}, {1}, high}, {{4}, {2}, low},  {{10}, {1}, low}};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {7, high}, {8, low}}));
+    r = storage_request();
+    r.initial_inputs = {high, high};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {5, high}}));
+    r.initial_inputs = {high, low};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}}));
+}
+TEST(TimingStorage, SrSetResetHoldAndForbiddenStateAreExplicit) {
+    const auto def = storage(t::SrLatch{{3}, {1}, {2}, {2}});
+    auto r = storage_request();
+    r.changes = {{{1}, {1}, high}, {{2}, {1}, low}, {{8}, {2}, high}, {{9}, {2}, low}};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {3, high}, {10, low}}));
+    r.initial_inputs = {high, high};
+    EXPECT_THROW(simulate(def, r), t::SimulationError);
+    r = storage_request();
+    r.changes = {{{5}, {1}, high}, {{5}, {2}, high}};
+    t::Simulation s(t::TimedCircuit(def), r);
+    try {
+        s.run();
+        FAIL();
+    } catch (const t::SimulationError& e) {
+        EXPECT_EQ(e.at(), t::Time{5});
+        EXPECT_EQ(e.node(), std::optional<d::NodeId>{{3}});
+    }
+    EXPECT_EQ(s.status(), t::StepStatus::Failed);
+    EXPECT_THROW(s.snapshot(), std::logic_error);
+    r = storage_request();
+    r.initial_inputs = {high, low};
+    // Simultaneous switch from set to reset never passes through forbidden 11.
+    r.changes = {{{4}, {1}, low}, {{4}, {2}, high}};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {2, high}, {6, low}}));
+}
+TEST(TimingStorage, ClockContractAndLazyScheduling) {
+    for (auto initial : {low, high}) {
+        auto def = buffer();
+        def.elements.clear();
+        def.outputs = {{"clock", {1}}};
+        auto r = request(12);
+        r.observed = {{1}};
+        r.initial_inputs = {initial};
+        r.clocks = {{{1}, {2}, {3}, {2}}};
+        r.work.queued_events = 1;
+        auto expected =
+            initial == low
+                ? changes({{0, low}, {2, high}, {5, low}, {7, high}, {10, low}, {12, high}})
+                : changes({{0, high}, {2, low}, {4, high}, {7, low}, {9, high}, {12, low}});
+        EXPECT_EQ(simulate(def, r).traces[0].transitions, expected);
+    }
+    auto r = request();
+    r.clocks = {{{1}, {1}, {1}, {1}}, {{1}, {2}, {1}, {1}}};
+    EXPECT_THROW(simulate(buffer(), r), std::length_error);
+    r.clocks.resize(1);
+    r.changes = {{{2}, {1}, high}};
+    EXPECT_THROW(simulate(buffer(), r), std::invalid_argument);
+    r.changes.clear();
+    for (auto invalid :
+         {t::Clock{{2}, {1}, {1}, {1}}, t::Clock{{1}, {0}, {1}, {1}}, t::Clock{{1}, {31}, {1}, {1}},
+          t::Clock{{1}, {1}, {0}, {1}}, t::Clock{{1}, {1}, {1}, {0}},
+          t::Clock{{1}, {1}, {t::limits::time_ticks + 1}, {1}}}) {
+        r.clocks = {invalid};
+        EXPECT_THROW(simulate(buffer(), r), std::invalid_argument);
+    }
+    auto def = buffer();
+    def.inputs.push_back({{4}, "B"});
+    r.initial_inputs = {low, low};
+    r.clocks = {{{1}, {1}, {1}, {1}}, {{1}, {2}, {1}, {1}}};
+    EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    r.clocks = {{{1}, {1}, {1}, {1}}, {{4}, {1}, {1}, {1}}};
+    r.work.queued_events = 2;
+    r.horizon = {1};
+    EXPECT_NO_THROW(simulate(def, r)); // Both due entries are removed before new events.
+}
+TEST(TimingStorage, FeedbackThroughStorageAndSimultaneousShiftRegister) {
+    auto def = storage(t::DFlipFlop{{3}, {4}, {2}, t::Edge::Rising, {1}});
+    def.elements.insert(def.elements.begin(), t::DelayedGate{{{4}, d::GateKind::Not, {{3}}}, {1}});
+    auto r = storage_request(22);
+    r.clocks = {{{2}, {5}, {5}, {5}}};
+    EXPECT_EQ(simulate(def, r).traces[2].transitions, changes({{0, low}, {6, high}, {16, low}}));
+    def.elements.push_back(t::DelayedGate{{{5}, d::GateKind::Not, {{5}}}, {1}});
+    EXPECT_THROW(t::TimedCircuit{def}, std::invalid_argument);
+    def = storage(t::DFlipFlop{{3}, {1}, {2}, t::Edge::Rising, {5}});
+    def.elements.push_back(t::DFlipFlop{{4}, {3}, {2}, t::Edge::Rising, {1}});
+    r = storage_request(20);
+    r.initial_storage.push_back({{4}, low});
+    r.observed = {{3}, {4}};
+    r.initial_inputs = {high, low};
+    r.clocks = {{{2}, {5}, {2}, {3}}};
+    auto first = simulate(def, r);
+    EXPECT_EQ(first.traces[0].transitions, changes({{0, low}, {10, high}}));
+    // Q1 arrives at same time as second rising edge: stage 2 sees old Q1.
+    EXPECT_EQ(first.traces[1].transitions, changes({{0, low}, {16, high}}));
+    std::reverse(def.elements.begin(), def.elements.end());
+    EXPECT_EQ(simulate(def, r).traces, first.traces);
+}
+TEST(TimingStorage, ValidatesSharedNamespaceInitialStatesAndFeedbackWorkLimit) {
+    auto def = storage(t::DLatch{{3}, {1}, {2}, {1}});
+    auto r = storage_request();
+    r.initial_storage.clear();
+    EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    for (auto id : {1U, 99U}) {
+        r.initial_storage = {{{id}, low}};
+        EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    }
+    r.initial_storage = {{{3}, static_cast<LogicValue>(9)}};
+    EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    def.elements.push_back(t::DelayedGate{{{4}, d::GateKind::Not, {{3}}}, {1}});
+    r.initial_storage = {{{4}, low}};
+    EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    r.initial_storage = {{{3}, low}, {{3}, low}};
+    EXPECT_THROW(simulate(def, r), std::invalid_argument);
+    std::get<t::DLatch>(def.elements[0]).data = {4};
+    r = storage_request();
+    r.initial_inputs = {low, high};
+    r.work.processed_events = 5;
+    EXPECT_THROW(simulate(def, r),
+                 t::SimulationError); // Legitimate storage feedback may oscillate.
+    std::get<t::DLatch>(def.elements[0]).id = {1};
+    EXPECT_THROW(t::TimedCircuit{def}, std::invalid_argument);
+    def = storage(t::DFlipFlop{{3}, {1}, {2}, static_cast<t::Edge>(9), {1}});
+    EXPECT_THROW(t::TimedCircuit{def}, std::invalid_argument);
+}
+TEST(TimedCircuit, CentralizedResourceBoundaries) {
+    auto def = buffer();
+    for (std::size_t i = 1; i < t::limits::inputs; ++i)
+        def.inputs.push_back({{static_cast<std::uint32_t>(10 + i)}, "I" + std::to_string(i)});
+    EXPECT_NO_THROW(t::TimedCircuit{def});
+    def.inputs.push_back({{999}, "excess"});
+    EXPECT_THROW(t::TimedCircuit{def}, std::length_error);
+    def = buffer();
+    auto& pins = std::get<t::DelayedGate>(def.elements[0]).gate.inputs;
+    pins.assign(t::limits::connections - 1, {1});
+    EXPECT_NO_THROW(t::TimedCircuit{def});
+    pins.push_back({1});
+    EXPECT_THROW(t::TimedCircuit{def}, std::length_error);
+    auto r = request();
+    r.changes.resize(t::limits::stimuli + 1);
+    EXPECT_THROW(simulate(buffer(), r), std::length_error);
+    r = request();
+    r.observed.resize(t::limits::observed_nodes + 1);
+    EXPECT_THROW(simulate(buffer(), r), std::length_error);
+}

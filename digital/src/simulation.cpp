@@ -164,10 +164,35 @@ void Simulation::react(std::size_t i, const std::vector<LogicValue>& before, boo
         }
         return;
     }
-    // Implemented in the storage checkpoint; never substitute an invented value.
-    (void)before;
-    (void)initial;
-    throw std::invalid_argument("Storage simulation is not yet enabled");
+    charge_pins(circuit_.sources_[i].size());
+    const auto a = circuit_.sources_[i][0], b = circuit_.sources_[i][1];
+    auto target = stored_[i];
+    if (std::holds_alternative<SrLatch>(element)) {
+        if (high(visible_[a]) && high(visible_[b]))
+            throw SimulationError(now_, element_id(element), "Forbidden SR latch condition S=R=1");
+        if (high(visible_[a]))
+            target = LogicValue::one;
+        else if (high(visible_[b]))
+            target = LogicValue::zero;
+    } else if (std::holds_alternative<DLatch>(element)) {
+        if (high(visible_[b]))
+            target = visible_[a];
+        else if (!initial && high(before[b]))
+            target = before[a];
+    } else {
+        const auto& ff = std::get<DFlipFlop>(element);
+        if (initial || before[b] == visible_[b])
+            return;
+        const bool rising = !high(before[b]) && high(visible_[b]);
+        if (rising != (ff.edge == Edge::Rising))
+            return;
+        target = before[a]; // Data changing in the same batch is not captured.
+    }
+    if (target == stored_[i])
+        return;
+    stored_[i] = target; // Captured state is independent of the delayed visible Q.
+    if (const auto due = delivery_time(element_delay(element)))
+        enqueue(*due, node, target); // Never cancel previously captured storage deliveries.
 }
 void Simulation::record() {
     for (std::size_t i = 0; i < traces_.size(); ++i) {
