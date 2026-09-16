@@ -19,7 +19,8 @@ https://github.com/codyklein/open-ece/blob/main/docs/windows.md
 App-local dependencies do not update themselves. Obtain a rebuilt OpenECE ZIP
 when dependency security updates are incorporated. Numerical behavior is the
 same as v0.3: full causal FIR convolution, visible uncompensated group delay,
-and unchanged FFT/window normalization. No new engineering features are added.
+and unchanged FFT/window normalization. Digital Logic is a separate two-state
+combinational domain; it does not change the sampled-signal representation.
 
 Use the sidebar to switch between Signals / DSP and Digital Logic.
 Digital Logic starts with an editable half-adder; Evaluate shows settled 0/1

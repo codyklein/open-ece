@@ -263,3 +263,37 @@ owned output vectors. Explain why declaration order can differ from evaluation
 order, why a blocked gate need not belong to a cycle, and why three-input XNOR is
 not all-equal. Read [the contracts](digital-logic.md) before changing the model.
 The editable GUI draft and immutable validated circuit are deliberately distinct.
+
+### v0.4 validation results
+
+The [implementation CI run](https://github.com/codyklein/open-ece/actions/runs/35039610043)
+passed all eight jobs on September 15, 2026 (local development date):
+
+| Configuration | Result |
+| --- | --- |
+| Fedora 44 GCC desktop / headless | 61 / 58 CTest entries passed |
+| Fedora 44 Clang desktop / headless | 61 / 58 CTest entries passed |
+| Fedora 44 Clang ASan/UBSan desktop / headless | 61 / 58 CTest entries passed |
+| Windows Server 2022, MSVC 2022, Qt 6.8.3 Debug / Release | 61 / 61 passed; zero failures, skips or disabled tests |
+| Fresh Windows runner, packaged startup | Native window opened; packaged Qt/Qwt/CRT modules verified; normal exit |
+
+The local Fedora six-configuration matrix also passed, with leak detection enabled
+and no sanitizer findings. GCC/Clang builds, clang-format and diff checks were clean.
+The rendered Digital Logic page was inspected with the half-adder and its truth table.
+The Signals/DSP extraction was compared mechanically with the original implementation:
+only class/base/central-layout changes and an explicit tab object name were introduced;
+all numerical processing and existing test assertions remain unchanged.
+
+The Release artifact is `OpenECE-v0.4.0-windows-x86_64`, containing the same-named
+portable ZIP. Startup uses the existing fresh Unicode/space-containing extraction
+path and sanitized environment, without a Qt SDK or development paths. The existing
+runtime dependency, notice and checksum deployment process is unchanged. This is
+actual hosted Windows execution, not cross-compilation. Windows 10/11 physical
+desktop, high-DPI and accessibility checks remain manual work; MinGW is unvalidated.
+
+Remaining digital technical debt is bounded and explicit: calculations are synchronous,
+GUI drafts live in the view, structural edits rebuild small tables, and errors use
+exception text rather than a structured diagnostic API. A future editor may warrant
+a shared draft model and richer diagnostics. No scheduler or simulation framework
+is needed to address the current use case. Saving, undo/redo, schematic editing and
+sequential/timing behavior are outside v0.4, not partially implemented features.
