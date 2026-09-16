@@ -11,8 +11,10 @@
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -24,6 +26,23 @@
 class WorkbenchTest : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void switchingDomainsPreservesSignalsState() {
+        openece::gui::MainWindow window;
+        auto* navigation = window.findChild<QListWidget*>("domain_navigation");
+        auto* pages = window.findChild<QStackedWidget*>("domain_pages");
+        QCOMPARE(navigation->count(), 2);
+        QCOMPARE(pages->currentIndex(), 0);
+        auto* phase = window.findChild<QLineEdit*>("phase");
+        phase->setText("pending invalid text");
+        auto* time = window.findChild<QwtPlot*>("time_plot");
+        const auto curves = time->itemList(QwtPlotItem::Rtti_PlotCurve);
+        navigation->setCurrentRow(1);
+        QCOMPARE(pages->currentIndex(), 1);
+        navigation->setCurrentRow(0);
+        QCOMPARE(phase->text(), QString("pending invalid text"));
+        QCOMPARE(time->itemList(QwtPlotItem::Rtti_PlotCurve), curves);
+    }
+
     void screenshotPathWithSpacesAndUnicode() {
         QTemporaryDir directory(QDir::tempPath() + "/OpenECE π path XXXXXX");
         QVERIFY(directory.isValid());
@@ -77,7 +96,7 @@ class WorkbenchTest : public QObject {
         QVERIFY(std::abs(time_curve->sample(0).y() - 2.0) < 1e-12);
         QCOMPARE(spectrum_curve->sample(8).x(), 16.0);
         QVERIFY(std::abs(spectrum_curve->sample(8).y() - 2.0) < 1e-12);
-        auto* tabs = window.findChild<QTabWidget*>();
+        auto* tabs = window.findChild<QTabWidget*>("signals_tabs");
         QCOMPARE(tabs->count(), 3);
         tabs->setCurrentIndex(1);
         QCOMPARE(tabs->currentIndex(), 1);
@@ -439,7 +458,7 @@ class WorkbenchTest : public QObject {
         const auto path = qEnvironmentVariable("OPENECE_FIR_SCREENSHOT");
         if (!path.isEmpty()) {
             QVERIFY(window.grab().save(path + "-signals.png"));
-            window.findChild<QTabWidget*>()->setCurrentIndex(2);
+            window.findChild<QTabWidget*>("signals_tabs")->setCurrentIndex(2);
             QCoreApplication::processEvents();
             QVERIFY(window.grab().save(path + "-response.png"));
         }
