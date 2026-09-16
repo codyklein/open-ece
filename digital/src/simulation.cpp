@@ -193,6 +193,8 @@ StepStatus Simulation::step() {
         }
         now_ = queue_.top().at;
         const auto before = visible_;
+        // Gather first: even stale entries release queue capacity before new scheduling.
+        std::vector<Event> due;
         // Deliver all preexisting due events before reacting to any changed input.
         while (!queue_.empty() && queue_.top().at == now_) {
             if (processed_ >= request_.work.processed_events)
@@ -206,7 +208,11 @@ StepStatus Simulation::step() {
                     continue;
                 pending_[i].reset();
             }
+            due.push_back(event);
+        }
+        for (const auto& event : due)
             visible_[event.node] = event.value;
+        for (const auto& event : due) {
             if (event.clock) {
                 const auto& clock = request_.clocks[*event.clock];
                 if (const auto next = delivery_time(high(event.value) ? clock.high : clock.low))
