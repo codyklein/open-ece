@@ -70,14 +70,14 @@ constants, minimization, Karnaugh maps or HDL are included. These need separate
 requirements and correctness contracts. Experiment persistence is deferred from
 the earlier roadmap proposal; no save/load work is included in v0.4.
 
-## v0.5 — Digital Timing and Sequential Logic
+## v0.5 — Digital Timing and Sequential Logic (implemented)
 
 - [x] Independent validated timed topology and deterministic timestamp-batch scheduler.
 - [x] Positive inertial gate delays, exact-delay pulse convention and owned traces.
 - [x] Explicit clocks, SR/D latches, rising/falling D flip-flops and storage feedback.
 - [x] Separate timing editor, diagrams, Run/Pause/Step/Reset, and combinational copy.
 - [x] Independent tick-reference and sequential edge-case tests plus GUI workflows.
-- [ ] Complete Fedora/Windows validation and packaged Windows startup.
+- [x] Complete Fedora/Windows validation and packaged Windows startup.
 
 The v0.4 evaluator and truth tables remain unchanged. Two-state timing conventions
 are educational digital models, not analog device behavior. No X/Z, setup/hold,

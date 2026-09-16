@@ -329,4 +329,40 @@ oscillator that reaches its work limit from an invalid pure gate cycle.
 The application version and CI artifact are now v0.5.0. Dependency bootstrap,
 Windows deployment, package-startup checks and Fedora repository policy remain
 unchanged; no new third-party dependency or network access during configure was
-introduced. Full matrix results are recorded after hosted validation completes.
+introduced. The results below record the completed validation.
+
+
+### v0.5 validation results
+
+[The implementation CI run](https://github.com/codyklein/open-ece/actions/runs/35151383540)
+at `4e895b5476116d12db0c17bacade91a068a4180b` passed all eight jobs on September 16, 2026:
+
+| Configuration | Result |
+| --- | --- |
+| Fedora 44 GCC desktop / headless | 80 / 76 CTest entries passed |
+| Fedora 44 Clang desktop / headless | 80 / 76 passed |
+| Fedora 44 Clang ASan/UBSan desktop / headless | 80 / 76 passed |
+| Windows Server 2022, MSVC 2022, Qt 6.8.3 Debug / Release | 80 / 80 passed, zero failures/skips/disabled tests |
+| Fresh Windows runner, packaged startup | Native window opened, packaged Qt/Qwt/CRT modules verified, normal exit |
+
+All six local Fedora configurations also passed with leak detection enabled and
+no sanitizer findings. GCC/Clang/MSVC project compilation produced no warnings;
+clang-format and diff checks passed. The offscreen timing rendering was inspected:
+D at 2/12 ns, clock rising at 5/15/25 ns, Q at 6/16 ns. Qwt curve samples are also
+checked numerically. Existing DSP, SignalsDspView, PlotWidget, phase parser,
+combinational evaluator and truth-table implementations are unchanged.
+
+Artifact `OpenECE-v0.5.0-windows-x86_64` contains the same-named ZIP. Its 31 files
+include the application, Release Qt/Qwt/CRT DLLs, Windows platform and other Qt
+plugins, qt.conf, runtime notes, dependency licenses/notices and SHA256SUMS.txt.
+All 30 manifest entries were independently verified; no Debug runtime artifacts
+were present. Startup extracted into a fresh path containing spaces and Unicode,
+removed development/plugin paths and used a working directory outside the package.
+This is actual hosted Windows execution, not cross-compilation. Windows 10/11
+physical hardware, high-DPI and accessibility checks remain manual; MinGW is
+unvalidated. No GitHub Release was published for this milestone.
+
+Remaining timing technical debt is bounded: state scans and trace snapshot copies,
+curve rebuilding, GUI-local table drafts, textual exception diagnostics and no
+hard UI latency guarantee. These tradeoffs and the educational timing conventions
+are explicit in digital-timing.md. No subsequent milestone was started.
