@@ -70,6 +70,20 @@ constants, minimization, Karnaugh maps or HDL are included. These need separate
 requirements and correctness contracts. Experiment persistence is deferred from
 the earlier roadmap proposal; no save/load work is included in v0.4.
 
+## v0.5 — Digital Timing and Sequential Logic
+
+- [x] Independent validated timed topology and deterministic timestamp-batch scheduler.
+- [x] Positive inertial gate delays, exact-delay pulse convention and owned traces.
+- [x] Explicit clocks, SR/D latches, rising/falling D flip-flops and storage feedback.
+- [x] Separate timing editor, diagrams, Run/Pause/Step/Reset, and combinational copy.
+- [x] Independent tick-reference and sequential edge-case tests plus GUI workflows.
+- [ ] Complete Fedora/Windows validation and packaged Windows startup.
+
+The v0.4 evaluator and truth tables remain unchanged. Two-state timing conventions
+are educational digital models, not analog device behavior. No X/Z, setup/hold,
+metastability, async preset/clear, JK/T primitives, FSM tools, buses, HDL, saving or
+subsequent engineering domain is included.
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP
@@ -79,11 +93,11 @@ the earlier roadmap proposal; no save/load work is included in v0.4.
 3. Explore circuit analysis with established linear algebra; expose an appropriate
    response representation to the signals/DSP tools instead of coupling GUIs.
 4. Add communications models and simulated demodulation before live SDR input.
-5. Extend combinational logic only through separately designed timing/sequential
-   requirements; consider FPGA/HDL interoperability when a concrete experiment needs it.
+5. Extend digital timing only through separately designed requirements; consider
+   FSM tools or FPGA/HDL interoperability when a concrete experiment needs them.
 6. Add versioned experiment persistence when round-trip and malformed-file contracts
    are designed, with explicit sample-rate and unit metadata.
 
-A runtime plugin ABI, generic simulation scheduler, node editor, hardware drivers,
+A runtime plugin ABI, cross-domain simulation scheduler, node editor, hardware drivers,
 and custom linear algebra are deliberately absent from the foundation. Each needs
 a demonstrated use case, design discussion, and tests before implementation.

@@ -240,7 +240,7 @@ TEST(Timing, AgreesWithIndependentDiscreteTickReference) {
     std::uint32_t seed = 2345;
     auto next = [&] {
         seed = seed * 1664525U + 1013904223U;
-        return seed;
+        return seed >> 8;
     };
     constexpr std::size_t inputs = 3, gates = 8, nodes = inputs + gates;
     constexpr std::uint64_t horizon = 80;
@@ -443,7 +443,7 @@ TEST(TimingStorage, ClockContractAndLazyScheduling) {
     EXPECT_THROW(simulate(def, r), std::invalid_argument);
     r.clocks = {{{1}, {1}, {1}, {1}}, {{4}, {1}, {1}, {1}}};
     r.work.queued_events = 2;
-    r.horizon = {1};
+    r.horizon = {4};
     EXPECT_NO_THROW(simulate(def, r)); // Both due entries are removed before new events.
 }
 TEST(TimingStorage, FeedbackThroughStorageAndSimultaneousShiftRegister) {

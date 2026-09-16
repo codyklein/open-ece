@@ -297,3 +297,36 @@ exception text rather than a structured diagnostic API. A future editor may warr
 a shared draft model and richer diagnostics. No scheduler or simulation framework
 is needed to address the current use case. Saving, undo/redo, schematic editing and
 sequential/timing behavior are outside v0.4, not partially implemented features.
+
+## v0.5 timing development
+
+`openece_timing_tests` is a separate Qt-independent GoogleTest binary. Its 18 cases
+cover validation, initialization, forward references, owned sessions/snapshots,
+inertial pulse boundaries, stale events, simultaneous changes, deadlines, inclusive
+horizons, work limits, clocks, SR/D latches, rising/falling DFFs and storage feedback.
+The independent discrete-tick reference uses separate Boolean calculations and
+scans each time tick rather than sharing the production priority queue or tokens.
+It checks 30 deterministic circuits with mixed transitions, tied pins, fan-out and
+reversed gate declaration order. Existing digital and numerical tests are retained.
+
+`timing_gui_workflow` adds five functional methods: example curve values/display
+units/domain persistence, Step/Pause/Reset/edit invalidation, invalid draft/SR error
+recovery, validated independent copying with stable IDs, and inertial pulse/GUI
+limit behavior. The existing GUI tests and their assertions are unchanged. All
+Qt workflow tests use the same offscreen platform and Windows runtime path handling.
+
+```bash
+QT_QPA_PLATFORM=offscreen OPENECE_TIMING_SCREENSHOT="$PWD/build/dev/timing.png" ./build/dev/tests/openece_timing_gui_tests exampleTracesAndDisplayUnits
+```
+
+Read [the timing conventions](digital-timing.md) before changing the scheduler.
+Trace an input pulse of width d−1, d and d+1 through an inertial buffer with delay d.
+Explain why the pending generation is checked before reactions, why a DFF samples
+pre-batch D, and why captured state can differ from Q. Follow a two-stage register
+whose Q delivery coincides with a clock edge. Distinguish a valid storage feedback
+oscillator that reaches its work limit from an invalid pure gate cycle.
+
+The application version and CI artifact are now v0.5.0. Dependency bootstrap,
+Windows deployment, package-startup checks and Fedora repository policy remain
+unchanged; no new third-party dependency or network access during configure was
+introduced. Full matrix results are recorded after hosted validation completes.

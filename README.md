@@ -4,14 +4,16 @@ An extensible desktop engineering workbench for learning and connecting Electric
 and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
 provides two domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
-**Digital Logic** (combinational circuits → evaluation → truth tables).
+**Digital Logic** (combinational circuits / truth tables and timed sequential simulation).
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.4 combinational Digital Logic
+## Current status: v0.5 Digital Timing and Sequential Logic
 
+- Independent event-driven timing sessions, inertial gates, clocks, SR/D latches and D flip-flops.
+- Timing diagrams with explicit visible delays and Run/Pause/Step/Reset controls.
 - Independent two-state digital core: seven gate kinds, validated acyclic circuits, bounded truth tables.
 - Digital Logic editor with input toggles, gate/source selectors, outputs, and an editable half-adder.
 - Persistent domain navigation; Windows portability and packaging retained.
@@ -26,7 +28,7 @@ general simulator, real-time system, or validated measurement instrument.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
-No analog circuit analysis, sequential/timing logic, communications, hardware,
+No analog circuit analysis, FSM/HDL tooling, communications, hardware,
 persistence, or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
@@ -167,7 +169,17 @@ in binary with the first input most significant. The desktop allows 8 inputs,
 64 gates, 16 outputs and 8 pins per gate. The independent core has larger explicit
 limits and permits tables through 10 inputs (1024 rows). This is settled two-state
 combinational evaluation, without timing, feedback or sequential elements.
-See [Digital Logic conventions and API](docs/digital-logic.md).
+See [Combinational conventions and API](docs/digital-logic.md).
+
+The **Timing / Sequential** tab has its own editable draft. Start with the DFF
+example, enter integer-picosecond delays and stimulus times, and Run or Step.
+Clock and manual drivers are exclusive per input. Observe nodes by ID; change
+display units without changing simulation ticks. Gates use inertial delay; storage
+captures have delayed visible Q. At simultaneous data/clock changes a DFF samples
+pre-batch data. SR=11 stops the simulation. Pure gate cycles are rejected, while
+feedback through storage is permitted. The copy action validates the combinational
+draft and replaces the timing draft with an independent copy and an explicit gate
+delay. See [Timing conventions, limits and API](docs/digital-timing.md).
 
 ## Windows: build, test, run and package
 
@@ -176,7 +188,7 @@ and Qt 6.8.3. Follow [the Windows guide](docs/windows.md) for prerequisites,
 checksum-pinned Qwt/GoogleTest bootstrap, explicit Debug/Release presets, and
 portable ZIP creation. GitHub Actions uses Fedora 44 for GCC/Clang and actual
 Windows MSVC runners for tests and packaged startup. MinGW is not validated.
-The v0.4 digital module adds an independent API; existing DSP behavior and APIs are unchanged.
+The timing layer preserves all v0.4 combinational and DSP APIs and behavior.
 
 ## Architecture
 
@@ -184,8 +196,8 @@ The v0.4 digital module adds an independent API; existing DSP behavior and APIs 
 core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
 dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
-digital/    two-state gates, validated combinational circuits and truth tables (stdlib only)
-gui/        domain navigation, SignalsDspView, DigitalLogicView; Qt Widgets + Qwt
+digital/    combinational evaluation / truth tables and separate timed simulation (stdlib only)
+gui/        SignalsDspView, DigitalWorkspace, DigitalLogicView, TimingView; Qt Widgets + Qwt
 tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```
