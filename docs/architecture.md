@@ -9,6 +9,9 @@ flowchart TD
     UI --> DSP[dsp]
     UI --> Digital[digital: standard library only]
     DigitalTests[Logical GoogleTest tests] --> Digital
+    UI --> Circuits[circuits]
+    Circuits --> Eigen[Eigen: private dense linear algebra]
+    CircuitTests[Independent DC tests] --> Circuits
     UI --> Qt[Qt Widgets and Qwt]
     Signals --> Core[core]
     DSP --> Core
@@ -25,7 +28,7 @@ does not even search for Qt or Qwt.
 GUI targets use `QT_NO_KEYWORDS` and Qt's explicit `Q_SIGNALS`/`Q_SLOTS` spellings.
 This prevents Qt's optional `signals` macro from colliding with the C++ domain namespace.
 
-Four small engineering targets are slightly more CMake work than one monolithic
+Five small engineering targets are slightly more CMake work than one monolithic
 library, but make dependency direction visible and prevent accidental GUI coupling.
 Namespaced public headers and target-level include paths provide stable boundaries
 without claiming a stable ABI in v0.1. C++20 provides `std::span`, bit utilities,
@@ -53,7 +56,7 @@ library/import-library map. Qt and GoogleTest use standard CMake package discove
 Windows dependency acquisition and runtime deployment are separate PowerShell
 scripts; ordinary CMake configure never uses the network. Compiler flags remain
 private to project targets. See [Windows build design](windows.md) for the pinned
-toolchain and portable ZIP deployment; the engineering dependency graph is unchanged.
+toolchain and portable ZIP deployment. Eigen is acquired separately for the DC solver.
 
 The internal `openece_workbench` target allows GUI integration tests to use the
 same implementation as the executable. It is not a public extension API.
@@ -72,7 +75,7 @@ The result structs are plain owned values, not an abstract data hierarchy.
 preserve their relationship. Physical units, timestamps, channel layouts, and
 complex signal records need a future design driven by actual consumers.
 
-Invalid domain inputs throw `std::invalid_argument`; sample indexing errors throw
+Invalid Signals/DSP inputs throw `std::invalid_argument`; sample indexing errors throw
 `std::out_of_range`; detected DSP arithmetic overflow throws `std::overflow_error`.
 Allocation errors can also propagate. The GUI converts exceptions to a visible
 message and clears stale plots. No domain code displays dialogs or logs globally.
@@ -232,3 +235,26 @@ Then connect it in the GUI. A separate experiment/controller model is warranted
 when saving, multiple views, or multiple operations need shared state. A graph
 engine and runtime plugins should follow repeated composition needs, rather than
 precede them. Circuits and SDR must not acquire dependencies on generator widgets.
+
+## Circuit Analysis (v0.6)
+
+`OpenECE::circuits` owns a physical terminal model independent of SampledSignal and
+Digital Logic. Its IDs, names, drafts, validated snapshots and owned DC results
+have no Qt/Eigen types in their public representation. `Circuit` construction
+validates structure; `solve_dc` separately diagnoses electrical/numerical failures
+through structured `CircuitError` codes and relevant IDs. No global state is used.
+
+OpenECE owns MNA indexing, stamps and sign conventions. Resistor/voltage-source
+connectivity establishes reference; current-source edges do not. Voltage-source
+forests distinguish inconsistent loops from redundant constraints, both rejected
+because source currents must be unique. Private Eigen FullPivLU operates on the
+explicitly equilibrated dense matrix; OpenECE checks rank/conditioning and original
+matrix plus physical branch residuals. A home-grown production factorization and
+sparse framework are unnecessary at the centralized 191-unknown cap.
+
+Fedora uses system Eigen; Windows adds a pinned, verified header-only bootstrap
+installation. Normal configure remains offline and no Eigen DLL is needed.
+MainWindow gains only a Circuits navigation item and persistent CircuitsView;
+other domain implementations remain unchanged. The view owns invalid editable
+widget state, converts prefixes to SI only on parsing, and clears results on edits.
+See [Circuit Analysis contracts](circuit-analysis.md) for all policies and tradeoffs.

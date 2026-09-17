@@ -51,12 +51,14 @@ if (Get-ChildItem $destination -Recurse -File | Where-Object { $_.Name -match '^
 Prefix=.
 Plugins=.
 '@ | Set-Content "$destination/qt.conf"
+Copy-Item "$PSScriptRoot/../../LICENSE" "$destination/LICENSE"
 Copy-Item "$PSScriptRoot/../../packaging/README-windows.txt" "$destination/README.txt"
 Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
 $notices = "$destination/licenses"
-New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt" | Out-Null
+New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt", "$notices/Eigen" | Out-Null
 Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/COPYING" "$notices/Qwt/"
 Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/GoogleTest/"
+Copy-Item "$DependenciesRoot/sources/eigen-5.0.0/COPYING.MPL2" "$notices/Eigen/"
 # Notices are generated from the checksum-pinned upstream archive by the
 # maintainer utility; packaging does not download or process Qt sources.
 Copy-Item "$PSScriptRoot/../../packaging/Qt-6.8.3-NOTICES.txt" "$notices/Qt/"
