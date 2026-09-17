@@ -34,8 +34,8 @@ Studio redistribution license, not Qt's or Qwt's licenses.
 https://visualstudio.microsoft.com/license-terms/
 https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
 
-OpenECE's project license has not yet been selected. These notices describe
-third-party dependencies and do not relicense OpenECE or any dependency.
+OpenECE uses the MIT License, included in LICENSE. These notices describe
+third-party dependencies and do not relicense any dependency.
 
 Eigen 5.0.0: copyright Eigen contributors, Mozilla Public License 2.0.
 Unmodified header-only dense linear algebra, compiled into OpenECE.

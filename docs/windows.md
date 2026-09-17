@@ -128,6 +128,7 @@ OpenECE-v0.6.0-windows-x86_64/
     <other required Qt plugin directories>
     qt.conf
     README.txt
+    LICENSE
     THIRD-PARTY-NOTICES.txt
     licenses/
     SHA256SUMS.txt

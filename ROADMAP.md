@@ -24,7 +24,7 @@ delivery promises; later work should be revised as actual requirements emerge.
 The implemented comparison uses the existing plot with selectable windows; simultaneous
 comparison views remain optional future presentation work. RMS and PSD are not implemented.
 
-The project license still needs to be selected. Hosted CMake/CTest CI and portable
+OpenECE uses the MIT License. Hosted CMake/CTest CI and portable
 Windows packaging are addressed in v0.3.1; see the platform development guides.
 
 ## v0.2.1 — Phase expressions (implemented)
@@ -84,14 +84,14 @@ are educational digital models, not analog device behavior. No X/Z, setup/hold,
 metastability, async preset/clear, JK/T primitives, FSM tools, buses, HDL, saving or
 subsequent engineering domain is included.
 
-## v0.6 — Linear DC Circuit Analysis
+## v0.6 — Linear DC Circuit Analysis (implemented)
 
 - [x] Independent owning circuit definitions, stable IDs, explicit ground and structural validation.
 - [x] MNA resistor/current-source/voltage-source stamps and private dense Eigen solve.
 - [x] Floating-reference, voltage-source-loop and numerical-quality diagnostics.
 - [x] Third persistent domain, table editor, explicit SI/prefix conversion and DC results.
 - [x] Analytical/independent reference tests, GUI recovery/units/locale workflows and documentation.
-- [ ] Complete final Fedora/Windows/package validation.
+- [x] Complete Fedora/Windows/package validation.
 
 No AC, RLC, transients, dependent sources, nonlinear devices, schematic canvas,
 SPICE integration, or subsequent milestone is included. Existing DSP and digital

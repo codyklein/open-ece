@@ -396,4 +396,42 @@ The CI retains Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan in both mo
 Windows MSVC Debug/Release, and a fresh Windows packaged-startup runner. Fedora
 installs `eigen3-devel`; Windows explicitly bootstraps Eigen 5.0.0 with a pinned
 SHA-256 and packages its MPL2 notice. Configure never downloads dependencies.
-Final validation results are recorded after the completed milestone run.
+### v0.6 validation results
+
+[The implementation CI run](https://github.com/codyklein/open-ece/actions/runs/35223556798)
+at `4d9402444a8698b07a9f9fe409f06e7b0c24b1d5` passed all eight jobs on September 17, 2026:
+
+| Configuration | Result |
+| --- | --- |
+| Fedora 44 GCC desktop / headless | 102 / 97 CTest entries passed |
+| Fedora 44 Clang desktop / headless | 102 / 97 passed |
+| Fedora 44 Clang ASan/UBSan desktop / headless | 102 / 97 passed |
+| Windows Server 2022, MSVC 2022, Qt 6.8.3 Debug / Release | 102 / 102 passed, no failures/skips/disabled tests |
+| Fresh Windows runner, packaged startup | Native window opened; packaged Qt/Qwt/CRT verified; normal exit |
+
+The six local Fedora configurations also passed, including leak detection and
+undefined-behavior checks. Local builds used user-installed pinned Eigen 5.0.0;
+Fedora CI independently exercised its system `eigen3-devel` package. Compiler
+warning, formatting and diff checks were clean. The rendered Circuits page was
+inspected. The 21 circuit tests include 40 independent branch-reference networks
+and an exact-rational fixture; the GUI suite has ten functional test methods.
+
+Windows CI initially exposed quadratic selector rebuilding during repeated
+component insertion. Refreshing only the newly inserted row resolved the timeout;
+no assertion or 30-second timeout was weakened. The Windows Debug circuit workflow
+then completed in 3.33 seconds, Release in 0.42 seconds.
+
+The implementation artifact `OpenECE-v0.6.0-windows-x86_64` contains the inner ZIP.
+All 31 manifest entries in that 32-file artifact were independently verified,
+including the added Eigen MPL2 notice. Qt/Qwt/CRT runtimes remain Release-only;
+Eigen introduces no DLL. Startup used a fresh path containing spaces and Unicode,
+sanitized development/plugin paths and an external working directory. The incoming
+main-branch MIT license is subsequently included in the final package as LICENSE;
+that packaging-only update is validated again by the same workflow.
+
+Signals/DSP and digital implementation files are unchanged. The sole existing
+GUI-test adjustment is the expected sidebar count from two to three. Remaining
+technical debt is explicit: dense bounded synchronous solving, GUI-local drafts,
+no save/load/undo or schematic canvas, and no exhaustive multi-error diagnostic
+report. Windows physical hardware, high-DPI and accessibility checks remain manual;
+MinGW is not validated. No release, AC/transient work or subsequent milestone was started.

@@ -51,6 +51,7 @@ if (Get-ChildItem $destination -Recurse -File | Where-Object { $_.Name -match '^
 Prefix=.
 Plugins=.
 '@ | Set-Content "$destination/qt.conf"
+Copy-Item "$PSScriptRoot/../../LICENSE" "$destination/LICENSE"
 Copy-Item "$PSScriptRoot/../../packaging/README-windows.txt" "$destination/README.txt"
 Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
 $notices = "$destination/licenses"

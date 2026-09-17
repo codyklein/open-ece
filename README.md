@@ -248,5 +248,5 @@ arbitrarily close tones. Zero-padding does not improve resolving power. This is
 not a power spectrum or PSD. Above-Nyquist
 generator frequencies are rejected. Full engineering details are in the numerics document.
 
-The project license has not been selected yet. Dependencies retain their own licenses;
+OpenECE is licensed under the [MIT License](LICENSE). Dependencies retain their own licenses;
 no third-party source is vendored in this repository.
