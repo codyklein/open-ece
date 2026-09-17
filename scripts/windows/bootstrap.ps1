@@ -20,7 +20,8 @@ Get-Command cl.exe, nmake.exe, cmake.exe -ErrorAction Stop | Out-Null
 New-Item -ItemType Directory -Force "$DependenciesRoot/downloads", "$DependenciesRoot/sources" | Out-Null
 $archives = @(
     @{ Name='qwt-6.3.0'; Directory='qwt-6.3.0'; Urls=@('https://downloads.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip', 'https://psychz.dl.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip', 'https://netix.dl.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip'); Hash='268d8d41974d263014fea13168324452f41e02880db573794f559995a4e11331' },
-    @{ Name='googletest-1.17.0'; Directory='googletest-1.17.0'; Urls=@('https://codeload.github.com/google/googletest/zip/refs/tags/v1.17.0'); Hash='40d4ec942217dcc84a9ebe2a68584ada7d4a33a8ee958755763278ea1c5e18ff' }
+    @{ Name='googletest-1.17.0'; Directory='googletest-1.17.0'; Urls=@('https://codeload.github.com/google/googletest/zip/refs/tags/v1.17.0'); Hash='40d4ec942217dcc84a9ebe2a68584ada7d4a33a8ee958755763278ea1c5e18ff' },
+    @{ Name='eigen-5.0.0'; Directory='eigen-5.0.0'; Urls=@('https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.zip'); Hash='795a5412b6ead1b82c43704b640d4642d75b5755a08d8f12b4f13615fea3f36d' }
 )
 foreach ($archive in $archives) {
     $zip = "$DependenciesRoot/downloads/$($archive.Name).zip"
@@ -95,7 +96,9 @@ foreach ($config in @('Debug', 'Release')) {
     Run 'cmake.exe' @('--build', "$DependenciesRoot/build/gtest", '--config', $config, '--parallel', '4')
     Run 'cmake.exe' @('--install', "$DependenciesRoot/build/gtest", '--config', $config)
 }
-$files = @(Get-ChildItem "$DependenciesRoot/qwt", "$DependenciesRoot/gtest" -File -Recurse | ForEach-Object {
+Run 'cmake.exe' @('-S', "$DependenciesRoot/sources/eigen-5.0.0", '-B', "$DependenciesRoot/build/eigen", '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DBUILD_TESTING=OFF', '-DEIGEN_BUILD_DOC=OFF', "-DCMAKE_INSTALL_PREFIX=$DependenciesRoot/eigen")
+Run 'cmake.exe' @('--install', "$DependenciesRoot/build/eigen", '--config', 'Release')
+$files = @(Get-ChildItem "$DependenciesRoot/qwt", "$DependenciesRoot/gtest", "$DependenciesRoot/eigen" -File -Recurse | ForEach-Object {
     @{ Path=$_.FullName; Hash=(Get-FileHash $_.FullName).Hash }
 })
 @{ Fingerprint=$fingerprint; Files=$files } | ConvertTo-Json -Depth 4 | Set-Content $stateFile
