@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -366,3 +366,34 @@ Remaining timing technical debt is bounded: state scans and trace snapshot copie
 curve rebuilding, GUI-local table drafts, textual exception diagnostics and no
 hard UI latency guarantee. These tradeoffs and the educational timing conventions
 are explicit in digital-timing.md. No subsequent milestone was started.
+
+## v0.6 Circuit Analysis development
+
+`openece_circuit_tests` links only the circuits library and GoogleTest. Tests cover
+all stamps/signs, reference connectivity, source-loop diagnostics, analytical
+networks, declaration permutations, range/size limits and numerical-quality failures.
+Forty deterministic networks are compared with independent branch-current equations
+and a test-only Gauss-Jordan solver, without production stamps or Eigen. The exact
+rational bridge fixture is reproducible with `python3 tests/reference/dc_exact.py`;
+Python is not required during normal configure/build/test.
+
+`circuit_gui_workflow` covers unit conversion of pending edits, invalid text
+preservation, SI source behavior, explicit missing references/stable IDs, ground
+selection, source loops, Unicode names, locale-independent decimals, GUI resource
+limits, and persistence across all three domains. Existing suites remain intact.
+
+```bash
+QT_QPA_PLATFORM=offscreen OPENECE_CIRCUIT_SCREENSHOT="$PWD/build/dev/circuits.png" ./build/dev/tests/openece_circuit_gui_tests dividerAndDomainPersistence
+```
+
+Read [MNA and numerical policy](circuit-analysis.md) before changing the solver.
+Explain the negative current of a supplying voltage source, why a current source
+cannot ground an island, and why equal parallel ideal voltage sources still fail.
+Trace the physical residual test in which a weak conductance is lost during matrix
+addition; a small assembled-system residual alone must not authorize a result.
+
+The CI retains Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan in both modes,
+Windows MSVC Debug/Release, and a fresh Windows packaged-startup runner. Fedora
+installs `eigen3-devel`; Windows explicitly bootstraps Eigen 5.0.0 with a pinned
+SHA-256 and packages its MPL2 notice. Configure never downloads dependencies.
+Final validation results are recorded after the completed milestone run.

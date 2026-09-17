@@ -1,11 +1,11 @@
-# Windows build and portable ZIP (v0.5.0)
+# Windows build and portable ZIP (v0.6.0)
 
-The v0.5.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
+The v0.6.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
-**GoogleTest 1.17.0**. CI uses an actual Windows Server 2022 GitHub runner with
+**GoogleTest 1.17.0** and **Eigen 5.0.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
 hardware test. MinGW has not been validated and is not a supported configuration
-for this milestone. Numerical APIs and behavior remain identical to v0.3.
+for this milestone. Existing DSP and digital APIs remain unchanged; v0.6 adds independent DC analysis.
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ The package described below needs none of these development environment settings
 ## Dependency bootstrap
 
 Normal CMake configuration **never downloads anything**. The explicit bootstrap
-verifies SHA-256-pinned Qwt and GoogleTest ZIPs before extracting them into the
+verifies SHA-256-pinned Qwt, GoogleTest and Eigen ZIPs before extracting them into the
 ignored `build/windows-deps` directory. Re-running rechecks the archives and
 reuses installations only when the script/toolchain/Qt fingerprint matches and
 all installed outputs still match their recorded hashes. CI caches this verified
@@ -84,12 +84,15 @@ script stages headers and the discovered DLL/import-library pairs, and writes
 `OpenECEQwtArtifacts.cmake`. OpenECE consumes that map through `Qwt::Qwt`; packaging
 uses the exact Release target file, not an assumed DLL basename. GoogleTest is
 installed through upstream CMake with `gtest_force_shared_crt=ON`, both configs,
-a distinct Debug library postfix, and no GoogleMock. Third-party code stays outside version control.
+a distinct Debug library postfix, and no GoogleMock. Eigen is installed as headers
+and CMake package metadata with tests/docs disabled, shared by Debug and Release.
+It adds no runtime DLL. Its pinned source hash and installed files participate in
+the same cache verification. Third-party code stays outside version control.
 
 Fedora continues to use `dnf` and `Qt6Qwt6` pkg-config discovery. Windows uses
-standard Qt/GTest CMake package discovery and `QWT_ROOT`; no package-management
+standard Qt/GTest/Eigen CMake package discovery and `QWT_ROOT`; no package-management
 framework or alternate plotting layer is introduced. For custom dependency
-locations, pass `-DQWT_ROOT=...` and `-DCMAKE_PREFIX_PATH='Qt-path;GTest-path'` at
+locations, pass `-DQWT_ROOT=...` and `-DCMAKE_PREFIX_PATH='Qt-path;GTest-path;Eigen-path'` at
 configure time (or use ignored `CMakeUserPresets.json`). Custom Windows Qwt
 installations can explicitly set `Qwt_LIBRARY_DEBUG/RELEASE` and
 `Qwt_RUNTIME_DEBUG/RELEASE` if their artifact names differ from upstream defaults.
@@ -101,7 +104,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.5.0-windows-x86_64.zip
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.6.0-windows-x86_64.zip
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -116,7 +119,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v0.5.0-windows-x86_64/
+OpenECE-v0.6.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -130,7 +133,7 @@ OpenECE-v0.5.0-windows-x86_64/
     SHA256SUMS.txt
 ```
 
-Runtime notes and original Qwt/GoogleTest license texts are included. Qt's license
+Runtime notes and original Qwt/GoogleTest/Eigen license texts are included. Qt's license
 texts and third-party attribution are retained in the checked-in
 `packaging/Qt-6.8.3-NOTICES.txt`, with source-relative headings and the upstream
 archive checksum. Packaging copies this notice file without network access or
@@ -151,7 +154,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v0.5.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v0.6.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the

@@ -84,14 +84,28 @@ are educational digital models, not analog device behavior. No X/Z, setup/hold,
 metastability, async preset/clear, JK/T primitives, FSM tools, buses, HDL, saving or
 subsequent engineering domain is included.
 
+## v0.6 — Linear DC Circuit Analysis
+
+- [x] Independent owning circuit definitions, stable IDs, explicit ground and structural validation.
+- [x] MNA resistor/current-source/voltage-source stamps and private dense Eigen solve.
+- [x] Floating-reference, voltage-source-loop and numerical-quality diagnostics.
+- [x] Third persistent domain, table editor, explicit SI/prefix conversion and DC results.
+- [x] Analytical/independent reference tests, GUI recovery/units/locale workflows and documentation.
+- [ ] Complete final Fedora/Windows/package validation.
+
+No AC, RLC, transients, dependent sources, nonlinear devices, schematic canvas,
+SPICE integration, or subsequent milestone is included. Existing DSP and digital
+APIs and behavior remain unchanged. Dense bounded solving and GUI-local drafts
+are deliberate v0.6 limits; see docs/circuit-analysis.md.
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP
    workflows reveal shared requirements. Define resampling and rate compatibility.
 2. Introduce complex/IQ data and streaming blocks with explicit ownership,
    backpressure, cancellation, and performance measurements before SDR hardware.
-3. Explore circuit analysis with established linear algebra; expose an appropriate
-   response representation to the signals/DSP tools instead of coupling GUIs.
+3. Extend circuit analysis only after a separate design/approval; define any future
+   response representation before integrating with signals/DSP rather than coupling GUIs.
 4. Add communications models and simulated demodulation before live SDR input.
 5. Extend digital timing only through separately designed requirements; consider
    FSM tools or FPGA/HDL interoperability when a concrete experiment needs them.

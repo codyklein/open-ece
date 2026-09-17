@@ -290,3 +290,41 @@ TEST(Dc, MaximumBoundedNetwork) {
     EXPECT_EQ(s.node_voltages.size(), limits::nodes);
     EXPECT_EQ(s.voltage_source_currents.size(), limits::voltage_sources);
 }
+TEST(Dc, ExactRationalBridge) {
+    // Reproduce the exact fractions with tests/reference/dc_exact.py.
+    auto d = divider();
+    d.nodes.push_back({{3}, "third"});
+    d.components.push_back(Resistor{{13}, "bridge", {1}, {3}, 330});
+    d.components.push_back(Resistor{{14}, "cross", {2}, {3}, 470});
+    d.components.push_back(CurrentSource{{15}, "I", {3}, {0}, .003});
+    d.components.push_back(VoltageSource{{16}, "V2", {3}, {2}, 2});
+    auto s = solve_dc(Circuit(d));
+    EXPECT_NEAR(voltage(s, {1}), 10, 1e-12);
+    EXPECT_NEAR(voltage(s, {2}), 1031.0 / 166, 1e-12);
+    EXPECT_NEAR(voltage(s, {3}), 1363.0 / 166, 1e-12);
+    EXPECT_NEAR(current(s, {10}), -1529.0 / 166000, 1e-14);
+    EXPECT_NEAR(current(s, {16}), -7153.0 / 3901000, 1e-14);
+}
+TEST(Dc, PhysicalResidualRejectsLostSmallConductance) {
+    auto d = divider();
+    std::get<VoltageSource>(d.components[0]).voltage_volts = 1e9;
+    std::get<Resistor>(d.components[1]).resistance_ohms = limits::resistance_min;
+    std::get<Resistor>(d.components[2]).resistance_ohms = limits::resistance_max;
+    // The weak conductance disappears when added to 1e9 S. A small assembled
+    // matrix residual is insufficient: branch KCL must reject this result.
+    error(d, ErrorCode::numerical_failure);
+}
+TEST(Dc, ZeroSourcesAndInclusiveComponentLimit) {
+    auto d = divider();
+    std::get<VoltageSource>(d.components[0]).voltage_volts = 0;
+    while (d.components.size() < limits::components) {
+        auto id = static_cast<std::uint32_t>(d.components.size() + 100);
+        d.components.push_back(Resistor{{id}, "R" + std::to_string(id), {1}, {0}, 1000});
+    }
+    auto s = solve_dc(Circuit(d));
+    for (auto v : s.node_voltages) {
+        EXPECT_DOUBLE_EQ(v.voltage_volts, 0);
+    }
+    EXPECT_DOUBLE_EQ(s.voltage_source_currents[0].current_amperes, 0);
+    EXPECT_DOUBLE_EQ(s.quality.backward_error, 0);
+}

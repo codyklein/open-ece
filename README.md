@@ -3,14 +3,19 @@
 An extensible desktop engineering workbench for learning and connecting Electrical
 and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
-provides two domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
-**Digital Logic** (combinational circuits / truth tables and timed sequential simulation).
+provides three domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
+**Digital Logic** (combinational circuits / truth tables and timed sequential simulation),
+and **Circuits** (linear DC resistors and independent sources).
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.5 Digital Timing and Sequential Logic
+## Current status: v0.6 Linear DC Circuit Analysis
+
+- Independent validated circuit model and Modified Nodal Analysis with explicit signs.
+- Node voltages, ideal-voltage-source currents, and floating/constraint/numerical diagnostics.
+- Persistent Circuits editor with explicit SI/prefix conversion and a voltage-divider example.
 
 - Independent event-driven timing sessions, inertial gates, clocks, SR/D latches and D flip-flops.
 - Timing diagrams with explicit visible delays and Run/Pause/Step/Reset controls.
@@ -28,7 +33,7 @@ general simulator, real-time system, or validated measurement instrument.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
-No analog circuit analysis, FSM/HDL tooling, communications, hardware,
+No AC/transient/nonlinear analysis, FSM/HDL tooling, communications, hardware,
 persistence, or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
@@ -40,7 +45,7 @@ Inspect before installing:
 g++ --version
 cmake --version
 git --version
-rpm -q gcc-c++ cmake ninja-build qt6-qtbase-devel qwt-qt6-devel gtest-devel
+rpm -q gcc-c++ cmake ninja-build qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel
 pkg-config --modversion Qt6Widgets Qt6Qwt6 gtest
 ```
 
@@ -48,7 +53,7 @@ Install only missing packages. This is the complete Fedora dependency command
 (copy it as one line):
 
 ```bash
-sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel
+sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel
 ```
 
 | Dependency | Purpose |
@@ -56,6 +61,7 @@ sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbas
 | C++20 compiler, CMake ≥ 3.24, Ninja | Standard C++ build and reproducible local presets |
 | Qt 6 ≥ 6.4 Widgets | Desktop controls, layout, event loop, and widget ownership |
 | Qwt ≥ 6.2, built for Qt 6 | Scientific axes, curves, and zoom; no custom plotting infrastructure |
+| Eigen ≥ 3.4 (Windows pins 5.0.0) | Private header-only DC linear algebra |
 | GoogleTest ≥ 1.12 | Numerical unit tests, discovered by CTest |
 | Qt Test (with Qt development packages) | Phase parser and desktop integration tests |
 | pkg-config | Discover Fedora's `Qt6Qwt6` imported dependency |
@@ -161,7 +167,7 @@ checkboxes, XOR Sum and AND Carry. Edit names, add/remove nodes, select a gate t
 configure its type and pins, and connect named outputs to source IDs. Choose
 **Evaluate** or **Generate truth table**. Invalid drafts stay editable; missing
 sources and cycles cause explicit errors. Edits clear stale digital results.
-Switching domains preserves both pages' state.
+Switching domains preserves all pages' state.
 
 NOT takes one pin; AND/OR/NAND/NOR/XOR/XNOR take one or more. XOR means odd parity,
 XNOR even parity. Truth-table columns follow declaration order; rows count upward
@@ -181,11 +187,23 @@ feedback through storage is permitted. The copy action validates the combination
 draft and replaces the timing draft with an independent copy and an explicit gate
 delay. See [Timing conventions, limits and API](docs/digital-timing.md).
 
+## Circuits
+
+Choose **Circuits** in the sidebar. The default 10 V / two-1 kΩ divider shows
+5 V at the midpoint and −0.005 A through the supply. Edit node/component names
+in place, select an explicit ground and +/− terminals, enter a value and unit,
+then choose **Solve DC**. Edits clear stale results; invalid drafts remain editable.
+Unit switching converts the pending physical value; invalid text stays visible.
+Positive current always means + terminal → − terminal, including voltage sources.
+Current sources do not establish a voltage reference. Floating networks and
+redundant/conflicting ideal-voltage-source loops are rejected without regularization.
+See [Circuit Analysis API, MNA, policies and limits](docs/circuit-analysis.md).
+
 ## Windows: build, test, run and package
 
 The Windows target remains Windows 10 (1809+) / Windows 11 x86_64, Visual Studio 2022,
 and Qt 6.8.3. Follow [the Windows guide](docs/windows.md) for prerequisites,
-checksum-pinned Qwt/GoogleTest bootstrap, explicit Debug/Release presets, and
+checksum-pinned Qwt/GoogleTest/Eigen bootstrap, explicit Debug/Release presets, and
 portable ZIP creation. GitHub Actions uses Fedora 44 for GCC/Clang and actual
 Windows MSVC runners for tests and packaged startup. MinGW is not validated.
 The timing layer preserves all v0.4 combinational and DSP APIs and behavior.
@@ -197,14 +215,15 @@ core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
 dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
 digital/    combinational evaluation / truth tables and separate timed simulation (stdlib only)
-gui/        SignalsDspView, DigitalWorkspace, DigitalLogicView, TimingView; Qt Widgets + Qwt
+circuits/   validated linear DC model and MNA solver (private Eigen dependency)
+gui/        persistent SignalsDspView, DigitalWorkspace and CircuitsView; Qt Widgets + Qwt
 tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```
 
 Public engineering headers live under each library's `include/openece/` tree.
 The CMake targets are `OpenECE::core`, `OpenECE::signals`, `OpenECE::dsp`, and
-`OpenECE::digital`. Digital Logic does not depend on the sampled-signal core.
+`OpenECE::digital`, and `OpenECE::circuits`. Circuit Analysis is independent of the other domains. Digital Logic does not depend on the sampled-signal core.
 Neither signals nor DSP depends on the other. The GUI composes them, while `core`
 depends only on the C++ standard library. `openece_workbench` is an internal GUI
 library shared by the application executable and its integration test.
