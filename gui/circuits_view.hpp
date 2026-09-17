@@ -17,6 +17,7 @@ class CircuitsView final : public QWidget {
     void add_node(const QString& name = {});
     void add_component();
     void refresh_connections();
+    void refresh_connection(QComboBox* selector);
     void load_divider();
     void solve();
     QTableWidget *nodes_, *components_, *voltages_, *currents_;

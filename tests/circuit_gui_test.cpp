@@ -21,7 +21,10 @@ class CircuitGuiTest : public QObject {
     QLineEdit* value(QWidget& v, int row) {
         return static_cast<QLineEdit*>(parts(v)->cellWidget(row, 5));
     }
-    void click(QWidget& v, const char* name) { v.findChild<QPushButton*>(name)->click(); }
+    void click(QWidget& v, const char* name) {
+        v.findChild<QPushButton*>(name)->click();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
     QString status(QWidget& v) { return v.findChild<QLabel*>("circuit_status")->text(); }
     void node(QWidget& v, int row, int column, unsigned id) {
         auto* c = select(v, row, column);

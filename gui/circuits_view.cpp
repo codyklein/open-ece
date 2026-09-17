@@ -251,31 +251,33 @@ void CircuitsView::add_component() {
         value->setText(QString::number(converted, 'g', 17));
         invalidate();
     });
-    refresh_connections();
+    // Adding a component does not change any existing node selector.
+    refresh_connection(combo(components_, row, 3));
+    refresh_connection(combo(components_, row, 4));
     invalidate();
 }
-void CircuitsView::refresh_connections() {
-    auto refresh = [&](QComboBox* selector) {
-        const auto old = selector->currentData();
-        QSignalBlocker block(selector);
-        selector->clear();
-        selector->addItem("Select node");
-        for (int i = 0; i < nodes_->rowCount(); ++i)
-            selector->addItem(nodes_->item(i, 1)->text() + " [" + nodes_->item(i, 0)->text() + "]",
-                              nodes_->item(i, 0)->data(Qt::UserRole));
-        if (old.isValid()) {
-            int index = selector->findData(old);
-            if (index < 0) {
-                selector->addItem("Missing node " + old.toString(), old);
-                index = selector->count() - 1;
-            }
-            selector->setCurrentIndex(index);
+void CircuitsView::refresh_connection(QComboBox* selector) {
+    const auto old = selector->currentData();
+    QSignalBlocker block(selector);
+    selector->clear();
+    selector->addItem("Select node");
+    for (int i = 0; i < nodes_->rowCount(); ++i)
+        selector->addItem(nodes_->item(i, 1)->text() + " [" + nodes_->item(i, 0)->text() + "]",
+                          nodes_->item(i, 0)->data(Qt::UserRole));
+    if (old.isValid()) {
+        int index = selector->findData(old);
+        if (index < 0) {
+            selector->addItem("Missing node " + old.toString(), old);
+            index = selector->count() - 1;
         }
-    };
-    refresh(ground_);
+        selector->setCurrentIndex(index);
+    }
+}
+void CircuitsView::refresh_connections() {
+    refresh_connection(ground_);
     for (int i = 0; i < components_->rowCount(); ++i)
         for (int column : {3, 4})
-            refresh(combo(components_, i, column));
+            refresh_connection(combo(components_, i, column));
 }
 void CircuitsView::load_divider() {
     loading_ = true;
