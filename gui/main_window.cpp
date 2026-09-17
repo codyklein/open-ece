@@ -1,4 +1,5 @@
 #include "main_window.hpp"
+#include "circuits_view.hpp"
 #include "digital_workspace.hpp"
 #include "signals_dsp_view.hpp"
 
@@ -8,7 +9,7 @@
 
 namespace openece::gui {
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle("OpenECE — Signals / DSP and Digital Logic");
+    setWindowTitle("OpenECE — Signals / DSP, Digital Logic and Circuits");
     resize(1280, 820);
     auto* central = new QWidget(this);
     setCentralWidget(central);
@@ -16,12 +17,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     auto* navigation = new QListWidget(central);
     navigation->setObjectName("domain_navigation");
     navigation->setAccessibleName("ECE domain");
-    navigation->addItems({"Signals / DSP", "Digital Logic"});
+    navigation->addItems({"Signals / DSP", "Digital Logic", "Circuits"});
     navigation->setFixedWidth(145);
     auto* pages = new QStackedWidget(central);
     pages->setObjectName("domain_pages");
     pages->addWidget(new SignalsDspView(pages));
     pages->addWidget(new DigitalWorkspace(pages));
+    pages->addWidget(new CircuitsView(pages));
     layout->addWidget(navigation);
     layout->addWidget(pages, 1);
     connect(navigation, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);

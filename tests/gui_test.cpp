@@ -30,7 +30,7 @@ class WorkbenchTest : public QObject {
         openece::gui::MainWindow window;
         auto* navigation = window.findChild<QListWidget*>("domain_navigation");
         auto* pages = window.findChild<QStackedWidget*>("domain_pages");
-        QCOMPARE(navigation->count(), 2);
+        QCOMPARE(navigation->count(), 3);
         QCOMPARE(pages->currentIndex(), 0);
         auto* phase = window.findChild<QLineEdit*>("phase");
         phase->setText("pending invalid text");
