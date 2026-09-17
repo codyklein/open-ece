@@ -19,6 +19,8 @@ inline constexpr int pins = 8;
 class DigitalLogicView final : public QWidget {
   public:
     explicit DigitalLogicView(QWidget* parent = nullptr);
+    digital::Circuit validated_circuit() const { return digital::Circuit(draft_); }
+    std::vector<digital::LogicValue> input_values() const { return assignments_; }
 
   private:
     void refresh();

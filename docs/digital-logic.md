@@ -51,9 +51,8 @@ values are rejected, including assignments on unused primary inputs.
 
 Two-state logic is sufficient for fully assigned, single-driver combinational
 circuits. Unknown/High-Z would require new propagation and driver-resolution
-semantics without a v0.4 use case. Future timing or sequential simulation will
-need a separate state/trace design; no event, clock, bus, or placeholder API is
-included now. `SampledSignal` continues to mean uniformly sampled real data.
+semantics without a v0.4 use case. The separate v0.5 [timing layer](digital-timing.md) adds explicit initialization,
+state and traces without changing these combinational APIs or adding X/Z. `SampledSignal` continues to mean uniformly sampled real data.
 
 ## Connections, validation and evaluation
 
@@ -121,7 +120,7 @@ These bounds support synchronous execution; they are not real-time guarantees.
 
 ## Desktop workflow
 
-1. Choose **Digital Logic** in the domain sidebar; Signals / DSP is the default.
+1. Choose **Digital Logic → Combinational**; Signals / DSP is the default domain.
 2. Start with the editable half-adder. Double-click names to rename them. Check an
    input for 1; leave it unchecked for 0.
 3. Select a gate row, choose its type, pin count and source for each pin. Changing
@@ -143,6 +142,6 @@ therefore remain incomplete without weakening the validated core API.
 
 This is a table-based editor, without schematic wiring, saving/loading, undo/redo,
 Boolean expressions, minimization, or Karnaugh maps. There is no time axis: values
-are settled Boolean results, not physical transient behavior. Propagation delays,
-clocks, latches, flip-flops, FSMs, buses and HDL are deferred until a separate design
-establishes their state, scheduling and correctness contracts.
+are settled Boolean results, not physical transient behavior. The separate **Timing / Sequential** tab adds propagation delays, clocks, latches
+and flip-flops under [explicit timing contracts](digital-timing.md). FSMs, buses
+and HDL remain deferred.

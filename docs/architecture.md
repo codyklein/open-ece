@@ -188,8 +188,42 @@ cycles rather than trying fixed points; diagnostics report blocked gates without
 claiming exact cycle membership. Truth tables cap inputs before exponential
 arithmetic and retain only primary inputs/outputs. Name and graph bounds are
 centralized in the digital core; the GUI imposes smaller bounds for synchronous use.
-No scheduler, bus representation, four-state semantics, or sequential placeholders
-are introduced. Timing and sequential simulation will need their own actual design.
+The v0.4 API contains no scheduler, buses or sequential placeholders. The v0.5
+timing layer below is independent of instantaneous evaluation.
+
+## Digital timing and sequential simulation (v0.5)
+
+`openece::digital::timing` extends the same standard-library-only target with
+`TimedCircuitDefinition`, validated `TimedCircuit`, and owned `Simulation` sessions.
+The existing `Circuit::evaluate()` and truth-table code are unchanged. Gate Boolean
+semantics are reused, while timing state, pending deliveries and captured storage
+state live only in the new session. A separate typed variant describes delayed
+gates, SR/D latches and edge-triggered D flip-flops. There is no generic device,
+HDL, bus or analog simulator abstraction.
+
+Graph validation cuts dependencies at storage outputs and topologically orders
+only gate-to-gate dependencies. This supports storage feedback without permitting
+pure combinational loops. Initialization settles those gates using explicit input
+and Q values; it makes no power-up claim. A deterministic priority queue processes
+whole timestamp batches, then evaluates affected elements once in declaration
+order. All delays are positive, so new deliveries cannot recurse at the same time.
+Generation tokens implement gate inertia; storage deliveries preserve capture
+order independently of visible Q. [Timing contracts](digital-timing.md) define the
+exact-delay pulse boundary, pre-batch D sampling, failure and resource semantics.
+
+`DigitalWorkspace` composes persistent Combinational and Timing / Sequential tabs.
+The former retains its existing editor and tests. A one-way copy action validates
+and copies its draft with an explicit gate delay. `TimingView` owns editable table
+cells and constructs a new validated session on Run/Step. Edits discard the old
+session and its results. A zero-interval QTimer advances bounded batches; it is a
+UI scheduling mechanism, never a simulated clock. `TimingDiagramWidget` uses Qwt
+owned curve samples for right-continuous traces, separately from the DSP adapter.
+
+The implementation favors inspectable correctness over throughput: each timestamp
+copies visible state, scans node changes and affected elements, and snapshots copy
+traces. Queue, work and trace budgets cap resources, and the GUI uses smaller caps.
+There is no worker thread or hard latency guarantee. A future performance change
+should be measurement-driven and preserve the documented deterministic semantics.
 
 ## Extension rule
 

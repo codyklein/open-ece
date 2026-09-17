@@ -1,4 +1,4 @@
-add_library(openece_digital STATIC src/logic.cpp src/circuit.cpp src/truth_table.cpp)
+add_library(openece_digital STATIC src/logic.cpp src/circuit.cpp src/truth_table.cpp src/timed_circuit.cpp src/simulation.cpp)
 add_library(OpenECE::digital ALIAS openece_digital)
 target_include_directories(openece_digital PUBLIC include)
 target_compile_features(openece_digital PUBLIC cxx_std_20)
