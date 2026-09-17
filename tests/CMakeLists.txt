@@ -1,5 +1,8 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
+add_executable(openece_circuit_tests circuit_test.cpp)
+target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
+gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)
 add_executable(openece_tests signal_test.cpp fft_test.cpp window_test.cpp convolution_test.cpp fir_test.cpp)
 target_link_libraries(openece_tests PRIVATE OpenECE::signals OpenECE::dsp GTest::gtest_main openece_options)
 gtest_discover_tests(openece_tests DISCOVERY_MODE PRE_TEST)

@@ -1,0 +1,5 @@
+add_library(openece_circuits STATIC src/circuit.cpp)
+add_library(OpenECE::circuits ALIAS openece_circuits)
+target_include_directories(openece_circuits PUBLIC include)
+target_compile_features(openece_circuits PUBLIC cxx_std_20)
+target_link_libraries(openece_circuits PRIVATE openece_options)
