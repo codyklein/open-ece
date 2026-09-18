@@ -1,6 +1,6 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
-add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp)
+add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp)
 target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
 target_include_directories(openece_circuit_tests PRIVATE ${PROJECT_SOURCE_DIR}/circuits/src)
 gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)

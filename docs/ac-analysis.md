@@ -43,3 +43,57 @@ Structural validation deliberately allows electrically floating, contradictory
 or resonant networks. An accepted definition is not a promise of solvability.
 AC analysis frequencies are strictly positive, bounded at 1e-6 through 1e12 Hz;
 zero-frequency RLC behavior is outside this milestone.
+
+## Complex MNA and single-frequency solve
+
+`ac/analysis.hpp` provides `solve_ac(const Circuit&, double frequency_hz)` and an
+owned AcSolution. It preserves the requested frequency, node voltages in node
+order including exact-zero ground, voltage-source currents in source order, and
+NumericalQuality. Errors use the existing structured CircuitError with codes,
+messages and relevant stable IDs. No partial solution is returned on failure.
+
+For omega=2*pi*f, branch admittances are 1/R, j*omega*C and 1/(j*omega*L).
+Unknowns are non-ground node voltages followed by voltage-source currents:
+
+```text
+[ Y(f)  B ] [ V  ] = [ J ]
+[ B^T   0 ] [ IV ]   [ E ]
+```
+
+B^T is the ordinary transpose, NEVER conjugate transpose. The MNA matrix is
+complex symmetric but generally not Hermitian. A branch admittance y adds y to
+its two nodal diagonals and -y to both off-diagonals; omit ground rows/columns.
+A current source p->n subtracts I from Jp and adds I to Jn. A voltage source adds
++1 at its positive-node coupling, -1 at its negative-node coupling, identical
+entries in the constraint row, and its complex voltage on that row's RHS.
+Inductors use admittance stamps, so do not add branch unknowns. Source phasors
+are held constant when evaluating different positive frequencies.
+
+At nonzero frequency R/C/L and voltage-source edges establish reference
+connectivity. Current sources never do. Connectivity alone does not prove
+solvability: reactive cancellation may make an ideal LC network singular.
+Voltage-source constraint forests compare signed complex path sums with complex
+source phasors. Redundant/consistent loops are rejected because individual source
+currents are non-unique; contradictory loops have a separate diagnostic. The
+existing loop tolerance uses complex magnitudes. Floating diagnostics take
+precedence, and diagnostics do not promise exhaustive classification.
+
+The private Eigen FullPivLU uses the same centralized numerical policies as DC:
+four row/column max-magnitude equilibration passes, relative rank threshold
+64*k*epsilon, scaled reciprocal condition at least 1e-12, original-matrix backward
+error at most max(1e-12,256*k*epsilon), physical KCL tolerance
+1e-15 A + 1e-10*sum(abs(incident currents)), and voltage-constraint tolerance
+1e-12 V + 1e-10*(abs(Vp)+abs(Vn)+abs(E)). Complex absolute values mean magnitudes.
+Scaling depends on the matrix, not excitation. Physical checks include ground.
+Nonfinite intermediate values, unreliable conditioning, rank deficiency, or
+failed residual checks reject the result. No solver acceptance threshold is
+relaxed for AC, and no resistance, grounding, pseudoinverse or regularization is
+inserted at resonance. Near resonance an ideal model may produce a large finite
+accepted result; this is not a prediction of real-device losses or voltage limits.
+
+Regressions include a 10 V RMS source across 1 kohm returning source current
+-10 mA; capacitor current leads voltage by 90 degrees and inductor current lags
+by 90 degrees. A first-order RC low-pass measured ACROSS THE CAPACITOR has
+H=1/(1+j*omega*R*C); at f=1/(2*pi*R*C), H=(1-j)/2, -3.01029995664 dB and -45 degrees.
+An independent branch-impedance/current formulation and test-only Gauss-Jordan
+solve check mixed networks without reusing production MNA stamps or Eigen.
