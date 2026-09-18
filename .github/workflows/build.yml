@@ -1,7 +1,7 @@
 name: Build, test and package
 on:
   push:
-    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis]
+    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis]
   pull_request:
   workflow_dispatch:
 permissions:
