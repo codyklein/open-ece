@@ -445,9 +445,18 @@ reference solves, exact resonance failure, conditioning/physical residual checks
 per-frequency sweep errors, source normalization, grid precision/work limits,
 phase wrapping, GUI cancellation/ownership, engineering units and plot gaps.
 
-Core and GUI checkpoint validation passed locally with GCC and Clang ASan/UBSan.
-Final six-configuration Fedora and Windows Debug/Release/package validation is
-recorded below once complete. No numerical tolerance or GUI timeout was weakened.
+Final local Fedora 44 validation passed with GCC 16.2.1 and Clang 22.1.8:
+
+| Configuration | Desktop | Headless |
+|---|---:|---:|
+| GCC Debug | 137/137 | 131/131 |
+| Clang Debug | 137/137 | 131/131 |
+| Clang ASan/UBSan | 137/137 | 131/131 |
+
+No compiler warnings, sanitizer findings, formatting errors or diff whitespace
+errors remained. No numerical tolerance or GUI timeout was weakened. The GCC
+headless result used a fresh build directory after a compiler-cache reset changed
+an older directory to GUI defaults; all configuration flags were checked.
 The sweep benchmark is an optional build target, not a CTest time limit; reproduction
 commands and GCC Debug/Release measurements are in [AC analysis](ac-analysis.md).
 
@@ -460,3 +469,23 @@ QT_QPA_PLATFORM=offscreen OPENECE_AC_SCREENSHOT="$PWD/build/dev/ac.png" ./build/
 The existing DC view and all DSP/digital implementation/tests are preserved.
 No new package dependency is required: the existing pinned Qt/Qwt/Eigen toolchain
 supports the AC module, and normal CMake configuration remains offline.
+
+Final cross-platform validation of `b0ac350` passed all eight jobs in
+[CI run 35368824794](https://github.com/codyklein/open-ece/actions/runs/35368824794).
+The six Fedora container configurations matched the counts above. Windows MSVC
+2022 with Qt 6.8.3 passed **137/137 in Debug and 137/137 in Release**. The independent
+fresh-runner package test extracted into a path containing spaces and π, removed
+Qt/Qwt development paths, opened a native window, verified app-local Qt/Qwt/CRT
+modules and closed normally.
+
+The downloaded `OpenECE-v0.7.0-windows-x86_64.zip` was independently inspected:
+33 files, 32 verified SHA-256 manifest entries, Release Qwt/Qt/CRT runtime DLLs,
+platform/style plugins, qt.conf, runtime README, OpenECE MIT license and dependency
+notices including Eigen. No Debug runtime DLLs were present. The inner ZIP SHA-256
+for that run is `b41fa0727f11ea953cec896f601b44ea650db27de6d959c0b12602b074afa394`.
+CI artifacts are validation builds; this milestone does not publish a GitHub Release.
+
+Remaining limitations: bounded dense solves and repeated topology checks per
+frequency; cancellation between solves only; GUI-local drafts with no save/load
+or undo; separate small DC/AC solve and editor paths. Actual Windows 10/11 hardware,
+high-DPI and accessibility remain manual validation, and MinGW is not validated.

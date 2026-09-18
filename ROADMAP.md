@@ -106,7 +106,7 @@ are deliberate v0.6 limits; see docs/circuit-analysis.md.
 - [x] Absolute voltage versus normalized transfer, source restrictions, wrapped phase and finite gain floor.
 - [x] Persistent DC/AC workspace, engineering units, cancellable sweeps and gap-preserving plots.
 - [x] Analytical and independent numerical references, GUI workflows and measured workload limits.
-- [ ] Complete final Fedora/Windows/package validation.
+- [x] Complete final Fedora/Windows/package validation.
 
 This is sinusoidal steady state only. DC APIs and behavior remain unchanged.
 No transient, nonlinear/dependent-source, schematic, persistence, undo or later
