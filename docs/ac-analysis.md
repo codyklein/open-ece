@@ -159,3 +159,50 @@ v0.7 policy. They are examples, not portable upper bounds; Debug and sanitizer
 builds are slower. GUI work must yield between solves for progress/cancellation;
 a numerical solve itself is bounded but not interruptible. No acceptance policy
 was loosened to improve these measurements.
+
+## GUI workflow and cancellation
+
+The persistent Circuits workspace has DC and AC / Phasors tabs. The previous DC
+view and tests are preserved. AC has Circuit, Single-frequency results, Frequency
+sweep and Conventions pages. The default RC low-pass measures across its capacitor;
+the second example is series RLC with output across the resistor. Single-frequency
+results show real/imaginary RMS values, magnitude and wrapped phase for each node
+and voltage-source current. Ground and other exact-zero values display no phase.
+
+The editor uses stable IDs, an explicit ground, independent component/source
+selection and editable values. Source input is nonnegative RMS magnitude and
+phase in degrees; any finite degree input is reduced modulo 360 before conversion
+to a rectangular phasor. Passive components have no phase field. Component type
+changes clear the old quantity. Prefixes include F/µF/nF/pF, H/mH/µH and
+Hz/kHz/MHz/GHz; existing resistance/voltage/current units remain physical SI
+conversions. Invalid numeric text remains visible and a failed unit change rolls
+back the unit selector. Input is locale-independent dot-decimal/scientific text.
+
+Sweep mode explicitly selects absolute voltage (V RMS) or voltage transfer (dB),
+output terminal IDs, and a reference source for transfer. Source/probe changes
+invalidate old results. Every frequency is prelisted with its exact double in
+item data and a 17-digit display. Successful rows show complex response and
+magnitude/phase; failed rows retain frequency and diagnostic IDs with blank numeric
+cells. Failure/undefined-phase gaps are separate Qwt curves, so interpolation
+cannot cross them. Phase wrap jumps are also split. Gain-floor phase suppression
+is presentation only; the accepted AcSolution retains its unmodified phasors.
+
+Each Run owns a validated circuit snapshot and a core-validated grid. A GUI QTimer
+advances one bounded `solve_ac_point` per event, with periodic plot updates. No
+worker thread or global state is involved. GUI limits are 32 nodes, 128 components,
+32 voltage sources and 1001 points, plus the core work bound. There is no guarantee
+that one frequency solve completes within a fixed time; cancellation occurs
+between solves. Changes to any calculation input stop the timer, discard the old
+snapshot and clear results. Switching pages/domains preserves state.
+
+Cancel retains evaluated point results and EVERY requested frequency row, marking
+all remaining rows "Not evaluated (cancelled)". Such a table is explicitly an
+incomplete run, not a completed core SweepResult. It does not fabricate electrical
+errors or numeric values for unevaluated points. Starting again creates a new
+snapshot and grid; deleting the view destroys its timer and owned run state.
+
+GUI workflow tests cover analytical results, source phase, prefix conversion,
+invalid pending input, explicit missing references, both source-type normalization
+restrictions, exact singular-point gaps, cancellation/edit invalidation/destruction,
+zero gain/phase, plot gap and phase-wrap segmentation, domain/DC/AC persistence,
+RLC example, resource bounds, Unicode labels and locale independence.

@@ -1,5 +1,5 @@
 #include "main_window.hpp"
-#include "circuits_view.hpp"
+#include "circuits_workspace.hpp"
 #include "digital_workspace.hpp"
 #include "signals_dsp_view.hpp"
 
@@ -23,7 +23,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     pages->setObjectName("domain_pages");
     pages->addWidget(new SignalsDspView(pages));
     pages->addWidget(new DigitalWorkspace(pages));
-    pages->addWidget(new CircuitsView(pages));
+    pages->addWidget(new CircuitsWorkspace(pages));
     layout->addWidget(navigation);
     layout->addWidget(pages, 1);
     connect(navigation, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
