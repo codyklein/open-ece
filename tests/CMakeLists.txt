@@ -1,6 +1,6 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
-add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp)
+add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp)
 target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
 target_include_directories(openece_circuit_tests PRIVATE ${PROJECT_SOURCE_DIR}/circuits/src)
 gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)
@@ -50,3 +50,7 @@ if(WIN32 AND OPENECE_BUILD_GUI)
     set_tests_properties(gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
+
+# Optional manual workload benchmark; excluded from ordinary builds and CTest.
+add_executable(openece_ac_benchmark EXCLUDE_FROM_ALL ../benchmarks/ac_sweep.cpp)
+target_link_libraries(openece_ac_benchmark PRIVATE OpenECE::circuits openece_options)

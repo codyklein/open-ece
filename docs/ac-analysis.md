@@ -97,3 +97,65 @@ by 90 degrees. A first-order RC low-pass measured ACROSS THE CAPACITOR has
 H=1/(1+j*omega*R*C); at f=1/(2*pi*R*C), H=(1-j)/2, -3.01029995664 dB and -45 degrees.
 An independent branch-impedance/current formulation and test-only Gauss-Jordan
 solve check mixed networks without reusing production MNA stamps or Eigen.
+
+## Frequency sweeps and response presentation
+
+`ac/sweep.hpp` provides SweepSpec (positive start/stop Hz, point count, spacing),
+`frequency_grid(circuit, spec)`, `solve_ac_point(circuit, frequency_hz)` and
+`sweep_ac(circuit, spec)`. A SweepPoint ALWAYS owns its requested frequency and
+`variant<AcSolution, CircuitError>`. A completed SweepResult retains every point
+in ascending grid order, including failures with diagnostic codes/messages/IDs.
+It never drops, replaces with zero, or interpolates a failed point. A malformed
+request fails before solving; allocation/system exceptions propagate rather than
+being disguised as electrical failures. Individual CircuitError failures do not
+prevent solving later frequencies. Results and errors own their data.
+
+Linear grids use std::lerp(start,stop,i/(P-1)). Logarithmic interiors use
+exp(lerp(log(start),log(stop),i/(P-1))). Both endpoints are explicitly assigned the
+requested double values, exactly. Require start<stop, 2<=P<=4096, valid spacing,
+and supported finite frequencies. Reject a grid if its represented values are
+not strictly increasing. Construction is deterministic on a given implementation;
+libm rounding is not promised bit-identical across platforms. No frequency is
+snapped to a nominal resonance or preferred engineering value.
+
+Before grid/result allocation, validate P*max(1,k)^3<=1,000,000,000, where k is the
+non-ground node count plus voltage-source count. The bounded k^3 and division
+comparison avoid unchecked product arithmetic. This is an aggregate work proxy,
+not a latency promise. The GUI uses at most 1001 points and smaller circuit limits.
+
+VoltageProbe explicitly selects positive and negative node IDs (equal IDs read
+zero). VoltageTransfer additionally names one nonzero AC voltage source. Every
+OTHER independent voltage AND current source must have zero phasor magnitude.
+`validate_voltage_transfer` checks this before a sweep; `voltage_transfer` also
+validates before returning H=(Vp-Vn)/E. It does not modify or suppress excitation.
+Its Circuit and AcSolution must represent the same validated snapshot. Absolute
+`probe_voltage` remains V RMS; normalized voltage transfer is dimensionless.
+
+`wrapped_phase_degrees` returns a value in (-180,180], mapping -180 to +180,
+including a negative-real phasor with negative-zero imaginary part. Exactly zero
+has no phase (nullopt), not an invented zero-degree response. Nonzero tiny values
+still have a mathematical phase. `gain_magnitude_db` computes 20*log10(abs(H))
+with a finite -240 dB display floor, including zeros. Neither helper changes the
+stored phasor. The GUI may hide transfer phase at/below the display floor; raw
+complex results remain available. Nonfinite response values are rejected.
+
+### Workload benchmark
+
+`openece_ac_benchmark` is an optional target excluded from normal builds/CTest.
+It measures grounded reactive networks at 4, 62 and 191 unknowns, using the
+largest point count accepted by the work and grid limits. Build/run it with:
+
+```sh
+cmake -S . -B build/ac-benchmark -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENECE_BUILD_GUI=OFF
+cmake --build build/ac-benchmark --target openece_ac_benchmark
+./build/ac-benchmark/tests/openece_ac_benchmark
+```
+
+On Fedora, GCC 16.2.1, Intel i9-12900H, Release measured approximately 0.017 s
+(4 unknowns/4096 points), 1.63 s (62/4096), and 1.18 s (191/143), with no failed
+points. Debug measured 0.28 s, 28.64 s and 19.30 s respectively on the same
+networks. These observations support retaining the provisional 1e9 bound as the
+v0.7 policy. They are examples, not portable upper bounds; Debug and sanitizer
+builds are slower. GUI work must yield between solves for progress/cancellation;
+a numerical solve itself is bounded but not interruptible. No acceptance policy
+was loosened to improve these measurements.
