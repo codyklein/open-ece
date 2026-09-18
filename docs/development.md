@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital circuits gui tests -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -435,3 +435,28 @@ technical debt is explicit: dense bounded synchronous solving, GUI-local drafts,
 no save/load/undo or schematic canvas, and no exhaustive multi-error diagnostic
 report. Windows physical hardware, high-DPI and accessibility checks remain manual;
 MinGW is not validated. No release, AC/transient work or subsequent milestone was started.
+
+## v0.7 validation and workload reproduction
+
+The AC milestone adds 34 core CTest entries and one Qt workflow suite (11 functional
+methods), giving 131 headless and 137 desktop entries. Tests cover RMS phasor signs,
+complex symmetric stamps, RC/RL/RLC closed forms, 120 independent mixed-network
+reference solves, exact resonance failure, conditioning/physical residual checks,
+per-frequency sweep errors, source normalization, grid precision/work limits,
+phase wrapping, GUI cancellation/ownership, engineering units and plot gaps.
+
+Core and GUI checkpoint validation passed locally with GCC and Clang ASan/UBSan.
+Final six-configuration Fedora and Windows Debug/Release/package validation is
+recorded below once complete. No numerical tolerance or GUI timeout was weakened.
+The sweep benchmark is an optional build target, not a CTest time limit; reproduction
+commands and GCC Debug/Release measurements are in [AC analysis](ac-analysis.md).
+
+An AC GUI screenshot can be generated during the domain/workspace test:
+
+```sh
+QT_QPA_PLATFORM=offscreen OPENECE_AC_SCREENSHOT="$PWD/build/dev/ac.png" ./build/dev/tests/openece_ac_gui_tests domainAndDcAcPersistenceWithRlcExample
+```
+
+The existing DC view and all DSP/digital implementation/tests are preserved.
+No new package dependency is required: the existing pinned Qt/Qwt/Eigen toolchain
+supports the AC module, and normal CMake configuration remains offline.

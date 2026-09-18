@@ -1,11 +1,11 @@
-# Windows build and portable ZIP (v0.6.0)
+# Windows build and portable ZIP (v0.7.0)
 
-The v0.6.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
+The v0.7.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0** and **Eigen 5.0.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
 hardware test. MinGW has not been validated and is not a supported configuration
-for this milestone. Existing DSP and digital APIs remain unchanged; v0.6 adds independent DC analysis.
+for this milestone. Existing DSP, digital and DC APIs remain unchanged; v0.7 adds independent AC phasor analysis.
 
 ## Prerequisites
 
@@ -104,7 +104,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.6.0-windows-x86_64.zip
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.7.0-windows-x86_64.zip
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -119,7 +119,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v0.6.0-windows-x86_64/
+OpenECE-v0.7.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -155,7 +155,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v0.6.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v0.7.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the

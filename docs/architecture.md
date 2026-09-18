@@ -258,3 +258,40 @@ MainWindow gains only a Circuits navigation item and persistent CircuitsView;
 other domain implementations remain unchanged. The view owns invalid editable
 widget state, converts prefixes to SI only on parsing, and clears results on edits.
 See [Circuit Analysis contracts](circuit-analysis.md) for all policies and tradeoffs.
+
+## AC Circuit Analysis (v0.7)
+
+`openece::circuits::ac` extends the same Qt-independent circuits target with a
+separate definition/validated snapshot and complex-valued results. It shares
+NodeId, ComponentId, Node and Resistor with DC; public DC variants and solve APIs
+remain unchanged. Private structural-validation utilities centralize ID/name/
+terminal/count rules, while component-value checks stay specific to each model.
+AC includes only R/C/L and independent complex RMS voltage/current sources.
+
+Positive-frequency MNA uses admittance stamps and the ordinary B transpose, never
+an adjoint. OpenECE owns indexing, stable-ID accumulation, topology/constraint-loop
+diagnostics, equilibration and physical residual checks. Private complex Eigen
+FullPivLU uses the unchanged centralized numerical acceptance policy. Sharing a
+scalar-generic solver framework was deliberately avoided in this milestone;
+real and complex solve implementations remain small, separately tested paths.
+
+SweepSpec produces exact requested endpoints and checked strictly increasing
+interiors. Every SweepPoint owns its requested frequency plus an AcSolution or
+structured CircuitError; failures do not stop later frequencies. A measured
+aggregate dense-work budget and point cap bound ordinary synchronous core sweeps.
+The optional benchmark records work-policy evidence without machine-dependent
+CTest timing assertions. Response helpers separate V RMS from normalized voltage
+gain, enforce excitation restrictions, and define wrapped phase and display floor.
+
+CircuitsWorkspace composes persistent DC and AC views. Existing CircuitsView is
+unchanged; MainWindow only composes the workspace. AcView owns invalid widget
+drafts and captures a validated snapshot/grid on Run. A QTimer performs one solve
+per event, allowing progress/cancellation without threads. Completed rows own core
+results; pending/cancelled rows explicitly remain unevaluated. Edits discard the
+old run. AcResponsePlot makes separate Qwt-owned curves for contiguous valid runs,
+so failed frequencies and undefined/wrapped phase never get joined accidentally.
+
+Tradeoffs are bounded dense factorization per frequency, repeated topology checks,
+separate DC/AC editor code, GUI-local drafts, and no cancellation inside one solve.
+There is no persistence, undo, schematic canvas, transient/nonlinear/dependent-source
+model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
