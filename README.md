@@ -5,13 +5,20 @@ and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
 provides three domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
 **Digital Logic** (combinational circuits / truth tables and timed sequential simulation),
-and **Circuits** (linear DC resistors and independent sources).
+and **Circuits** (linear DC and sinusoidal steady-state AC analysis).
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.6 Linear DC Circuit Analysis
+## Current status: v0.7 AC Circuit Analysis
+
+- Separate Qt-independent AC model with R/C/L and independent RMS phasor sources.
+- Complex MNA single-frequency solves, explicit source-current signs, and strict diagnostics.
+- Bounded linear/log sweeps preserving each frequency and its accepted solution or error.
+- Persistent DC/AC tabs, engineering-unit inputs, phasor tables, and cancellable response plots.
+- Explicit absolute V RMS versus normalized voltage gain, wrapped phase, and visible failure gaps.
+- RC/RL/RLC analytical regressions and independent branch-current reference calculations.
 
 - Independent validated circuit model and Modified Nodal Analysis with explicit signs.
 - Node voltages, ideal-voltage-source currents, and floating/constraint/numerical diagnostics.
@@ -33,7 +40,7 @@ general simulator, real-time system, or validated measurement instrument.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
-No AC/transient/nonlinear analysis, FSM/HDL tooling, communications, hardware,
+No transient/nonlinear analysis, FSM/HDL tooling, communications, hardware,
 persistence, or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
@@ -61,7 +68,7 @@ sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbas
 | C++20 compiler, CMake ≥ 3.24, Ninja | Standard C++ build and reproducible local presets |
 | Qt 6 ≥ 6.4 Widgets | Desktop controls, layout, event loop, and widget ownership |
 | Qwt ≥ 6.2, built for Qt 6 | Scientific axes, curves, and zoom; no custom plotting infrastructure |
-| Eigen ≥ 3.4 (Windows pins 5.0.0) | Private header-only DC linear algebra |
+| Eigen ≥ 3.4 (Windows pins 5.0.0) | Private header-only real/complex linear algebra |
 | GoogleTest ≥ 1.12 | Numerical unit tests, discovered by CTest |
 | Qt Test (with Qt development packages) | Phase parser and desktop integration tests |
 | pkg-config | Discover Fedora's `Qt6Qwt6` imported dependency |
@@ -189,7 +196,7 @@ delay. See [Timing conventions, limits and API](docs/digital-timing.md).
 
 ## Circuits
 
-Choose **Circuits** in the sidebar. The default 10 V / two-1 kΩ divider shows
+Choose **Circuits** in the sidebar. Its **DC** tab retains the default 10 V / two-1 kΩ divider, showing
 5 V at the midpoint and −0.005 A through the supply. Edit node/component names
 in place, select an explicit ground and +/− terminals, enter a value and unit,
 then choose **Solve DC**. Edits clear stale results; invalid drafts remain editable.
@@ -197,7 +204,27 @@ Unit switching converts the pending physical value; invalid text stays visible.
 Positive current always means + terminal → − terminal, including voltage sources.
 Current sources do not establish a voltage reference. Floating networks and
 redundant/conflicting ideal-voltage-source loops are rejected without regularization.
-See [Circuit Analysis API, MNA, policies and limits](docs/circuit-analysis.md).
+See [DC Circuit Analysis API, MNA, policies and limits](docs/circuit-analysis.md).
+
+The **AC / Phasors** tab supports resistors, capacitors, inductors and independent
+sinusoidal sources. Enter RMS source magnitude and phase in degrees; the reference
+waveform is cosine. Choose a strictly positive frequency and **Solve AC** for
+complex node voltages and voltage-source currents. Prefix changes convert physical
+quantities rather than reinterpreting text. The RC low-pass example measures across
+the capacitor; at its corner the voltage transfer is −3.0103 dB and −45°.
+
+For a **Frequency sweep**, choose endpoints, linear/log spacing, up to 1001 GUI
+points, and an output node pair. **Absolute voltage** reports V RMS. **Voltage
+transfer** divides by a selected nonzero voltage-source phasor and requires ALL
+other independent voltage/current sources to be zero. Gain is 20 log10|H| with a
+−240 dB display floor; phase is wrapped to (−180°,180°]. Zero has undefined phase.
+
+Every requested frequency stays in the table. Electrical failures create diagnostic
+rows and plot gaps, never fabricated zeros or lines across missing results. Cancel
+keeps evaluated points and marks the remaining frequencies unevaluated. Edits cancel
+old work and clear stale results; domain/tab switching preserves state. The core
+accepts up to 4096 points subject to its aggregate work bound. See
+[AC phasor, MNA, sweep and GUI contracts](docs/ac-analysis.md).
 
 ## Windows: build, test, run and package
 
@@ -215,8 +242,8 @@ core/       SampledSignal: owning real samples and sample rate
 signals/    sine generator → core
 dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
 digital/    combinational evaluation / truth tables and separate timed simulation (stdlib only)
-circuits/   validated linear DC model and MNA solver (private Eigen dependency)
-gui/        persistent SignalsDspView, DigitalWorkspace and CircuitsView; Qt Widgets + Qwt
+circuits/   separate validated DC/AC models, real/complex MNA and sweeps (private Eigen)
+gui/        persistent SignalsDspView, DigitalWorkspace and CircuitsWorkspace; Qt Widgets + Qwt
 tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```

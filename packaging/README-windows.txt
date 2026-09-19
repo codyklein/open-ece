@@ -1,4 +1,4 @@
-OpenECE v0.6.0 - Windows x86_64
+OpenECE v0.7.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -36,5 +36,16 @@ Circuits starts with a 10 V / two-1 kilohm voltage divider (midpoint 5 V).
 Edit node/component tables, explicitly select ground and terminals, and Solve DC.
 Positive current flows from + to -; the supply current is -0.005 A.
 Prefixes convert values, invalid drafts remain editable, and edits clear results.
-This is linear DC only: resistors and independent current/voltage sources.
+The DC tab supports resistors and independent current/voltage sources.
 See docs/circuit-analysis.md in source for MNA, limits and numerical policies.
+
+The AC / Phasors tab adds linear sinusoidal steady-state R/C/L analysis. Sources
+use RMS magnitude and phase in degrees with a cosine reference. Solve one positive
+frequency or run a bounded sweep. Voltage-transfer mode requires one nonzero
+voltage source and every other voltage/current source set to zero. Absolute
+response is V RMS; transfer gain is 20 log10|H| with a -240 dB display floor.
+Failed frequencies remain visible as diagnostics and plot gaps. Cancel retains
+completed points and explicitly marks unevaluated frequencies. Start with the
+RC low-pass (output across C) or series RLC (output across R) examples.
+No transient, nonlinear, schematic, persistence or undo features are included.
+See docs/ac-analysis.md in source for phasor signs, limits and numerical policy.

@@ -1,6 +1,6 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
-add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp)
+add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp)
 target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
 target_include_directories(openece_circuit_tests PRIVATE ${PROJECT_SOURCE_DIR}/circuits/src)
 gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)
@@ -18,6 +18,11 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_ac_gui_tests ac_gui_test.cpp)
+    set_target_properties(openece_ac_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_ac_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    add_test(NAME ac_gui_workflow COMMAND openece_ac_gui_tests)
+    set_tests_properties(ac_gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
     add_executable(openece_circuit_gui_tests circuit_gui_test.cpp)
     set_target_properties(openece_circuit_gui_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_circuit_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -47,6 +52,10 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
+
+# Optional manual workload benchmark; excluded from ordinary builds and CTest.
+add_executable(openece_ac_benchmark EXCLUDE_FROM_ALL ../benchmarks/ac_sweep.cpp)
+target_link_libraries(openece_ac_benchmark PRIVATE OpenECE::circuits openece_options)

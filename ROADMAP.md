@@ -98,6 +98,20 @@ SPICE integration, or subsequent milestone is included. Existing DSP and digital
 APIs and behavior remain unchanged. Dense bounded solving and GUI-local drafts
 are deliberate v0.6 limits; see docs/circuit-analysis.md.
 
+## v0.7 — Linear steady-state AC Circuit Analysis (implemented)
+
+- [x] Separate AC draft/snapshot model sharing stable circuit IDs and internal validation.
+- [x] R/C/L complex-admittance MNA, independent RMS phasor sources, strict electrical/numerical diagnostics.
+- [x] Positive-frequency phasor solves, deterministic bounded linear/log grids and explicit per-point failures.
+- [x] Absolute voltage versus normalized transfer, source restrictions, wrapped phase and finite gain floor.
+- [x] Persistent DC/AC workspace, engineering units, cancellable sweeps and gap-preserving plots.
+- [x] Analytical and independent numerical references, GUI workflows and measured workload limits.
+- [x] Complete final Fedora/Windows/package validation.
+
+This is sinusoidal steady state only. DC APIs and behavior remain unchanged.
+No transient, nonlinear/dependent-source, schematic, persistence, undo or later
+milestone is included. See docs/ac-analysis.md for contracts and resource policy.
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP
