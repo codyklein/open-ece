@@ -75,3 +75,56 @@ at (m+1)/Rs, including the last decision at record duration. There is no tail,
 padding, timing search or delay compensation. Perfect coherent phase/timing is
 assumed. LinkResult owns full waveform and decision records plus integer error
 counts. Mutating the request cannot change an existing result.
+
+## BER Monte Carlo experiment
+
+BerExperiment validates an owned BerRequest before allocating point state. Each
+point preserves its original index and requested Eb/N0, owns bit/noise generators,
+and retains integer bit_errors, bits_tested and requested_bits. Results are owned
+snapshots in request order. Repeated Eb/N0 values are allowed and get distinct
+streams by index. Changing processing order or chunk size leaves each completed
+point unchanged. Altering a different point does not reseed existing identities.
+The bit budget and every advance budget must be divisible by k; odd QPSK requests
+are rejected, never rounded. An advance consumes at most the remaining budget;
+completed points are unchanged. Run continues any partial work to completion.
+
+Monte Carlo operates at matched-filter decision rate: symbol energy one and
+independent Gaussian decision coordinates of variance N0/2. This is statistically
+equivalent to the normalized waveform chain, but uses distinct BER stream tags
+and retains no waveform records. It is not the same noise realization as LinkResult.
+Each BPSK symbol consumes one bit and an I/Q Gaussian pair (Q ignored); QPSK consumes
+two bits and an I/Q Gaussian pair. RNG state is never reconstructed at chunk edges.
+
+Theory for both mappings is 0.5*erfc(sqrt(10^(Eb/N0_dB/10))). Measured BER is the
+integer error count divided by tested bits; no tested bits means no estimate.
+Zero errors is reported as "0 errors in N bits", with a one-sided 95% upper bound
+1-0.05^(1/N), evaluated as -expm1(log(0.05)/N). There is no invented measured BER
+floor. Fixed bit budgets avoid error-triggered stopping. Partial cancelled counts
+remain partial, with the originally requested budget available for comparison.
+
+Theory regression tests use fixed seeds and a predeclared two-sided Bernstein
+binomial bound: with t=log(2/alpha), accept |errors-Np| <= sqrt(2*N*p*(1-p)*t)+2*t/3.
+Alpha=1e-6 for each of eight modulation/Eb/N0 cases gives a union bound <=8e-6
+under the independent Bernoulli model. Tests do not demand exact theory equality
+or monotonic empirical curves. Gaussian mean and second-moment checks use normal
+and chi-square concentration bounds; no empirical variance renormalization occurs.
+
+## Provisional execution policy and benchmark
+
+Core limits are 64 BER points, 10,000,000 bits per point and 50,000,000 aggregate
+bits; multiplication is checked by division before point allocation. One advance
+is bounded to 65,536 bits. GUI policy will be stricter: 41 points, 1,000,000 bits
+per point and 10,000,000 aggregate bits. Benchmark results are evidence for a
+resource policy, not a time guarantee. The largest BPSK/QPSK single-point and
+64-point workloads can be reproduced with:
+
+```sh
+cmake -S . -B build/communications-benchmark -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENECE_BUILD_GUI=OFF
+cmake --build build/communications-benchmark --target openece_communications_benchmark
+./build/communications-benchmark/tests/openece_communications_benchmark
+```
+
+Fedora GCC Release measured 0.32/1.61 seconds for BPSK 10M/50M bits and 0.18/0.92
+seconds for QPSK 10M/50M bits. Windows Release measurements are required before
+these provisional limits are frozen. The benchmark is excluded from ordinary
+builds and CTest, and has no machine-dependent pass/fail time threshold.

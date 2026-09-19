@@ -108,6 +108,13 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ctest --preset windows-release --output-junit release-results.xml
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Benchmark communications resource limits
+        shell: pwsh
+        run: |
+          cmake --build build/windows --config Release --target openece_communications_benchmark --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./build/windows/tests/Release/openece_communications_benchmark.exe | Tee-Object build/windows/communications-benchmark.log
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package Release
         shell: pwsh
         run: ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
@@ -123,6 +130,7 @@ jobs:
           path: |
             build/windows/Testing/
             build/windows/*results.xml
+            build/windows/communications-benchmark.log
             build/windows/CMakeFiles/CMakeConfigureLog.yaml
   packaged-startup:
     name: Packaged app / fresh Windows runner without Qt SDK

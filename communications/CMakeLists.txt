@@ -1,4 +1,4 @@
-add_library(openece_communications STATIC src/model.cpp src/link.cpp)
+add_library(openece_communications STATIC src/model.cpp src/link.cpp src/ber.cpp)
 add_library(OpenECE::communications ALIAS openece_communications)
 target_include_directories(openece_communications PUBLIC include)
 target_compile_features(openece_communications PUBLIC cxx_std_20)

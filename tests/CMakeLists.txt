@@ -1,6 +1,6 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
-add_executable(openece_communications_tests communications_model_test.cpp communications_link_test.cpp)
+add_executable(openece_communications_tests communications_model_test.cpp communications_link_test.cpp communications_ber_test.cpp)
 target_link_libraries(openece_communications_tests PRIVATE OpenECE::communications GTest::gtest_main openece_options)
 target_include_directories(openece_communications_tests PRIVATE ${PROJECT_SOURCE_DIR}/communications/src)
 gtest_discover_tests(openece_communications_tests DISCOVERY_MODE PRE_TEST)
@@ -63,3 +63,6 @@ endif()
 # Optional manual workload benchmark; excluded from ordinary builds and CTest.
 add_executable(openece_ac_benchmark EXCLUDE_FROM_ALL ../benchmarks/ac_sweep.cpp)
 target_link_libraries(openece_ac_benchmark PRIVATE OpenECE::circuits openece_options)
+
+add_executable(openece_communications_benchmark EXCLUDE_FROM_ALL ../benchmarks/communications_ber.cpp)
+target_link_libraries(openece_communications_benchmark PRIVATE OpenECE::communications openece_options)
