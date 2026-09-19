@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital circuits gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits communications gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -489,3 +489,55 @@ Remaining limitations: bounded dense solves and repeated topology checks per
 frequency; cancellation between solves only; GUI-local drafts with no save/load
 or undo; separate small DC/AC solve and editor paths. Actual Windows 10/11 hardware,
 high-DPI and accessibility remain manual validation, and MinGW is not validated.
+
+## v0.8 validation
+
+Communications adds 27 core test entries and one Qt workflow suite containing nine
+functional cases. The complete suite has 158 headless and 165 desktop CTest entries.
+It tests exact mappings and thresholds, normalized pulse/receiver arithmetic,
+random stream contracts, per-point/chunk determinism, fixed-seed binomial theory
+bounds, Gaussian moments, limits, cancellation and existing-domain preservation.
+No existing numerical tolerance or GUI test timeout was loosened. Three existing
+navigation tests change only the expected number of domains from three to four.
+
+Core execution budgets were benchmarked on Fedora GCC Release and Windows MSVC
+Release before being frozen; see [Communications](communications.md). The benchmark
+is an optional build target and runs in Windows CI, without a timing threshold.
+
+Render the three GUI views during the domain workflow test:
+
+```sh
+QT_QPA_PLATFORM=offscreen OPENECE_COMMUNICATIONS_SCREENSHOT="$PWD/build/communications.png" ./build/dev/tests/openece_communications_gui_tests DomainsPreserveDraftsAndPlots
+```
+
+The initial path saves I/Q waveforms; `.constellation.png` and `.ber.png` suffixes
+save the other views.
+
+The final local Fedora 44 matrix passed: GCC and Clang desktop **165/165** each,
+GCC and Clang headless **158/158** each, and Clang ASan/UBSan desktop **165/165**
+and headless **158/158**. Formatting and diff checks passed, without compiler
+warnings or sanitizer findings.
+
+Final versioned validation of `e11a8d5` passed all eight jobs in
+[CI run 35449429725](https://github.com/codyklein/open-ece/actions/runs/35449429725).
+Fedora 44 GCC/Clang and sanitizer jobs matched the local counts. Windows MSVC
+2022 / Qt 6.8.3 passed **165/165 Debug and 165/165 Release**. No compiler warnings
+or sanitizer findings appeared in the full CI log. A fresh Windows Server 2022
+runner extracted the ZIP into a path containing spaces and π, removed Qt/Qwt
+development paths, opened a native window, verified app-local Qt/Qwt/CRT modules,
+and closed normally.
+
+The downloaded `OpenECE-v0.8.0-windows-x86_64.zip` contains 33 files with all 32
+SHA-256 manifest entries independently verified: the Release executable, Qt/Qwt
+and CRT DLLs, platform/style plugins, qt.conf, runtime README, OpenECE MIT license
+and dependency notices including Eigen. No Debug runtime DLLs were present.
+The inner ZIP SHA-256 for that run is
+`c881f07d5afe1a8a43c0f209721ea38c23d36deb29150a9f890097905cbeada4`.
+This is a CI validation artifact, not a published GitHub Release.
+
+Remaining limitations: ideal synchronized normalized baseband only; bounded
+synchronous link simulation and BER cancellation between chunks; labelled plot
+previews; GUI-local state without project files or undo. Integer random streams
+are portable, while floating Gaussian results may vary slightly with the math
+library. Physical Windows 10/11, high-DPI/accessibility behavior and MinGW remain
+unvalidated.

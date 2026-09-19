@@ -9,6 +9,8 @@ flowchart TD
     UI --> DSP[dsp]
     UI --> Digital[digital: standard library only]
     DigitalTests[Logical GoogleTest tests] --> Digital
+    UI --> Communications[communications: standard library only]
+    CommunicationsTests[Mapping / channel / BER tests] --> Communications
     UI --> Circuits[circuits]
     Circuits --> Eigen[Eigen: private dense linear algebra]
     CircuitTests[Independent DC tests] --> Circuits
@@ -28,7 +30,7 @@ does not even search for Qt or Qwt.
 GUI targets use `QT_NO_KEYWORDS` and Qt's explicit `Q_SIGNALS`/`Q_SLOTS` spellings.
 This prevents Qt's optional `signals` macro from colliding with the C++ domain namespace.
 
-Five small engineering targets are slightly more CMake work than one monolithic
+Separate small engineering targets are slightly more CMake work than one monolithic
 library, but make dependency direction visible and prevent accidental GUI coupling.
 Namespaced public headers and target-level include paths provide stable boundaries
 without claiming a stable ABI in v0.1. C++20 provides `std::span`, bit utilities,
@@ -295,3 +297,31 @@ Tradeoffs are bounded dense factorization per frequency, repeated topology check
 separate DC/AC editor code, GUI-local drafts, and no cancellation inside one solve.
 There is no persistence, undo, schematic canvas, transient/nonlinear/dependent-source
 model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
+
+## Digital Communications (v0.8)
+
+OpenECE::communications is independent of Qt and every other engineering target.
+BitSequence and BasebandSignal own their data; normalized complex baseband samples
+are not digital logic values, circuit RMS phasors, or an extension of SampledSignal.
+Mapping and coherent waveform simulation return owned records. LinkResult includes
+actual unit-energy pulse samples, channel samples and matched-filter decisions.
+
+The separate BerExperiment owns bounded point states with independent bit/noise
+engines derived from stable request indices. It retains integer counts, not full
+waveforms. Incremental calls preserve both integer generator and Gaussian state.
+There is no global generator, standard-library distribution, worker thread or
+cross-domain scheduler. The specified mt19937_64/open-uniform/Box-Muller algorithm
+and statistical acceptance tests are documented in communications.md.
+
+CommunicationsView owns editable widget state and snapshots each link or BER
+request. Its QTimer advances at most 4096 BER bits per event; Step and Run use
+the same operation. Cancelling preserves partial counts; edits discard stale
+snapshots. MainWindow only composes the fourth persistent domain. Qwt owns copied
+curve/marker data; constellation scaling preserves I/Q geometry. Zero-error
+markers represent explicit statistical upper bounds, not measured nonzero BER.
+
+Tradeoffs are bounded synchronous waveform generation, cancellation between BER
+chunks, truncated labelled plot previews, and GUI-local drafts without persistence
+or undo. Floating Gaussian values may differ slightly across math libraries, while
+integer streams are specified exactly. No generalized modem/filter framework or
+RF carrier/recovery path is introduced. Existing DSP/digital/circuit APIs stay intact.

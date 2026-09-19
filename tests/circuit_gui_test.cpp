@@ -36,7 +36,7 @@ class CircuitGuiTest : public QObject {
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         auto* nav = window.findChild<QListWidget*>("domain_navigation");
-        QCOMPARE(nav->count(), 3);
+        QCOMPARE(nav->count(), 4);
         nav->setCurrentRow(2);
         QVERIFY(status(window).startsWith("Solved DC"));
         auto* volts = table(window, "circuit_voltages");
