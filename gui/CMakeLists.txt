@@ -2,10 +2,10 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
 find_package(Qwt 6.2 REQUIRED)
 
 # Internal GUI library allows integration tests to exercise the same workbench as main().
-add_library(openece_workbench STATIC circuits_workspace.cpp ac_view.cpp ac_response_plot.cpp circuits_view.cpp circuit_value.cpp main_window.cpp signals_dsp_view.cpp digital_logic_view.cpp digital_workspace.cpp timing_view.cpp timing_diagram_widget.cpp plot_widget.cpp phase_input.cpp)
+add_library(openece_workbench STATIC communications_view.cpp communications_plot.cpp circuits_workspace.cpp ac_view.cpp ac_response_plot.cpp circuits_view.cpp circuit_value.cpp main_window.cpp signals_dsp_view.cpp digital_logic_view.cpp digital_workspace.cpp timing_view.cpp timing_diagram_widget.cpp plot_widget.cpp phase_input.cpp)
 target_include_directories(openece_workbench PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(openece_workbench
-    PUBLIC Qt6::Widgets Qwt::Qwt OpenECE::digital OpenECE::circuits
+    PUBLIC OpenECE::communications Qt6::Widgets Qwt::Qwt OpenECE::digital OpenECE::circuits
     PRIVATE OpenECE::signals OpenECE::dsp openece_options)
 target_compile_features(openece_workbench PUBLIC cxx_std_20)
 # Keep Qt's optional `signals` macro from colliding with our domain namespace.

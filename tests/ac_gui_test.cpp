@@ -300,7 +300,7 @@ class AcGuiTest : public QObject {
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         auto* nav = window.findChild<QListWidget*>("domain_navigation");
-        QCOMPARE(nav->count(), 3);
+        QCOMPARE(nav->count(), 4);
         nav->setCurrentRow(2);
         auto* tabs = window.findChild<QTabWidget*>("circuits_analysis_tabs");
         QCOMPARE(tabs->count(), 2);

@@ -27,7 +27,6 @@ rate is L*Rs, bit rate k*Rs and sample count (bit_count/k)*L. Limits are central
 resource policies. Invalid bits, lengths, values, limits and numerical failures
 have structured ErrorCode values; allocation errors are not disguised.
 
-The remaining BER and GUI contracts are implemented in later checkpoints.
 
 ## Deterministic random contract (specified before channel implementation)
 
@@ -132,3 +131,43 @@ The benchmark is excluded from ordinary
 builds and CTest, and has no machine-dependent pass/fail time threshold.
 
 Checkpoint 3 validation passed all eight jobs in [CI run 35418109825](https://github.com/codyklein/open-ece/actions/runs/35418109825): 164 desktop / 158 headless tests, MSVC Debug and Release, and fresh packaged startup.
+
+## Communications workspace
+
+MainWindow composes a persistent fourth CommunicationsView, with I/Q waveforms,
+constellation/bit decisions, BER experiment and conventions tabs. Domain switches
+preserve controls and results. This is in-memory workspace state, not file persistence.
+The existing domains keep their implementations and APIs; navigation-count tests
+now account for the fourth page.
+
+The link editor accepts seeded random bits or manual 0/1 text with whitespace.
+Invalid characters, odd QPSK counts and over-budget records produce visible errors
+without repairing inputs. Seeds are unsigned decimal uint64 values. Rates accept
+symbols/s, ksymbols/s or Msymbols/s; switching units converts the physical value,
+and failed conversions retain text and roll back the selector. Numeric parsing
+uses the C locale with grouping separators rejected. Noise can be disabled explicitly.
+
+GUI link limits are 65,536 bits and complex samples, and 1..64 samples/symbol.
+Waveform and constellation plots show the first 2048 samples/decisions, not an
+undocumented decimation; bit tables show the first 256 bits. Labels expose these
+limits, while error counts include the entire record. I/Q constellation axes use
+equal physical display scaling. Curves/markers are Qwt-owned and copy their data.
+
+BER is a distinct random experiment with its own point/bit budget; link rate,
+manual bits, samples/symbol and link noise checkbox do not redefine its channel.
+The GUI allows 1..41 points, up to 1,000,000 bits per point and 10,000,000 aggregate
+bits. One point requires equal endpoints; a sweep requires strictly increasing
+finite Eb/N0 values, preserving endpoints exactly. The core validates each point.
+
+Run/resume and Step use an owned BerExperiment; each GUI event advances at most
+4096 bits. Cancel stops the timer, retains integer counts and labels every incomplete
+row (including points not yet evaluated). Resume continues those RNG states.
+Edits cancel and discard stale results. Destruction deletes the timer and experiment.
+BER results are shown at their actual Eb/N0 values, without connecting incomplete
+or zero-error observations as measured lines. Zero-error downward triangles mark
+fixed-N one-sided 95% upper bounds, not measured BER. Partial results are explicit;
+user-adaptive cancellation does not imply the fixed-N statistical coverage guarantee.
+
+Nine GUI workflows test mapping, odd/invalid inputs, pending unit conversion,
+Run/Step repeatability, cancellation/resume/destruction, zero-error plot semantics,
+resource/plot limits, locale/seed handling and persistence across all four domains.
