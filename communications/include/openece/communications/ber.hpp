@@ -4,7 +4,7 @@
 #include <optional>
 namespace openece::communications {
 namespace limits {
-// Provisional execution policies until Fedora/Windows checkpoint-3 benchmarks.
+// Execution policies validated by Fedora/Windows checkpoint-3 benchmarks; not latency guarantees.
 inline constexpr std::size_t ber_points = 64;
 inline constexpr std::uint64_t bits_per_ber_point = 10'000'000, aggregate_ber_bits = 50'000'000;
 inline constexpr std::uint64_t chunk_bits = 65'536;

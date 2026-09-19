@@ -109,7 +109,7 @@ under the independent Bernoulli model. Tests do not demand exact theory equality
 or monotonic empirical curves. Gaussian mean and second-moment checks use normal
 and chi-square concentration bounds; no empirical variance renormalization occurs.
 
-## Provisional execution policy and benchmark
+## Execution policy and benchmark
 
 Core limits are 64 BER points, 10,000,000 bits per point and 50,000,000 aggregate
 bits; multiplication is checked by division before point allocation. One advance
@@ -125,6 +125,10 @@ cmake --build build/communications-benchmark --target openece_communications_ben
 ```
 
 Fedora GCC Release measured 0.32/1.61 seconds for BPSK 10M/50M bits and 0.18/0.92
-seconds for QPSK 10M/50M bits. Windows Release measurements are required before
-these provisional limits are frozen. The benchmark is excluded from ordinary
+seconds for QPSK 10M/50M bits. Windows MSVC Release measured 0.53/2.48 seconds
+for BPSK and 0.28/1.42 seconds for QPSK at the same 10M/50M workloads. These
+measurements support retaining the proposed core and GUI budgets as v0.8 policy.
+The benchmark is excluded from ordinary
 builds and CTest, and has no machine-dependent pass/fail time threshold.
+
+Checkpoint 3 validation passed all eight jobs in [CI run 35418109825](https://github.com/codyklein/open-ece/actions/runs/35418109825): 164 desktop / 158 headless tests, MSVC Debug and Release, and fresh packaged startup.
