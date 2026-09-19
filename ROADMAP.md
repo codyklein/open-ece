@@ -119,7 +119,7 @@ milestone is included. See docs/ac-analysis.md for contracts and resource policy
 - [x] Specified random streams, independent indexed BER points and fixed-budget statistics.
 - [x] Zero-error upper bounds, statistical reference tests and Fedora/Windows resource benchmarks.
 - [x] Persistent Communications GUI, bounded plots, Run/Step/Cancel/resume and workflow tests.
-- [ ] Complete final Fedora/Windows/package validation.
+- [x] Complete final Fedora/Windows/package validation.
 
 This is an ideal synchronized complex-baseband link. No RF carrier, recovery,
 configurable pulse shaping, coding, higher-order QAM, eye diagrams, SDR or OFDM.

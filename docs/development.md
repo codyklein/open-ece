@@ -516,5 +516,28 @@ save the other views.
 The final local Fedora 44 matrix passed: GCC and Clang desktop **165/165** each,
 GCC and Clang headless **158/158** each, and Clang ASan/UBSan desktop **165/165**
 and headless **158/158**. Formatting and diff checks passed, without compiler
-warnings or sanitizer findings. Final versioned Windows package validation is
-recorded below once complete.
+warnings or sanitizer findings.
+
+Final versioned validation of `e11a8d5` passed all eight jobs in
+[CI run 35449429725](https://github.com/codyklein/open-ece/actions/runs/35449429725).
+Fedora 44 GCC/Clang and sanitizer jobs matched the local counts. Windows MSVC
+2022 / Qt 6.8.3 passed **165/165 Debug and 165/165 Release**. No compiler warnings
+or sanitizer findings appeared in the full CI log. A fresh Windows Server 2022
+runner extracted the ZIP into a path containing spaces and π, removed Qt/Qwt
+development paths, opened a native window, verified app-local Qt/Qwt/CRT modules,
+and closed normally.
+
+The downloaded `OpenECE-v0.8.0-windows-x86_64.zip` contains 33 files with all 32
+SHA-256 manifest entries independently verified: the Release executable, Qt/Qwt
+and CRT DLLs, platform/style plugins, qt.conf, runtime README, OpenECE MIT license
+and dependency notices including Eigen. No Debug runtime DLLs were present.
+The inner ZIP SHA-256 for that run is
+`c881f07d5afe1a8a43c0f209721ea38c23d36deb29150a9f890097905cbeada4`.
+This is a CI validation artifact, not a published GitHub Release.
+
+Remaining limitations: ideal synchronized normalized baseband only; bounded
+synchronous link simulation and BER cancellation between chunks; labelled plot
+previews; GUI-local state without project files or undo. Integer random streams
+are portable, while floating Gaussian results may vary slightly with the math
+library. Physical Windows 10/11, high-DPI/accessibility behavior and MinGW remain
+unvalidated.

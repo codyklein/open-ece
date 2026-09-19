@@ -112,7 +112,7 @@ and chi-square concentration bounds; no empirical variance renormalization occur
 
 Core limits are 64 BER points, 10,000,000 bits per point and 50,000,000 aggregate
 bits; multiplication is checked by division before point allocation. One advance
-is bounded to 65,536 bits. GUI policy will be stricter: 41 points, 1,000,000 bits
+is bounded to 65,536 bits. GUI policy is stricter: 41 points, 1,000,000 bits
 per point and 10,000,000 aggregate bits. Benchmark results are evidence for a
 resource policy, not a time guarantee. The largest BPSK/QPSK single-point and
 64-point workloads can be reproduced with:
