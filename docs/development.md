@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital circuits gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits communications gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -489,3 +489,32 @@ Remaining limitations: bounded dense solves and repeated topology checks per
 frequency; cancellation between solves only; GUI-local drafts with no save/load
 or undo; separate small DC/AC solve and editor paths. Actual Windows 10/11 hardware,
 high-DPI and accessibility remain manual validation, and MinGW is not validated.
+
+## v0.8 validation
+
+Communications adds 27 core test entries and one Qt workflow suite containing nine
+functional cases. The complete suite has 158 headless and 165 desktop CTest entries.
+It tests exact mappings and thresholds, normalized pulse/receiver arithmetic,
+random stream contracts, per-point/chunk determinism, fixed-seed binomial theory
+bounds, Gaussian moments, limits, cancellation and existing-domain preservation.
+No existing numerical tolerance or GUI test timeout was loosened. Three existing
+navigation tests change only the expected number of domains from three to four.
+
+Core execution budgets were benchmarked on Fedora GCC Release and Windows MSVC
+Release before being frozen; see [Communications](communications.md). The benchmark
+is an optional build target and runs in Windows CI, without a timing threshold.
+
+Render the three GUI views during the domain workflow test:
+
+```sh
+QT_QPA_PLATFORM=offscreen OPENECE_COMMUNICATIONS_SCREENSHOT="$PWD/build/communications.png" ./build/dev/tests/openece_communications_gui_tests DomainsPreserveDraftsAndPlots
+```
+
+The initial path saves I/Q waveforms; `.constellation.png` and `.ber.png` suffixes
+save the other views.
+
+The final local Fedora 44 matrix passed: GCC and Clang desktop **165/165** each,
+GCC and Clang headless **158/158** each, and Clang ASan/UBSan desktop **165/165**
+and headless **158/158**. Formatting and diff checks passed, without compiler
+warnings or sanitizer findings. Final versioned Windows package validation is
+recorded below once complete.

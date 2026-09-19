@@ -3,15 +3,23 @@
 An extensible desktop engineering workbench for learning and connecting Electrical
 and Computer Engineering tools. The long-term direction includes Signals and
 Systems, DSP, circuits, digital logic, communications, and SDR. This repository
-provides three domains: **Signals / DSP** (sine → optional FIR → FFT → plots) and
+provides four domains: **Signals / DSP** (sine → optional FIR → FFT → plots),
 **Digital Logic** (combinational circuits / truth tables and timed sequential simulation),
-and **Circuits** (linear DC and sinusoidal steady-state AC analysis).
+**Circuits** (linear DC and sinusoidal steady-state AC analysis), and
+**Communications** (ideal coherent BPSK/QPSK, AWGN, and BER experiments).
 
 OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.7 AC Circuit Analysis
+## Current status: v0.8 Digital Communications
+
+- Separate Qt-independent communications model with owned bits and complex baseband records.
+- Exact BPSK/Gray-QPSK mappings, rectangular unit-energy pulses, AWGN and coherent reception.
+- Specified seeded random streams, chunk/order-independent BER experiments and theory checks.
+- Persistent fourth domain with I/Q waveforms, labelled constellations, recovered bits and BER plots.
+- Explicit integer error counts, zero-error upper bounds and cancellation/resume without lost state.
+- Bounded execution policies benchmarked on Fedora and Windows.
 
 - Separate Qt-independent AC model with R/C/L and independent RMS phasor sources.
 - Complex MNA single-frequency solves, explicit source-current signs, and strict diagnostics.
@@ -40,7 +48,7 @@ general simulator, real-time system, or validated measurement instrument.
 - Qt-independent engineering libraries, GoogleTest numerical tests, and Qt Test GUI integration checks.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
-No transient/nonlinear analysis, FSM/HDL tooling, communications, hardware,
+No transient/nonlinear analysis, FSM/HDL tooling, RF/SDR hardware,
 persistence, or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
@@ -226,6 +234,31 @@ old work and clear stale results; domain/tab switching preserves state. The core
 accepts up to 4096 points subject to its aggregate work bound. See
 [AC phasor, MNA, sweep and GUI contracts](docs/ac-analysis.md).
 
+## Communications
+
+Choose **Communications** to simulate an ideal coherent complex-baseband link.
+Use seeded random bits or manual 0/1 text, select BPSK or Gray QPSK, and choose a
+symbol rate, samples/symbol and Eb/N0. QPSK requires even bit counts; no padding
+is applied. **Simulate link** displays actual transmitted/received I/Q samples,
+matched-filter decision constellations and recovered bits. All amplitudes are
+normalized discrete-energy quantities, not physical RMS voltages or RF carriers.
+
+Each symbol has unit energy, independent of samples/symbol. Perfect timing and
+phase are assumed. The first 2048 samples/decisions and 256 bits are displayed;
+error counts use the entire bounded record. Rate-unit changes convert values.
+
+The **BER experiment** tab runs a separate seeded, fixed-budget Monte Carlo
+experiment at decision rate. Choose Eb/N0 endpoints and points (equal endpoints
+for one point), then Run/resume, Step or Cancel. Each point preserves its integer
+error/tested counts. Zero errors is shown as "0 errors in N bits" with a fixed-N
+95% upper-bound marker, never an invented measured BER floor. Both modulations
+share the theoretical BER at equal Eb/N0. Edits discard stale results; domain
+switching preserves the workspace, but no project files are saved.
+
+See [Communications model, random contract, normalization and limits](docs/communications.md).
+No coding, higher-order QAM, configurable pulse shaping, recovery, eye diagrams,
+RF carrier simulation, SDR or OFDM is included.
+
 ## Windows: build, test, run and package
 
 The Windows target remains Windows 10 (1809+) / Windows 11 x86_64, Visual Studio 2022,
@@ -243,7 +276,8 @@ signals/    sine generator → core
 dsp/        convolution, FIR/design/response, windows, FFT, and spectrum → core
 digital/    combinational evaluation / truth tables and separate timed simulation (stdlib only)
 circuits/   separate validated DC/AC models, real/complex MNA and sweeps (private Eigen)
-gui/        persistent SignalsDspView, DigitalWorkspace and CircuitsWorkspace; Qt Widgets + Qwt
+communications/ normalized BPSK/QPSK links, deterministic AWGN and bounded BER experiments
+gui/        persistent domain workspaces; Qt Widgets + Qwt
 tests/      independent numerical checks, phase parser, and desktop workflow tests
 docs/       architecture decisions, mathematical conventions, development guide
 ```

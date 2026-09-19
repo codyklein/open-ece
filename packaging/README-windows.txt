@@ -1,4 +1,4 @@
-OpenECE v0.7.0 - Windows x86_64
+OpenECE v0.8.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -49,3 +49,12 @@ completed points and explicitly marks unevaluated frequencies. Start with the
 RC low-pass (output across C) or series RLC (output across R) examples.
 No transient, nonlinear, schematic, persistence or undo features are included.
 See docs/ac-analysis.md in source for phasor signs, limits and numerical policy.
+
+Communications adds an ideal coherent complex-baseband BPSK/QPSK link. Use seeded
+or manual bits, view transmitted/received I/Q and labelled constellations, or run
+an independent bounded BER experiment. QPSK requires even bit counts. Eb/N0 noise
+normalization preserves unit symbol energy regardless of samples/symbol. Run and
+Step preserve the same random streams; Cancel retains partial counts and Resume
+continues them. Zero errors is an observation, with an explicit 95% fixed-N upper
+bound rather than a fabricated BER floor. No RF carrier/recovery/coding/SDR is
+included. See docs/communications.md in source for full conventions and limits.

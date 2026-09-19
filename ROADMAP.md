@@ -112,15 +112,29 @@ This is sinusoidal steady state only. DC APIs and behavior remain unchanged.
 No transient, nonlinear/dependent-source, schematic, persistence, undo or later
 milestone is included. See docs/ac-analysis.md for contracts and resource policy.
 
+## v0.8 — Ideal coherent Digital Communications (implemented)
+
+- [x] Independent owned bit/baseband model, BPSK and Gray QPSK mappings.
+- [x] Rectangular unit-energy waveform, explicit AWGN normalization and coherent receiver.
+- [x] Specified random streams, independent indexed BER points and fixed-budget statistics.
+- [x] Zero-error upper bounds, statistical reference tests and Fedora/Windows resource benchmarks.
+- [x] Persistent Communications GUI, bounded plots, Run/Step/Cancel/resume and workflow tests.
+- [ ] Complete final Fedora/Windows/package validation.
+
+This is an ideal synchronized complex-baseband link. No RF carrier, recovery,
+configurable pulse shaping, coding, higher-order QAM, eye diagrams, SDR or OFDM.
+Existing engineering APIs remain unchanged. See docs/communications.md.
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP
    workflows reveal shared requirements. Define resampling and rate compatibility.
-2. Introduce complex/IQ data and streaming blocks with explicit ownership,
+2. Extend the bounded communications I/Q model only through designed streaming blocks with explicit ownership,
    backpressure, cancellation, and performance measurements before SDR hardware.
 3. Extend circuit analysis only after a separate design/approval; define any future
    response representation before integrating with signals/DSP rather than coupling GUIs.
-4. Add communications models and simulated demodulation before live SDR input.
+4. Extend communications beyond the ideal coherent link only through a separate
+   design and approval; simulated validation must precede live SDR input.
 5. Extend digital timing only through separately designed requirements; consider
    FSM tools or FPGA/HDL interoperability when a concrete experiment needs them.
 6. Add versioned experiment persistence when round-trip and malformed-file contracts
