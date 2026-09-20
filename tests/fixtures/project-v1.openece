@@ -1,0 +1,328 @@
+{
+  "circuits": {
+    "ac": {
+      "components": [
+        {
+          "id": "0",
+          "kind": "voltage_source",
+          "name": "V1",
+          "negative": "0",
+          "phase": {
+            "text": "0",
+            "unit": "deg"
+          },
+          "positive": "1",
+          "value": {
+            "text": "1",
+            "unit": "V"
+          }
+        },
+        {
+          "id": "1",
+          "kind": "resistor",
+          "name": "R1",
+          "negative": "2",
+          "phase": {
+            "text": "0",
+            "unit": "deg"
+          },
+          "positive": "1",
+          "value": {
+            "text": "1",
+            "unit": "kohm"
+          }
+        },
+        {
+          "id": "2",
+          "kind": "capacitor",
+          "name": "C1",
+          "negative": "0",
+          "phase": {
+            "text": "0",
+            "unit": "deg"
+          },
+          "positive": "2",
+          "value": {
+            "text": "1",
+            "unit": "uF"
+          }
+        }
+      ],
+      "count_text": "201",
+      "frequency": {
+        "text": "159.15494309189535",
+        "unit": "Hz"
+      },
+      "ground": "0",
+      "mode": "transfer",
+      "next_component": "3",
+      "next_node": "3",
+      "nodes": [
+        {
+          "id": "0",
+          "name": "Ground"
+        },
+        {
+          "id": "1",
+          "name": "Input"
+        },
+        {
+          "id": "2",
+          "name": "π output 🚀"
+        }
+      ],
+      "probe_negative": "0",
+      "probe_positive": "2",
+      "reference_source": "0",
+      "selected_tab": "editor",
+      "spacing": "logarithmic",
+      "start": {
+        "text": "10",
+        "unit": "Hz"
+      },
+      "stop": {
+        "text": "10000",
+        "unit": "Hz"
+      }
+    },
+    "dc": {
+      "components": [
+        {
+          "id": "0",
+          "kind": "voltage_source",
+          "name": "V1",
+          "negative": "0",
+          "positive": "1",
+          "value": {
+            "text": "10",
+            "unit": "V"
+          }
+        },
+        {
+          "id": "1",
+          "kind": "resistor",
+          "name": "R1",
+          "negative": "9",
+          "positive": "1",
+          "value": {
+            "text": "1e-",
+            "unit": "ohm"
+          }
+        },
+        {
+          "id": "2",
+          "kind": "resistor",
+          "name": "R2",
+          "negative": "0",
+          "positive": "2",
+          "value": {
+            "text": "1000",
+            "unit": "ohm"
+          }
+        }
+      ],
+      "ground": "0",
+      "next_component": "3",
+      "next_node": "3",
+      "nodes": [
+        {
+          "id": "0",
+          "name": "Ground"
+        },
+        {
+          "id": "1",
+          "name": "Supply"
+        },
+        {
+          "id": "2",
+          "name": "Midpoint"
+        }
+      ],
+      "selected_tab": "editor"
+    },
+    "selected_tab": "dc"
+  },
+  "communications": {
+    "bit_count_text": "256",
+    "bit_seed_text": "1",
+    "budget_text": "100000",
+    "eb_n0": {
+      "text": "6",
+      "unit": "dB"
+    },
+    "manual_bits_text": "01 1",
+    "modulation": "qpsk",
+    "noise_enabled": true,
+    "noise_seed_text": "2",
+    "points_text": "7",
+    "samples_text": "16",
+    "selected_tab": "waveforms",
+    "source_mode": "manual",
+    "start": {
+      "text": "-2",
+      "unit": "dB"
+    },
+    "stop": {
+      "text": "10",
+      "unit": "dB"
+    },
+    "symbol_rate": {
+      "text": "1",
+      "unit": "ksymbol/s"
+    }
+  },
+  "digital": {
+    "combinational": {
+      "gates": [
+        {
+          "id": "3",
+          "kind": "xor",
+          "pin_count_text": "2",
+          "pins": [
+            "1",
+            "77"
+          ]
+        },
+        {
+          "id": "4",
+          "kind": "and",
+          "pin_count_text": "2",
+          "pins": [
+            "1",
+            "2"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "high": false,
+          "id": "1",
+          "name": "A"
+        },
+        {
+          "high": false,
+          "id": "2",
+          "name": "B"
+        }
+      ],
+      "next_id": "5",
+      "outputs": [
+        {
+          "name": "Sum",
+          "source": "3"
+        },
+        {
+          "name": "Carry",
+          "source": "4"
+        }
+      ]
+    },
+    "copy_delay": {
+      "text": "1000",
+      "unit": "ps"
+    },
+    "selected_tab": "combinational",
+    "timing": {
+      "display_unit": "ns",
+      "elements": [
+        {
+          "delay": {
+            "text": "1000",
+            "unit": "ps"
+          },
+          "id": "3",
+          "initial_q_text": "0",
+          "kind": "dff_rising",
+          "pins_text": "1,"
+        }
+      ],
+      "horizon": {
+        "text": "30000",
+        "unit": "ps"
+      },
+      "inputs": [
+        {
+          "clock": {
+            "first_edge_text": "",
+            "high_text": "",
+            "low_text": "",
+            "unit": "ps"
+          },
+          "id": "1",
+          "initial_text": "0",
+          "name": "D"
+        },
+        {
+          "clock": {
+            "first_edge_text": "5000",
+            "high_text": "5000",
+            "low_text": "5000",
+            "unit": "ps"
+          },
+          "id": "2",
+          "initial_text": "0",
+          "name": "CLK"
+        }
+      ],
+      "next_id": "4",
+      "observed_text": "1,2,3",
+      "outputs": [
+        {
+          "name": "Q",
+          "source_text": "3"
+        }
+      ],
+      "selected_tab": "inputs",
+      "stimuli": [
+        {
+          "input_text": "1",
+          "time": {
+            "text": "2000",
+            "unit": "ps"
+          },
+          "value_text": "1"
+        },
+        {
+          "input_text": "1",
+          "time": {
+            "text": "12000",
+            "unit": "ps"
+          },
+          "value_text": "0"
+        }
+      ]
+    }
+  },
+  "format": "org.openece.project",
+  "schema_version": 1,
+  "selected_domain": "communications",
+  "signals": {
+    "amplitude": {
+      "text": "1.0000",
+      "unit": "1"
+    },
+    "cutoff": {
+      "text": "64.000000",
+      "unit": "Hz"
+    },
+    "duration": {
+      "text": "1.000000",
+      "unit": "s"
+    },
+    "filter": "off",
+    "frequency": {
+      "text": "8.0000",
+      "unit": "Hz"
+    },
+    "phase": {
+      "text": "3π/",
+      "unit": "rad"
+    },
+    "sample_rate": {
+      "text": "1024.0000",
+      "unit": "Hz"
+    },
+    "taps_text": "63",
+    "window": "rectangular"
+  }
+}

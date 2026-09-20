@@ -42,3 +42,9 @@ Unmodified header-only dense linear algebra, compiled into OpenECE.
 Only MPL2-compatible modules enabled (EIGEN_MPL2_ONLY).
 License: licenses/Eigen/COPYING.MPL2. Corresponding source:
 https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.zip
+
+JSON for Modern C++ 3.12.0: copyright Niels Lohmann and contributors; MIT license.
+Unmodified header-only JSON codec implementation dependency. Includes Hedley
+compatibility macros under their embedded MIT notice (hedley.hpp).
+License: licenses/nlohmann-json/LICENSE.MIT. Corresponding source:
+https://github.com/nlohmann/json/tree/v3.12.0

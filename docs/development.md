@@ -541,3 +541,25 @@ previews; GUI-local state without project files or undo. Integer random streams
 are portable, while floating Gaussian results may vary slightly with the math
 library. Physical Windows 10/11, high-DPI/accessibility behavior and MinGW remain
 unvalidated.
+
+## v0.9 checkpoint 1: project model and codec
+
+The schema is fully specified in [project-format.md](project-format.md), with the
+complete invalid-draft fixture in `tests/fixtures/project-v1.openece`. The project
+target has no Qt or engineering-domain dependency. JSON types stay private.
+
+Fedora uses `json-devel` (nlohmann/json 3.12). Windows explicitly bootstraps pinned
+3.12.0 headers/CMake metadata with SHA-256 verification and no additional DLL.
+Normal configuration remains offline. For a local non-system installation, use
+`-Dnlohmann_json_DIR=/absolute/prefix/share/cmake/nlohmann_json`. The optional
+dependency acquisition/install step is separate from OpenECE configuration.
+
+Checkpoint 1 covers the owned DTOs, strict codec, parser budgets, canonical IDs,
+monotonic allocation that reserves dangling references, and schema tests. GUI
+adapters, pending-edit synchronization, transactional storage and file menus are
+not yet implemented at this checkpoint.
+
+Checkpoint 1 local validation: GCC desktop 184/184; Clang ASan/UBSan headless
+177/177. These include 19 new project codec/allocator tests. Formatting and diff
+checks passed without compiler warnings or sanitizer findings. Cross-platform CI
+validation is recorded separately once the branch run completes.

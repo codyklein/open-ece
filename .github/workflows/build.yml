@@ -1,7 +1,7 @@
 name: Build, test and package
 on:
   push:
-    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis, feature/communications]
+    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis, feature/communications, feature/project-persistence]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -22,7 +22,7 @@ jobs:
           - {compiler: clang++, gui: 'OFF', sanitize: 'ON'}
     steps:
       - name: Install Fedora system packages
-        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel clang-tools-extra
+        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel json-devel clang-tools-extra
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure
         run: cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DOPENECE_BUILD_GUI=${{ matrix.gui }} -DOPENECE_ENABLE_SANITIZERS=${{ matrix.sanitize }}
@@ -77,7 +77,7 @@ jobs:
         with:
           path: build/windows-deps
           key: windows-x64-qt6.8.3-msvc${{ steps.msvc.outputs.version }}-${{ hashFiles('scripts/windows/bootstrap.ps1') }}
-      - name: Bootstrap pinned Qwt, GoogleTest and Eigen
+      - name: Bootstrap pinned Qwt, GoogleTest, Eigen and JSON
         shell: pwsh
         run: ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
       - name: Verify bootstrap reuse

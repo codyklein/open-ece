@@ -60,7 +60,7 @@ Inspect before installing:
 g++ --version
 cmake --version
 git --version
-rpm -q gcc-c++ cmake ninja-build qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel
+rpm -q gcc-c++ cmake ninja-build qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel json-devel
 pkg-config --modversion Qt6Widgets Qt6Qwt6 gtest
 ```
 
@@ -68,7 +68,7 @@ Install only missing packages. This is the complete Fedora dependency command
 (copy it as one line):
 
 ```bash
-sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel
+sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel json-devel
 ```
 
 | Dependency | Purpose |

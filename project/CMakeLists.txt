@@ -1,0 +1,6 @@
+find_package(nlohmann_json 3.12 REQUIRED CONFIG)
+add_library(openece_project STATIC src/model.cpp src/codec.cpp)
+add_library(OpenECE::project ALIAS openece_project)
+target_include_directories(openece_project PUBLIC include)
+target_compile_features(openece_project PUBLIC cxx_std_20)
+target_link_libraries(openece_project PRIVATE nlohmann_json::nlohmann_json openece_options)

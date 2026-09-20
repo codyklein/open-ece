@@ -2,7 +2,7 @@
 
 The v0.8.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
-**GoogleTest 1.17.0** and **Eigen 5.0.0**. CI uses an actual Windows Server 2022 GitHub runner with
+**GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
 hardware test. MinGW has not been validated and is not a supported configuration
 for this milestone. Existing DSP, digital and circuit APIs remain unchanged; v0.8 adds an independent communications domain.
