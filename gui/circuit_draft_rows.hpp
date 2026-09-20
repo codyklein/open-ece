@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QTableWidget>
 namespace openece::gui {
+enum class CircuitDraftChange { value, nodes, components };
 inline project::Reference selected_reference(QComboBox* box) {
     return box->currentData().isValid()
                ? project::Reference{project::Id{box->currentData().toUInt()}}
@@ -58,7 +59,8 @@ template <class Draft> class CircuitDraftRows {
     QComboBox* ground_;
     QLabel* status_;
     QObject* context_;
-    std::function<void()> changed_;
+    std::function<void(CircuitDraftChange)> changed_;
+    void notify(CircuitDraftChange what = CircuitDraftChange::value) { changed_(what); }
     bool rendering_ = false;
     auto& part(project::Id id) {
         return *std::ranges::find(
@@ -121,7 +123,7 @@ template <class Draft> class CircuitDraftRows {
                                  auto value = selected_reference(selector);
                                  if (ref != value) {
                                      ref = value;
-                                     changed_();
+                                     notify();
                                  }
                              });
         }
@@ -145,7 +147,7 @@ template <class Draft> class CircuitDraftRows {
                 auto s = draft_text(phase->text());
                 if (part(id).phase.text != s) {
                     part(id).phase.text = s;
-                    changed_();
+                    notify();
                 }
             });
         }
@@ -155,7 +157,7 @@ template <class Draft> class CircuitDraftRows {
             auto s = draft_text(value->text());
             if (part(id).value.text != s) {
                 part(id).value.text = s;
-                changed_();
+                notify();
             }
         });
         QObject::connect(type, &QComboBox::currentIndexChanged, context_,
@@ -174,7 +176,7 @@ template <class Draft> class CircuitDraftRows {
                                  phase->setText("0");
                                  phase->setEnabled(type->currentIndex() >= 3);
                              }
-                             changed_();
+                             notify(CircuitDraftChange::components);
                          });
         QObject::connect(unit, &QComboBox::currentIndexChanged, context_, [this, id, unit, value] {
             if (rendering_)
@@ -196,13 +198,14 @@ template <class Draft> class CircuitDraftRows {
             p.value.unit = draft_text(tokens[selected]);
             unit->setProperty("previousUnit", selected);
             value->setText(QString::number(converted, 'g', 17));
-            changed_();
+            notify();
         });
     }
 
   public:
     CircuitDraftRows(Draft& draft, QTableWidget* nodes, QTableWidget* parts, QComboBox* ground,
-                     QLabel* status, QObject* context, std::function<void()> changed)
+                     QLabel* status, QObject* context,
+                     std::function<void(CircuitDraftChange)> changed)
         : draft_(draft), nodes_(nodes), parts_(parts), ground_(ground), status_(status),
           context_(context), changed_(std::move(changed)) {
         QObject::connect(nodes_, &QTableWidget::itemChanged, context_, [this](QTableWidgetItem* i) {
@@ -216,7 +219,7 @@ template <class Draft> class CircuitDraftRows {
                 auto r = selected_reference(ground_);
                 if (draft_.ground != r) {
                     draft_.ground = r;
-                    changed_();
+                    notify();
                 }
             }
         });
@@ -257,8 +260,11 @@ template <class Draft> class CircuitDraftRows {
         auto value = draft_text(text);
         if (target != value) {
             target = value;
-            refresh();
-            changed_();
+            if (table == nodes_) {
+                refresh();
+                notify(CircuitDraftChange::nodes);
+            } else
+                notify(CircuitDraftChange::components);
         }
     }
     void add_node(const QString& name) {
@@ -277,7 +283,7 @@ template <class Draft> class CircuitDraftRows {
             }
             refresh();
             rendering_ = false;
-            changed_();
+            notify(CircuitDraftChange::nodes);
         } catch (const std::exception& e) {
             status_->setText(QString::fromUtf8(e.what()));
         }
@@ -299,9 +305,8 @@ template <class Draft> class CircuitDraftRows {
                 const QSignalBlocker block(parts_);
                 append_part(draft_.components.size() - 1);
             }
-            refresh();
             rendering_ = false;
-            changed_();
+            notify(CircuitDraftChange::components);
         } catch (const std::exception& e) {
             status_->setText(QString::fromUtf8(e.what()));
         }
@@ -312,15 +317,14 @@ template <class Draft> class CircuitDraftRows {
         draft_.nodes.erase(draft_.nodes.begin() + row);
         nodes_->removeRow(row);
         refresh();
-        changed_();
+        notify(CircuitDraftChange::nodes);
     }
     void remove_component(int row) {
         if (row < 0)
             return;
         draft_.components.erase(draft_.components.begin() + row);
         parts_->removeRow(row);
-        refresh();
-        changed_();
+        notify(CircuitDraftChange::components);
     }
 };
 } // namespace openece::gui

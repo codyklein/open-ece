@@ -149,21 +149,13 @@ CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
             invalidate();
         }
     });
-    connect(nodes_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_connections();
-            invalidate();
-        }
-    });
-    connect(components_, &QTableWidget::itemChanged, this, [this] { invalidate(); });
-    connect(ground_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(solve_button, &QPushButton::clicked, this, [this] { solve(); });
     connect(example, &QPushButton::clicked, this, [this] { load_divider(); });
-    rows_ = std::make_unique<CircuitDraftRows<project::DcDraft>>(state_.get(), nodes_, components_,
-                                                                 ground_, status_, this, [this] {
-                                                                     edited();
-                                                                     invalidate();
-                                                                 });
+    rows_ = std::make_unique<CircuitDraftRows<project::DcDraft>>(
+        state_.get(), nodes_, components_, ground_, status_, this, [this](CircuitDraftChange) {
+            edited();
+            invalidate();
+        });
     bind_table(nodes_,
                [this](int r, int c, const QString& t) { rows_->text_edit(nodes_, r, c, t); });
     bind_table(components_,

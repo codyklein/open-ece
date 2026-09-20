@@ -260,28 +260,19 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
     timer_ = new QTimer(this);
     timer_->setInterval(0);
     connect(timer_, &QTimer::timeout, this, [this] { advance_sweep(); });
-    connect(nodes_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_connections();
-            invalidate();
-        }
-    });
-    connect(components_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_sources();
-            invalidate();
-        }
-    });
-    connect(ground_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(spacing_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(count_, &QSpinBox::valueChanged, this, [this] { invalidate(); });
-    rows_ = std::make_unique<CircuitDraftRows<project::AcDraft>>(state_.get(), nodes_, components_,
-                                                                 ground_, status_, this, [this] {
-                                                                     edited();
-                                                                     invalidate();
-                                                                     refresh_connections();
-                                                                     refresh_sources();
-                                                                 });
+    rows_ = std::make_unique<CircuitDraftRows<project::AcDraft>>(
+        state_.get(), nodes_, components_, ground_, status_, this,
+        [this](CircuitDraftChange change) {
+            edited();
+            invalidate();
+            if (change == CircuitDraftChange::nodes) {
+                refresh_connection(probe_positive_);
+                refresh_connection(probe_negative_);
+            } else if (change == CircuitDraftChange::components)
+                refresh_sources();
+        });
     bind_table(nodes_,
                [this](int r, int c, const QString& t) { rows_->text_edit(nodes_, r, c, t); });
     bind_table(components_,
