@@ -25,13 +25,11 @@ using namespace digital;
 constexpr std::array kinds{GateKind::Not, GateKind::And, GateKind::Or,  GateKind::Nand,
                            GateKind::Nor, GateKind::Xor, GateKind::Xnor};
 const QStringList kind_names{"NOT", "AND", "OR", "NAND", "NOR", "XOR", "XNOR"};
-QString kind_name(GateKind kind) {
-    for (std::size_t i = 0; i < kinds.size(); ++i) {
-        if (kinds[i] == kind)
-            return kind_names[static_cast<int>(i)];
-    }
-    return "Invalid";
+QString kind_name(const std::string& kind) { return qt_text(kind).toUpper(); }
+project::Reference reference(unsigned id) {
+    return id ? project::Reference{project::Id{id}} : std::nullopt;
 }
+unsigned node_id(project::Reference source) { return source ? source->value : 0; }
 QString value_text(LogicValue value) { return value == LogicValue::one ? "1" : "0"; }
 QTableWidgetItem* cell(const QString& text, bool editable = false) {
     auto* item = new QTableWidgetItem(text);
@@ -57,12 +55,10 @@ QPushButton* button(QHBoxLayout* row, const QString& text, const char* name) {
 }
 } // namespace
 
-DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
+DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft* draft, bool inert)
+    : DraftView(parent), state_(draft, project::default_project().digital.combinational),
+      draft_(state_.get()) {
     setObjectName("digital_logic_view");
-    draft_ = {{{{1}, "A"}, {{2}, "B"}},
-              {{{3}, GateKind::Xor, {{1}, {2}}}, {{4}, GateKind::And, {{1}, {2}}}},
-              {{"Sum", {3}}, {"Carry", {4}}}};
-    assignments_ = {LogicValue::zero, LogicValue::zero};
     auto* layout = new QVBoxLayout(this);
     auto* scroll = new QScrollArea(this);
     scroll->setWidgetResizable(true);
@@ -103,7 +99,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
     kind_ = new QComboBox(editor);
     kind_->setObjectName("digital_gate_kind");
     kind_->addItems(kind_names);
-    pin_count_ = new QSpinBox(editor);
+    pin_count_ = new DraftInt(editor);
     pin_count_->setObjectName("digital_pin_count");
     pin_count_->setRange(1, digital_limits::pins);
     form->addRow("Type", kind_);
@@ -170,6 +166,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
             item->text().toUtf8().toStdString();
         invalidate();
         refresh_sources();
+        edited();
     });
     connect(outputs_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* item) {
         if (refreshing_ || item->column() != 0)
@@ -177,6 +174,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         draft_.outputs[static_cast<std::size_t>(item->row())].name =
             item->text().toUtf8().toStdString();
         invalidate();
+        edited();
     });
     connect(gates_, &QTableWidget::currentCellChanged, this, [this] {
         if (!refreshing_)
@@ -186,20 +184,11 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         const int row = gates_->currentRow();
         if (refreshing_ || row < 0 || index < 0)
             return;
-        draft_.gates[static_cast<std::size_t>(row)].kind = kinds[static_cast<std::size_t>(index)];
+        draft_.gates[static_cast<std::size_t>(row)].kind = draft_text(kind_names[index].toLower());
         update_gate_row(row);
         invalidate();
         refresh_sources();
-    });
-    connect(pin_count_, &QSpinBox::valueChanged, this, [this](int count) {
-        const int row = gates_->currentRow();
-        if (refreshing_ || row < 0)
-            return;
-        draft_.gates[static_cast<std::size_t>(row)].inputs.resize(static_cast<std::size_t>(count),
-                                                                  NodeId{0});
-        update_gate_row(row);
-        invalidate();
-        refresh_gate_editor();
+        edited();
     });
     connect(add_input, &QPushButton::clicked, this, [this] {
         if (draft_.inputs.size() >= digital_limits::inputs) {
@@ -210,16 +199,16 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         if (id.value == 0)
             return;
         draft_.inputs.push_back({id, "Input " + std::to_string(id.value)});
-        assignments_.push_back(LogicValue::zero);
         refresh();
+        edited();
     });
     connect(remove_input, &QPushButton::clicked, this, [this] {
         const int row = inputs_->currentRow();
         if (row < 0)
             return;
         draft_.inputs.erase(draft_.inputs.begin() + row);
-        assignments_.erase(assignments_.begin() + row);
         refresh();
+        edited();
     });
     connect(add_gate, &QPushButton::clicked, this, [this] {
         if (draft_.gates.size() >= digital_limits::gates) {
@@ -229,8 +218,9 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         const auto id = new_id();
         if (id.value == 0)
             return;
-        draft_.gates.push_back({id, GateKind::And, {{0}, {0}}});
+        draft_.gates.push_back({id, "and", {std::nullopt, std::nullopt}, "2"});
         refresh();
+        edited();
         gates_->selectRow(static_cast<int>(draft_.gates.size()) - 1);
     });
     connect(remove_gate, &QPushButton::clicked, this, [this] {
@@ -239,6 +229,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
             return;
         draft_.gates.erase(draft_.gates.begin() + row);
         refresh();
+        edited();
     });
     connect(add_output, &QPushButton::clicked, this, [this] {
         if (draft_.outputs.size() >= digital_limits::outputs) {
@@ -249,8 +240,9 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
         const auto id = new_id();
         if (id.value == 0)
             return;
-        draft_.outputs.push_back({"Output " + std::to_string(id.value), {0}});
+        draft_.outputs.push_back({"Output " + std::to_string(id.value), std::nullopt});
         refresh();
+        edited();
     });
     connect(remove_output, &QPushButton::clicked, this, [this] {
         const int row = outputs_->currentRow();
@@ -258,19 +250,109 @@ DigitalLogicView::DigitalLogicView(QWidget* parent) : QWidget(parent) {
             return;
         draft_.outputs.erase(draft_.outputs.begin() + row);
         refresh();
+        edited();
+    });
+    bind_table(inputs_, [this](int row, int column, const QString& text) {
+        if (column == 1 && row >= 0 && row < static_cast<int>(draft_.inputs.size())) {
+            auto& name = draft_.inputs[static_cast<std::size_t>(row)].name;
+            if (name != draft_text(text)) {
+                edit(name, draft_text(text));
+                invalidate();
+                refresh_sources();
+            }
+        }
+    });
+    bind_table(outputs_, [this](int row, int column, const QString& text) {
+        if (column == 0 && row >= 0 && row < static_cast<int>(draft_.outputs.size())) {
+            auto& name = draft_.outputs[static_cast<std::size_t>(row)].name;
+            if (name != draft_text(text)) {
+                edit(name, draft_text(text));
+                invalidate();
+            }
+        }
+    });
+    connect(pin_count_, &QSpinBox::valueChanged, this, [this](int count) {
+        const int row = gates_->currentRow();
+        if (restoring_ || refreshing_ || row < 0)
+            return;
+        auto& gate = draft_.gates[static_cast<std::size_t>(row)];
+        edit(gate.pin_count_text, draft_text(static_cast<DraftInt*>(pin_count_)->raw_text()));
+        if (static_cast<std::size_t>(count) != gate.pins.size()) {
+            gate.pins.resize(static_cast<std::size_t>(count));
+            update_gate_row(row);
+            refresh_gate_editor();
+            edited();
+        }
+        invalidate();
+    });
+    connect(static_cast<DraftInt*>(pin_count_)->editor(), &QLineEdit::textChanged, this, [this] {
+        const int row = gates_->currentRow();
+        if (restoring_ || refreshing_ || row < 0)
+            return;
+        auto& gate = draft_.gates[static_cast<std::size_t>(row)];
+        const auto raw = static_cast<DraftInt*>(pin_count_)->raw_text();
+        edit(gate.pin_count_text, draft_text(raw));
+        bool ok = false;
+        const int count = raw.toInt(&ok);
+        if (ok && count >= 1 && count <= digital_limits::pins &&
+            static_cast<std::size_t>(count) != gate.pins.size()) {
+            gate.pins.resize(static_cast<std::size_t>(count));
+            update_gate_row(row);
+            refresh_gate_editor();
+            edited();
+        }
+        invalidate();
     });
     refresh();
-    evaluate(false);
+    restoring_ = false;
+    if (!inert)
+        evaluate(false);
+    else
+        status_->clear();
 }
 
-NodeId DigitalLogicView::new_id() {
-    if (next_id_ == std::numeric_limits<std::uint32_t>::max()) {
-        status_->setText("Node ID space exhausted; reopen the application for a new draft.");
+project::Id DigitalLogicView::new_id() {
+    try {
+        return project::allocate_id(draft_.next_id, project::reserved_ids(draft_));
+    } catch (const std::exception& e) {
+        status_->setText(QString::fromUtf8(e.what()));
         return {0};
     }
-    return {next_id_++};
 }
-void DigitalLogicView::populate_sources(QComboBox* selector, NodeId source) {
+void DigitalLogicView::synchronize_pending_text() {
+    DraftView::synchronize_pending_text();
+    const int row = gates_->currentRow();
+    if (row >= 0)
+        edit(draft_.gates[static_cast<std::size_t>(row)].pin_count_text,
+             draft_text(static_cast<DraftInt*>(pin_count_)->raw_text()));
+}
+digital::Circuit DigitalLogicView::validated_circuit() const {
+    digital::CircuitDefinition result;
+    for (const auto& input : draft_.inputs)
+        result.inputs.push_back({{input.id.value}, input.name});
+    for (const auto& gate : draft_.gates) {
+        bool ok = false;
+        const auto count = qt_text(gate.pin_count_text).toUInt(&ok);
+        if (!ok || count != gate.pins.size())
+            throw std::invalid_argument(
+                "Invalid pending pin count; set the intended number of connections.");
+        const int index = static_cast<int>(kind_names.indexOf(kind_name(gate.kind)));
+        digital::Gate g{{gate.id.value}, kinds.at(static_cast<std::size_t>(index)), {}};
+        for (auto pin : gate.pins)
+            g.inputs.push_back({node_id(pin)});
+        result.gates.push_back(std::move(g));
+    }
+    for (const auto& output : draft_.outputs)
+        result.outputs.push_back({output.name, {node_id(output.source)}});
+    return digital::Circuit(std::move(result));
+}
+std::vector<digital::LogicValue> DigitalLogicView::input_values() const {
+    std::vector<digital::LogicValue> values;
+    for (const auto& input : draft_.inputs)
+        values.push_back(input.high ? LogicValue::one : LogicValue::zero);
+    return values;
+}
+void DigitalLogicView::populate_sources(QComboBox* selector, project::Reference source) {
     const QSignalBlocker blocker(selector);
     selector->clear();
     selector->addItem("— unconnected —", 0U);
@@ -283,14 +365,15 @@ void DigitalLogicView::populate_sources(QComboBox* selector, NodeId source) {
         selector->addItem(QString("%1: %2").arg(gate.id.value).arg(kind_name(gate.kind)),
                           gate.id.value);
     }
-    int index = selector->findData(source.value);
+    int index = selector->findData(node_id(source));
     if (index < 0) {
-        selector->addItem(QString("Missing node %1").arg(source.value), source.value);
+        selector->addItem(QString("Missing node %1").arg(node_id(source)), node_id(source));
         index = selector->count() - 1;
     }
     selector->setCurrentIndex(index);
 }
-QComboBox* DigitalLogicView::source_selector(NodeId source, const QString& name, QWidget* parent) {
+QComboBox* DigitalLogicView::source_selector(project::Reference source, const QString& name,
+                                             QWidget* parent) {
     auto* selector = new QComboBox(parent);
     selector->setObjectName(name);
     selector->setMinimumContentsLength(12);
@@ -307,14 +390,15 @@ void DigitalLogicView::refresh() {
         const auto index = static_cast<std::size_t>(i);
         inputs_->setItem(i, 0, cell(QString::number(draft_.inputs[index].id.value)));
         inputs_->setItem(i, 1, cell(QString::fromStdString(draft_.inputs[index].name), true));
-        auto* toggle = new QCheckBox(value_text(assignments_[index]), inputs_);
+        auto* toggle = new QCheckBox(draft_.inputs[index].high ? "1" : "0", inputs_);
         toggle->setObjectName(QString("digital_input_%1").arg(draft_.inputs[index].id.value));
-        toggle->setChecked(assignments_[index] == LogicValue::one);
+        toggle->setChecked(draft_.inputs[index].high);
         inputs_->setCellWidget(i, 2, toggle);
         connect(toggle, &QCheckBox::toggled, this, [this, index, toggle](bool high) {
-            assignments_[index] = high ? LogicValue::one : LogicValue::zero;
+            edit(draft_.inputs[index].high, high);
             toggle->setText(high ? "1" : "0");
             invalidate();
+            edited();
         });
     }
     gates_->setRowCount(0);
@@ -331,8 +415,9 @@ void DigitalLogicView::refresh() {
         outputs_->setCellWidget(i, 1, selector);
         outputs_->setItem(i, 2, cell("—"));
         connect(selector, &QComboBox::currentIndexChanged, this, [this, index, selector] {
-            draft_.outputs[index].source = {selector->currentData().toUInt()};
+            draft_.outputs[index].source = reference(selector->currentData().toUInt());
             invalidate();
+            edited();
         });
     }
     if (gates_->rowCount() > 0)
@@ -346,15 +431,16 @@ void DigitalLogicView::update_gate_row(int row) {
     gates_->setItem(row, 0, cell(QString::number(gate.id.value)));
     gates_->setItem(row, 1, cell(kind_name(gate.kind)));
     QStringList sources;
-    for (auto source : gate.inputs) {
+    for (auto source : gate.pins) {
         bool found = false;
         for (const auto& input : draft_.inputs)
-            found = found || input.id == source;
+            found = found || project::Reference{input.id} == source;
         for (const auto& candidate : draft_.gates)
-            found = found || candidate.id == source;
-        sources.push_back(source.value == 0 ? "unconnected"
-                                            : (found ? QString::number(source.value)
-                                                     : QString("missing %1").arg(source.value)));
+            found = found || project::Reference{candidate.id} == source;
+        sources.push_back(node_id(source) == 0
+                              ? "unconnected"
+                              : (found ? QString::number(node_id(source))
+                                       : QString("missing %1").arg(node_id(source))));
     }
     gates_->setItem(row, 2, cell(sources.join(", ")));
     gates_->setItem(row, 3, cell("—"));
@@ -371,15 +457,18 @@ void DigitalLogicView::refresh_gate_editor() {
     const auto index = static_cast<std::size_t>(row);
     const auto& gate = draft_.gates[index];
     kind_->setCurrentText(kind_name(gate.kind));
-    pin_count_->setValue(static_cast<int>(gate.inputs.size()));
-    for (std::size_t pin = 0; pin < gate.inputs.size(); ++pin) {
-        auto* selector = source_selector(gate.inputs[pin], QString("digital_pin_%1").arg(pin),
+    const QSignalBlocker block_text(static_cast<DraftInt*>(pin_count_)->editor());
+    pin_count_->setValue(static_cast<int>(gate.pins.size()));
+    static_cast<DraftInt*>(pin_count_)->restore_text(gate.pin_count_text);
+    for (std::size_t pin = 0; pin < gate.pins.size(); ++pin) {
+        auto* selector = source_selector(gate.pins[pin], QString("digital_pin_%1").arg(pin),
                                          kind_->parentWidget());
         pin_form_->addRow(QString("Pin %1").arg(pin + 1), selector);
         connect(selector, &QComboBox::currentIndexChanged, this, [this, index, pin, selector] {
-            draft_.gates[index].inputs[pin] = {selector->currentData().toUInt()};
+            draft_.gates[index].pins[pin] = reference(selector->currentData().toUInt());
             update_gate_row(static_cast<int>(index));
             invalidate();
+            edited();
         });
     }
 }
@@ -401,10 +490,11 @@ void DigitalLogicView::invalidate() {
     status_->setText("Draft or inputs changed. Evaluate or generate a truth table to validate.");
 }
 void DigitalLogicView::evaluate(bool table_requested) {
+    synchronize_pending_text();
     invalidate();
     try {
-        const Circuit circuit(draft_);
-        const auto result = circuit.evaluate(assignments_);
+        const Circuit circuit = validated_circuit();
+        const auto result = circuit.evaluate(input_values());
         const QSignalBlocker block_gates(gates_), block_outputs(outputs_);
         for (int i = 0; i < gates_->rowCount(); ++i)
             gates_->item(i, 3)->setText(

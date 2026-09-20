@@ -20,12 +20,13 @@ namespace openece::gui {
 namespace d = digital;
 namespace t = digital::timing;
 namespace {
+const QStringList tokens{"not",  "and",      "or",      "nand",       "nor",        "xor",
+                         "xnor", "sr_latch", "d_latch", "dff_rising", "dff_falling"};
 const QStringList kinds{"NOT",  "AND",      "OR",      "NAND",       "NOR",        "XOR",
                         "XNOR", "SR latch", "D latch", "DFF rising", "DFF falling"};
 constexpr std::array gate_kinds{d::GateKind::Not,  d::GateKind::And, d::GateKind::Or,
                                 d::GateKind::Nand, d::GateKind::Nor, d::GateKind::Xor,
                                 d::GateKind::Xnor};
-QString text(QTableWidget* table, int row, int column) { return table->item(row, column)->text(); }
 std::uint64_t integer(const QString& value, std::uint64_t maximum, const char* what) {
     const auto trimmed = value.trimmed();
     static const QRegularExpression digits("^[0-9]+$");
@@ -63,7 +64,8 @@ QPushButton* button(QHBoxLayout* row, const QString& label, const char* name) {
     return b;
 }
 } // namespace
-TimingView::TimingView(QWidget* parent) : QWidget(parent) {
+TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*inert*/)
+    : DraftView(parent), state_(draft, project::default_project().digital.timing) {
     setObjectName("timing_view");
     auto* layout = new QVBoxLayout(this);
     auto* help = new QLabel(
@@ -95,7 +97,11 @@ TimingView::TimingView(QWidget* parent) : QWidget(parent) {
         row->addStretch();
         page_layout->addLayout(row);
         tabs->addTab(page, title);
-        connect(table, &QTableWidget::itemChanged, this, [this] { invalidate(); });
+        connect(table, &QTableWidget::itemChanged, this, [this, table](QTableWidgetItem* item) {
+            text_edit(table, item->row(), item->column(), item->text());
+            if (!restoring_)
+                invalidate();
+        });
         connect(add, &QPushButton::clicked, this, [=, this] {
             if (table->rowCount() >= limit) {
                 status_->setText("GUI row limit reached.");
@@ -115,7 +121,18 @@ TimingView::TimingView(QWidget* parent) : QWidget(parent) {
         });
         connect(remove, &QPushButton::clicked, this, [=, this] {
             if (table->currentRow() >= 0) {
-                table->removeRow(table->currentRow());
+                const int selected_row = table->currentRow();
+                auto& d = state_.get();
+                if (table == inputs_)
+                    d.inputs.erase(d.inputs.begin() + selected_row);
+                else if (table == elements_)
+                    d.elements.erase(d.elements.begin() + selected_row);
+                else if (table == outputs_)
+                    d.outputs.erase(d.outputs.begin() + selected_row);
+                else
+                    d.stimuli.erase(d.stimuli.begin() + selected_row);
+                table->removeRow(selected_row);
+                edited();
                 invalidate();
             }
         });
@@ -215,11 +232,44 @@ TimingView::TimingView(QWidget* parent) : QWidget(parent) {
         if (simulation_)
             render();
     });
-    example();
+    auto& d = state_.get();
+    bind_text(horizon_, d.horizon.text);
+    bind_text(observed_, d.observed_text);
+    bind_choice(scale_, d.display_unit, {"ps", "ns", "us", "ms", "s"});
+    bind_tabs(tabs, d.selected_tab, {"inputs", "elements", "outputs", "stimuli"});
+    for (auto* table : {inputs_, elements_, outputs_, stimuli_})
+        bind_table(table,
+                   [this, table](int r, int c, const QString& t) { text_edit(table, r, c, t); });
+    restore_rows();
+    restoring_ = false;
+    invalidate();
+    status_->clear();
 }
 void TimingView::append(QTableWidget* table, const QStringList& values, bool node) {
     const QSignalBlocker block(table);
     const auto row = table->rowCount();
+    if (!restoring_) {
+        auto& d = state_.get();
+        if (table == inputs_)
+            d.inputs.push_back(
+                {{values[0].toUInt()},
+                 draft_text(values[1]),
+                 draft_text(values[2]),
+                 {draft_text(values[3]), draft_text(values[4]), draft_text(values[5]), "ps"}});
+        else if (table == elements_)
+            d.elements.push_back(
+                {{values[0].toUInt()},
+                 values[1].isEmpty() ? "not" : draft_text(tokens[kinds.indexOf(values[1])]),
+                 draft_text(values[2]),
+                 {draft_text(values[3]), "ps"},
+                 draft_text(values[4])});
+        else if (table == outputs_)
+            d.outputs.push_back({draft_text(values[0]), draft_text(values[1])});
+        else
+            d.stimuli.push_back(
+                {{draft_text(values[0]), "ps"}, draft_text(values[1]), draft_text(values[2])});
+        edited();
+    }
     table->insertRow(row);
     for (int i = 0; i < table->columnCount(); ++i) {
         auto* cell = new QTableWidgetItem(values[i]);
@@ -232,14 +282,95 @@ void TimingView::append(QTableWidget* table, const QStringList& values, bool nod
         type->addItems(kinds);
         type->setCurrentIndex(values[1].isEmpty() ? 0 : static_cast<int>(kinds.indexOf(values[1])));
         table->setCellWidget(row, 1, type);
-        connect(type, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
+        const auto element_id = values[0].toUInt();
+        connect(type, &QComboBox::currentIndexChanged, this, [this, type, element_id] {
+            if (restoring_)
+                return;
+            for (auto& e : state_.get().elements)
+                if (e.id.value == element_id)
+                    edit(e.kind, draft_text(tokens[type->currentIndex()]));
+            invalidate();
+        });
     }
     table->selectRow(row);
 }
 std::uint32_t TimingView::new_id() {
-    if (next_id_ > std::numeric_limits<std::uint32_t>::max())
-        throw std::length_error("Node ID space exhausted");
-    return static_cast<std::uint32_t>(next_id_++);
+    return project::allocate_id(state_.get().next_id, project::reserved_ids(state_.get())).value;
+}
+void TimingView::text_edit(QTableWidget* table, int row, int col, const QString& text) {
+    if (restoring_ || row < 0)
+        return;
+    auto& d = state_.get();
+    auto i = static_cast<std::size_t>(row);
+    std::string* target = nullptr;
+    if (table == inputs_ && i < d.inputs.size()) {
+        auto& v = d.inputs[i];
+        if (col == 1)
+            target = &v.name;
+        else if (col == 2)
+            target = &v.initial_text;
+        else if (col == 3)
+            target = &v.clock.first_edge_text;
+        else if (col == 4)
+            target = &v.clock.high_text;
+        else if (col == 5)
+            target = &v.clock.low_text;
+    } else if (table == elements_ && i < d.elements.size()) {
+        auto& v = d.elements[i];
+        if (col == 2)
+            target = &v.pins_text;
+        else if (col == 3)
+            target = &v.delay.text;
+        else if (col == 4)
+            target = &v.initial_q_text;
+    } else if (table == outputs_ && i < d.outputs.size()) {
+        if (col == 0)
+            target = &d.outputs[i].name;
+        else if (col == 1)
+            target = &d.outputs[i].source_text;
+    } else if (table == stimuli_ && i < d.stimuli.size()) {
+        auto& v = d.stimuli[i];
+        if (col == 0)
+            target = &v.time.text;
+        else if (col == 1)
+            target = &v.input_text;
+        else if (col == 2)
+            target = &v.value_text;
+    }
+    if (target && *target != draft_text(text)) {
+        edit(*target, draft_text(text));
+        invalidate();
+    }
+}
+void TimingView::restore_rows() {
+    const bool previous = restoring_;
+    restoring_ = true;
+    const auto& d = state_.get();
+    for (auto* table : {inputs_, elements_, outputs_, stimuli_}) {
+        QSignalBlocker block(table);
+        table->setRowCount(0);
+    }
+    for (const auto& v : d.inputs)
+        append(inputs_,
+               {QString::number(v.id.value), qt_text(v.name), qt_text(v.initial_text),
+                qt_text(v.clock.first_edge_text), qt_text(v.clock.high_text),
+                qt_text(v.clock.low_text)},
+               true);
+    for (const auto& v : d.elements)
+        append(elements_,
+               {QString::number(v.id.value), kinds[tokens.indexOf(qt_text(v.kind))],
+                qt_text(v.pins_text), qt_text(v.delay.text), qt_text(v.initial_q_text)},
+               true);
+    for (const auto& v : d.outputs)
+        append(outputs_, {qt_text(v.name), qt_text(v.source_text)});
+    for (const auto& v : d.stimuli)
+        append(stimuli_, {qt_text(v.time.text), qt_text(v.input_text), qt_text(v.value_text)});
+    {
+        QSignalBlocker a(horizon_), b(observed_);
+        horizon_->setText(qt_text(d.horizon.text));
+        observed_->setText(qt_text(d.observed_text));
+    }
+    restoring_ = previous;
 }
 void TimingView::invalidate() {
     timer_->stop();
@@ -254,49 +385,48 @@ void TimingView::fail(const std::exception& error) {
 }
 void TimingView::example() {
     invalidate();
-    for (auto* table : {inputs_, elements_, outputs_, stimuli_})
-        table->setRowCount(0);
-    append(inputs_, {"1", "D", "0", "", "", ""}, true);
-    append(inputs_, {"2", "CLK", "0", "5000", "5000", "5000"}, true);
-    append(elements_, {"3", "DFF rising", "1,2", "1000", "0"}, true);
-    append(outputs_, {"Q", "3"});
-    append(stimuli_, {"2000", "1", "1"});
-    append(stimuli_, {"12000", "1", "0"});
-    next_id_ = 4;
-    horizon_->setText("30000");
-    observed_->setText("1,2,3");
+    const auto selected_tab = state_.get().selected_tab;
+    const auto display_unit = state_.get().display_unit;
+    state_.get() = project::default_project().digital.timing;
+    state_.get().selected_tab = selected_tab;
+    state_.get().display_unit = display_unit;
+    restore_rows();
+    edited();
     status_->setText("DFF example ready: Q rises at 6000 ps and falls at 16000 ps. Run or Step.");
 }
 void TimingView::initialize() {
+    synchronize_pending_text();
     t::TimedCircuitDefinition def;
     t::SimulationRequest request;
-    request.horizon = {integer(horizon_->text(), t::limits::time_ticks, "End time")};
-    request.observed = ids(observed_->text(), timing_gui_limits::observed);
+    const auto& draft = state_.get();
+    request.horizon = {integer(qt_text(draft.horizon.text), t::limits::time_ticks, "End time")};
+    request.observed = ids(qt_text(draft.observed_text), timing_gui_limits::observed);
     request.work = {timing_gui_limits::queued, timing_gui_limits::processed,
                     timing_gui_limits::pin_visits, timing_gui_limits::recorded};
-    for (int row = 0; row < inputs_->rowCount(); ++row) {
-        const auto node = id(text(inputs_, row, 0));
-        def.inputs.push_back({node, text(inputs_, row, 1).toUtf8().toStdString()});
-        request.initial_inputs.push_back(logic(text(inputs_, row, 2)));
-        if (!text(inputs_, row, 3).trimmed().isEmpty() ||
-            !text(inputs_, row, 4).trimmed().isEmpty() ||
-            !text(inputs_, row, 5).trimmed().isEmpty())
+    for (const auto& input : draft.inputs) {
+        const d::NodeId node{input.id.value};
+        def.inputs.push_back({node, input.name});
+        request.initial_inputs.push_back(logic(qt_text(input.initial_text)));
+        const auto& clock = input.clock;
+        if (!qt_text(clock.first_edge_text).trimmed().isEmpty() ||
+            !qt_text(clock.high_text).trimmed().isEmpty() ||
+            !qt_text(clock.low_text).trimmed().isEmpty())
             request.clocks.push_back(
                 {node,
-                 {integer(text(inputs_, row, 3), t::limits::time_ticks, "First edge")},
-                 {integer(text(inputs_, row, 4), t::limits::time_ticks, "High duration")},
-                 {integer(text(inputs_, row, 5), t::limits::time_ticks, "Low duration")}});
+                 {integer(qt_text(clock.first_edge_text), t::limits::time_ticks, "First edge")},
+                 {integer(qt_text(clock.high_text), t::limits::time_ticks, "High duration")},
+                 {integer(qt_text(clock.low_text), t::limits::time_ticks, "Low duration")}});
     }
-    for (int row = 0; row < elements_->rowCount(); ++row) {
-        const auto node = id(text(elements_, row, 0));
-        const auto kind = static_cast<QComboBox*>(elements_->cellWidget(row, 1))->currentIndex();
-        const auto pins = ids(text(elements_, row, 2), timing_gui_limits::pins);
+    for (const auto& element : draft.elements) {
+        const d::NodeId node{element.id.value};
+        const auto kind = tokens.indexOf(qt_text(element.kind));
+        const auto pins = ids(qt_text(element.pins_text), timing_gui_limits::pins);
         const t::Delay delay{
-            integer(text(elements_, row, 3), t::limits::time_ticks, "Element delay")};
+            integer(qt_text(element.delay.text), t::limits::time_ticks, "Element delay")};
         if (kind < 0)
             throw std::invalid_argument("Select an element type");
         if (kind < 7) {
-            if (!text(elements_, row, 4).trimmed().isEmpty())
+            if (!qt_text(element.initial_q_text).trimmed().isEmpty())
                 throw std::invalid_argument("Initial Q must be blank for gates");
             def.elements.emplace_back(
                 t::DelayedGate{{node, gate_kinds[static_cast<std::size_t>(kind)], pins}, delay});
@@ -310,21 +440,20 @@ void TimingView::initialize() {
             else
                 def.elements.emplace_back(t::DFlipFlop{
                     node, pins[0], pins[1], kind == 9 ? t::Edge::Rising : t::Edge::Falling, delay});
-            request.initial_storage.push_back({node, logic(text(elements_, row, 4))});
+            request.initial_storage.push_back({node, logic(qt_text(element.initial_q_text))});
         }
     }
     output_names_.clear();
     trace_labels_.clear();
-    for (int row = 0; row < outputs_->rowCount(); ++row) {
-        def.outputs.push_back(
-            {text(outputs_, row, 0).toUtf8().toStdString(), id(text(outputs_, row, 1))});
-        output_names_.push_back(def.outputs.back().name);
+    for (const auto& output : draft.outputs) {
+        def.outputs.push_back({output.name, id(qt_text(output.source_text))});
+        output_names_.push_back(output.name);
     }
-    for (int row = 0; row < stimuli_->rowCount(); ++row)
+    for (const auto& stimulus : draft.stimuli)
         request.changes.push_back(
-            {{integer(text(stimuli_, row, 0), t::limits::time_ticks, "Stimulus time")},
-             id(text(stimuli_, row, 1)),
-             logic(text(stimuli_, row, 2))});
+            {{integer(qt_text(stimulus.time.text), t::limits::time_ticks, "Stimulus time")},
+             id(qt_text(stimulus.input_text)),
+             logic(qt_text(stimulus.value_text))});
     for (auto node : request.observed) {
         QString label = "Node " + QString::number(node.value);
         for (const auto& input : def.inputs)
@@ -393,10 +522,16 @@ void TimingView::load_combinational(const d::Circuit& circuit,
     invalidate();
     for (auto* table : {inputs_, elements_, outputs_, stimuli_})
         table->setRowCount(0);
-    next_id_ = 1;
+    auto& draft = state_.get();
+    draft.inputs.clear();
+    draft.elements.clear();
+    draft.outputs.clear();
+    draft.stimuli.clear();
+    draft.next_id = {1};
     QStringList observed;
     auto note = [&](d::NodeId node) {
-        next_id_ = std::max(next_id_, static_cast<std::uint64_t>(node.value) + 1);
+        draft.next_id.value =
+            std::max(draft.next_id.value, static_cast<std::uint64_t>(node.value) + 1);
         if (observed.size() < timing_gui_limits::observed)
             observed.push_back(QString::number(node.value));
     };

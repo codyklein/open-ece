@@ -1,5 +1,5 @@
 #pragma once
-#include <QWidget>
+#include "draft_view.hpp"
 #include <memory>
 #include <openece/communications/ber.hpp>
 #include <openece/communications/link.hpp>
@@ -19,11 +19,14 @@ inline constexpr int bits = 65536, samples = 65536, points = 41, bits_per_point 
 inline constexpr std::uint64_t aggregate_bits = 10000000, chunk_bits = 4096;
 } // namespace communications_gui_limits
 class CommunicationsPlot;
-class CommunicationsView final : public QWidget {
+class CommunicationsView final : public DraftView {
   public:
-    explicit CommunicationsView(QWidget* parent = nullptr);
+    explicit CommunicationsView(QWidget* parent = nullptr,
+                                project::CommunicationsDraft* draft = nullptr, bool inert = false);
+    const project::CommunicationsDraft& draft() const { return state_.get(); }
 
   private:
+    DraftOwner<project::CommunicationsDraft> state_;
     void invalidate();
     void simulate();
     void ensure_experiment();

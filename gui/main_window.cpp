@@ -1,34 +1,9 @@
 #include "main_window.hpp"
-#include "circuits_workspace.hpp"
-#include "communications_view.hpp"
-#include "digital_workspace.hpp"
-#include "signals_dsp_view.hpp"
-
-#include <QHBoxLayout>
-#include <QListWidget>
-#include <QStackedWidget>
-
+#include "project_workspace.hpp"
 namespace openece::gui {
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("OpenECE — Signals / DSP, Digital Logic, Circuits and Communications");
     resize(1280, 820);
-    auto* central = new QWidget(this);
-    setCentralWidget(central);
-    auto* layout = new QHBoxLayout(central);
-    auto* navigation = new QListWidget(central);
-    navigation->setObjectName("domain_navigation");
-    navigation->setAccessibleName("ECE domain");
-    navigation->addItems({"Signals / DSP", "Digital Logic", "Circuits", "Communications"});
-    navigation->setFixedWidth(145);
-    auto* pages = new QStackedWidget(central);
-    pages->setObjectName("domain_pages");
-    pages->addWidget(new SignalsDspView(pages));
-    pages->addWidget(new DigitalWorkspace(pages));
-    pages->addWidget(new CircuitsWorkspace(pages));
-    pages->addWidget(new CommunicationsView(pages));
-    layout->addWidget(navigation);
-    layout->addWidget(pages, 1);
-    connect(navigation, &QListWidget::currentRowChanged, pages, &QStackedWidget::setCurrentIndex);
-    navigation->setCurrentRow(0);
+    setCentralWidget(new ProjectWorkspace(project::default_project(), false, this));
 }
 } // namespace openece::gui

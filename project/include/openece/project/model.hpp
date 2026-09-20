@@ -63,7 +63,7 @@ struct Quantity {
 struct SignalsDraft {
     Quantity amplitude{"1.0000", "1"}, frequency{"8.0000", "Hz"}, phase{"0", "deg"},
         sample_rate{"1024.0000", "Hz"}, duration{"1.000000", "s"}, cutoff{"64.000000", "Hz"};
-    std::string window = "rectangular", filter = "off", taps_text = "63";
+    std::string window = "rectangular", filter = "off", taps_text = "63", selected_tab = "signals";
     bool operator==(const SignalsDraft&) const = default;
 };
 struct DigitalInput {

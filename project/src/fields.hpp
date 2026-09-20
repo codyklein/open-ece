@@ -31,6 +31,7 @@ template <class A, class T> void fields(A& a, T& v, Rule context = {}) {
         a.field("window", v.window, choices("rectangular|hann_periodic"));
         a.field("filter", v.filter, choices("off|fir_lowpass"));
         a.field("taps_text", v.taps_text, text(128));
+        a.field("selected_tab", v.selected_tab, choices("signals|help|response"));
     } else if constexpr (std::is_same_v<V, DigitalInput>) {
         a.field("id", v.id);
         a.field("name", v.name);

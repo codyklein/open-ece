@@ -323,6 +323,7 @@
       "unit": "Hz"
     },
     "taps_text": "63",
+    "selected_tab": "signals",
     "window": "rectangular"
   }
 }

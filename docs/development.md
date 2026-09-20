@@ -563,3 +563,24 @@ Checkpoint 1 local validation: GCC desktop 184/184; Clang ASan/UBSan headless
 177/177. These include 19 new project codec/allocator tests. Formatting and diff
 checks passed without compiler warnings or sanitizer findings. Cross-platform CI
 validation is recorded separately once the branch run completes.
+
+
+## v0.9 checkpoint 2: authoritative workspace bindings
+
+`project_gui_workflow` exercises the complete session and each of its six engineering
+editors with default and invalid drafts. Its 20 workflow/data cases cover inert
+restoration, model-only capture after pending synchronization, invalid/empty numeric
+text, Unicode/whitespace, disabled retained fields, active table delegates, spin focus
+and hide/show behavior, unit conversion/rollback, stable/dangling references, ordering,
+allocator exhaustion, missing-reference recovery, tab/mode selections and storage
+boundaries. Executing operations does not emit persisted-edit notifications. A pending
+timing cell is also tested through execution to exclude stale table-item reads.
+QtTest additionally reports its initialization and cleanup cases (22 total).
+
+The Signals selected-tab field was added to the unreleased schema-1 specification
+and complete fixture when the adapter audit found it missing. All existing engineering
+workflow suites remain unchanged. Run the same desktop CTest matrix; headless builds
+continue exercising the codec and engineering tests without any Qt dependency.
+
+No file-storage/controller workflows are introduced here. Later tests must exercise
+transactional replacement and failure injection on top of these owned, inert sessions.

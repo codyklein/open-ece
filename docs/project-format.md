@@ -1,7 +1,8 @@
 # OpenECE project schema 1
 
-Status: checkpoint 1 defines the Qt-independent model/codec. GUI adapters and file
-workflows follow in later v0.9 checkpoints; this document does not claim they exist yet.
+Status: checkpoints 1–2 provide the Qt-independent model/codec and authoritative
+GUI bindings with inert restoration. File storage and New/Open/Save workflows are
+not implemented yet.
 The complete, loadable cross-domain fixture is `tests/fixtures/project-v1.openece`.
 It deliberately includes pending phase text, missing node references, an incomplete
 timing pin list, and odd QPSK input. None is a structural project error.
@@ -72,6 +73,7 @@ Signals object (`SignalsDraft`):
 | window | Token(rectangular\|hann_periodic) |
 | filter | Token(off\|fir_lowpass) |
 | taps_text | Edit(128) |
+| selected_tab | Token(signals\|help\|response) |
 
 Disabled filter controls are retained. No samples, FFT, FIR coefficients, spectra,
 response values, status summaries or plots are saved.
@@ -237,7 +239,7 @@ path. Allocation failures are not hidden as engineering errors.
 ## Ownership and next checkpoints
 
 ProjectSnapshot is the authoritative editable model; numeric libraries are unchanged.
-GUI controls will edit it. A narrow pre-save synchronization transfers pending editor
+GUI controls edit it. A narrow capture synchronization transfers pending editor
 text without parsing, normalization, conversion, validation or execution. Selected
 user tabs/domain are persisted; automatic result-tab navigation is transient.
 The codec contains no Qt, domain solver types, JSON types in public headers, files,
@@ -246,4 +248,19 @@ preferences, or global mutable state. Copies are owned independent values.
 Qt file storage will use QSaveFile with direct-write fallback disabled: write checked
 bytes then commit(), with no public flush/close finalization contract. Transactional
 Open will prepare and verify a complete inert replacement session before replacing
-live state. These controller and GUI operations are intentionally later checkpoints.
+live state. File storage and document-controller operations are later checkpoints.
+
+`ProjectWorkspace(snapshot, true)` validates storage structure, creates all domain
+views without executing engineering operations, and verifies that capture equals
+the supplied snapshot. Child views borrow subdrafts; the session destroys its views
+before the owned snapshot. `capture()` first synchronizes exact active editor text,
+then copies the model. It does not validate engineering inputs. Standalone views
+can own a draft for existing workflow tests; within a project they never keep an
+independent editable copy. Derived results remain view-local and start empty.
+
+Spin-like editors preserve raw text across focus, hide/show and close. Table
+delegates synchronize active buffers without committing table items or parsing
+cells; Escape restores the pre-edit text. Reference selectors explicitly retain
+missing IDs. Normal user unit changes still perform the documented conversions;
+restoration blocks those handlers. `draftEdited` reports persisted edits only.
+Automatic result navigation leaves the last user-selected persisted tab unchanged.
