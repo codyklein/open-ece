@@ -1,8 +1,8 @@
 # OpenECE project schema 1
 
-Status: checkpoints 1–2 provide the Qt-independent model/codec and authoritative
-GUI bindings with inert restoration. File storage and New/Open/Save workflows are
-not implemented yet.
+Status: checkpoints 1–3 provide the model/codec, authoritative GUI bindings,
+transactional file storage and document-controller APIs. Menu/dialog/prompt/recent
+project workflows are not implemented yet. See [project-transactions.md](project-transactions.md).
 The complete, loadable cross-domain fixture is `tests/fixtures/project-v1.openece`.
 It deliberately includes pending phase text, missing node references, an incomplete
 timing pin list, and odd QPSK input. None is a structural project error.
@@ -245,10 +245,10 @@ user tabs/domain are persisted; automatic result-tab navigation is transient.
 The codec contains no Qt, domain solver types, JSON types in public headers, files,
 preferences, or global mutable state. Copies are owned independent values.
 
-Qt file storage will use QSaveFile with direct-write fallback disabled: write checked
+Qt file storage uses QSaveFile with direct-write fallback disabled: write checked
 bytes then commit(), with no public flush/close finalization contract. Transactional
-Open will prepare and verify a complete inert replacement session before replacing
-live state. File storage and document-controller operations are later checkpoints.
+Open prepares and verifies a complete inert replacement session before replacing
+live state. The controller is implemented; user-facing file workflows remain checkpoint 4.
 
 `ProjectWorkspace(snapshot, true)` validates storage structure, creates all domain
 views without executing engineering operations, and verifies that capture equals

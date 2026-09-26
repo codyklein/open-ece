@@ -30,7 +30,14 @@ enum class ErrorCode {
     invalid_identity,
     duplicate_identity,
     invalid_allocator_state,
-    resource_limit
+    resource_limit,
+    read_failed,
+    file_too_large,
+    restore_failed,
+    encode_failed,
+    save_open_failed,
+    save_write_failed,
+    save_commit_failed
 };
 class Error : public std::runtime_error {
   public:

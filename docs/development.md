@@ -584,3 +584,20 @@ continue exercising the codec and engineering tests without any Qt dependency.
 
 No file-storage/controller workflows are introduced here. Later tests must exercise
 transactional replacement and failure injection on top of these owned, inert sessions.
+
+
+## v0.9 checkpoint 3: file transactions and document state
+
+`project_document_workflow` adds real-filesystem and injected-failure tests to
+the unchanged desktop test matrix. It covers a complete cross-domain fixture,
+Unicode/spaces/nested paths, overwrites, Save As, semantic re-save equivalence,
+bounded reads, codec diagnostics, atomic-save failures, exact pending text,
+inert candidate restoration/fidelity checks, revision transitions and cancellation.
+Same-file Save As while Open is staged is tested through conservative re-staging.
+
+Failure decorators exercise real QSaveFile temporary writes before refusing commit;
+tests assert original destination bytes, path, revision and session identity are
+preserved and no temporary file remains. Real POSIX directory permission tests are
+skipped only when privileges bypass them or on Windows ACL-based filesystems; all
+injected failures run on both platforms. No existing engineering tests or timeouts
+are weakened. Full controller details are in [project-transactions.md](project-transactions.md).

@@ -357,3 +357,20 @@ result-tab navigation is blocked from changing persisted user selection.
 This checkpoint introduces no file commands, file path state, preferences, dirty
 revision counter, or save transaction. The project codec and all numerical libraries
 remain Qt-independent. Qt bindings deliberately remain in the workbench library.
+
+
+## Transactional document boundary (v0.9 checkpoint 3)
+
+`ProjectFileStore` wraps Qt filesystem I/O around complete project values;
+`ProjectDocument` owns the session and its path/revision bookkeeping. Move-only
+prepared candidates contain complete inert workspaces and are installed only by
+an explicit session swap. Failed staging never mutates the current workspace.
+QSaveFile commit is the save boundary; no path or clean revision changes before
+it succeeds. A later save invalidates pending Open bytes and forces re-staging
+before installation. The production backend has no numerical/runtime dependencies.
+
+The Qt-independent codec remains unchanged apart from shared error-code additions.
+Device and workspace-factory seams support deterministic rollback tests without
+a second editable project model. File menus, prompts, preferences and recent
+projects are not yet connected. See [project-transactions.md](project-transactions.md)
+for API ownership, load/save sequences, path identity and limitations.
