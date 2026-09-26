@@ -49,7 +49,7 @@ general simulator, real-time system, or validated measurement instrument.
 - CMake presets for desktop, headless, and address/undefined-behavior sanitizer builds.
 
 No transient/nonlinear analysis, FSM/HDL tooling, RF/SDR hardware,
-persistence, or plugin features are implemented.
+or plugin features are implemented.
 See [ROADMAP.md](ROADMAP.md) for the proposed sequence.
 
 ## Dependencies and Fedora setup
@@ -253,7 +253,9 @@ for one point), then Run/resume, Step or Cancel. Each point preserves its intege
 error/tested counts. Zero errors is shown as "0 errors in N bits" with a fixed-N
 95% upper-bound marker, never an invented measured BER floor. Both modulations
 share the theoretical BER at equal Eb/N0. Edits discard stale results; domain
-switching preserves the workspace, but no project files are saved.
+switching preserves the workspace. The v0.9 work-in-progress File menu saves and
+opens editable `.openece` projects across all domains; derived results are recomputed
+by running the relevant operation after load. See [project workflows](docs/project-transactions.md).
 
 See [Communications model, random contract, normalization and limits](docs/communications.md).
 No coding, higher-order QAM, configurable pulse shaping, recovery, eye diagrams,

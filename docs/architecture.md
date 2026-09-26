@@ -371,6 +371,8 @@ before installation. The production backend has no numerical/runtime dependencie
 
 The Qt-independent codec remains unchanged apart from shared error-code additions.
 Device and workspace-factory seams support deterministic rollback tests without
-a second editable project model. File menus, prompts, preferences and recent
-projects are not yet connected. See [project-transactions.md](project-transactions.md)
+a second editable project model. Checkpoint 4 adds `ProjectWorkflow` for File-menu
+decisions through injectable dialog/preference interfaces. MainWindow composes the
+document-owned workspace and wires actions; QSettings history stays outside the
+project model. See [project-transactions.md](project-transactions.md)
 for API ownership, load/save sequences, path identity and limitations.

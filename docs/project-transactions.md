@@ -1,7 +1,7 @@
-# Project storage and controller (v0.9 checkpoint 3)
+# Project storage, controller and workflows (v0.9 checkpoints 3–4)
 
-This checkpoint supplies internal Qt file/session APIs. It does not add menu
-commands, dialogs, unsaved-change prompts, recent projects, or preferences.
+Checkpoint 3 supplies internal Qt file/session APIs. Checkpoint 4 wires the File
+menu through a workflow controller, with injectable dialogs and preferences.
 The schema and Qt-independent DTO/codec remain in [project-format.md](project-format.md).
 Numerical APIs and all engineering execution paths are unchanged.
 
@@ -19,11 +19,11 @@ independent owned transaction values, not live parallel editors.
 - `install(PreparedProject)` consumes an eligible move-only candidate belonging
   to that document. Abandoning a candidate simply destroys its private workspace.
 - `save()` targets the current path; an unnamed document returns a structured
-  destination-required error for the future UI to resolve with Save As.
+  destination-required error; the workflow controller routes unnamed Save to Save As.
 - `save_as(optional<QString>)` distinguishes a supplied path from cancellation.
   `nullopt` returns `SaveStatus::cancelled` without capture, state changes, or I/O.
 - `workspace()`, `path()`, `dirty()`, `revision()`, `saved_revision()` and
-  `ignored_fields()` expose state for checkpoint 4.
+  `ignored_fields()` expose document state.
 
 `ProjectResult<T>` is a value-or-`ProjectFailure` variant. No JSON implementation
 or numerical runtime type crosses this boundary. `ProjectFileStore` operates
@@ -31,11 +31,12 @@ only on complete project DTOs and raw bounded file bytes; it knows no widgets.
 
 Operations are synchronous on the GUI thread. Backends and preparation factories
 must not pump events or re-enter the document. Qt notification slots must not throw.
-The document owns its workspace; a future visual host must outlive the document
+The document owns its workspace; its visual host must outlive the document
 and must not independently delete that workspace. `workspaceReplaced(old,new)`
 is emitted after the state swap while the old workspace is still alive, allowing
 the host to detach it and display the replacement. `stateChanged()` exposes
-bookkeeping changes. MainWindow is deliberately not wired to these APIs yet.
+bookkeeping changes. MainWindow detaches its old central widget during the signal;
+the document destroys it after the notification, including cooperative runtime timers.
 
 ## Loading transaction
 
@@ -61,7 +62,7 @@ before its installation, installation re-reads and re-prepares the source before
 swapping. This conservative rule handles Save As overwriting a pending Open target,
 including path aliases, without installing stale bytes. A re-stage failure retains
 the current session, including any successful save already performed. There is no
-prompt policy in the controller: checkpoint 4 chooses Save/Discard/Cancel first.
+prompt policy in the file/session layer: ProjectWorkflow resolves Save/Discard/Cancel first.
 
 External same-size concurrent file modifications are not locked or detected
 universally. The codec still validates the bytes actually read. Cross-process
@@ -125,7 +126,7 @@ bounded generic messages, not exposed verbatim to GUI consumers.
 
 Ignored optional JSON fields are returned with the prepared candidate, then exposed
 by the installed document until a successful re-save. They will be discarded by
-encoding. Checkpoint 4 must show that warning; this API does not claim lossless
+encoding. The workflow shows that warning after installation; this API does not claim lossless
 forward compatibility or byte-identical round trips.
 
 ## Validation seams
@@ -139,3 +140,67 @@ suite also uses real temporary directories, Unicode/spaces/nested paths, overwri
 Save As, missing parents, path aliases, unknown fields and a complete invalid-draft
 fixture. Read-only directory tests run when permissions are enforced; deterministic
 injected failures remain mandatory on every platform.
+
+## File workflows (checkpoint 4)
+
+`ProjectWorkflow` borrows the document and owns no editable project copy. It
+coordinates New/Open/Save/Save As/Close decisions through `ProjectDialogs` and
+`ProjectPreferences` interfaces. MainWindow only composes the active workspace,
+wires actions with Qt standard platform shortcuts, and updates presentation.
+Modal workflow reentry is rejected. The file/session transaction itself remains
+synchronous and never pumps events.
+
+- **New** prepares `default_project()` inertly, resolves unsaved changes, and installs
+  a clean unnamed session. Default examples are editable; all derived results start
+  empty. Old execution state dies with the old session. Recent projects stay intact.
+- **Open / Recent Projects** stages the complete file before asking about current
+  unsaved changes. Invalid/unreadable files leave the active session untouched and
+  do not reorder history. Cancellation abandons only the candidate. A successful
+  install starts clean without running anything. Same-file Open follows these rules,
+  including re-staging after an intervening successful Save or Save As.
+- **Save** targets the current path or asks for Save As when unnamed. **Save As**
+  preserves the old path until commit. Pending text is synchronized exactly before
+  modal destination/unsaved dialogs; serialization still reads only the draft model.
+- Save As appends `.openece` unless the name already ends in that extension
+  (case-insensitive): `example` becomes `example.openece`, `example.txt` becomes
+  `example.txt.openece`, and `example.OPENECE` is unchanged. Overwrite confirmation
+  checks the final, extended destination, including dangling symlinks. Cancelling
+  either dialog does not write or change the document path/history.
+- Dirty New/Open/Close present **Save / Discard / Cancel**. Save continues only
+  after a successful file commit; failed save or cancelled Save As aborts the
+  requested replacement/close. Discard explicitly abandons current edits. Cancel
+  preserves the session. Clean documents do not prompt. Close/Exit share the same
+  path and an accepted close stops cooperative execution timers immediately.
+
+The title is `Untitled — OpenECE` or `filename.openece — OpenECE`, with `*` immediately
+following the name only when persisted draft edits are dirty. The window tooltip,
+window file path and status bar expose the absolute path. Generate/Solve/Run,
+progress, cancellation, results and automatic result navigation do not dirty a
+project. User changes to persisted domain/tab selections do; restoration does not.
+
+Recent projects use **QSettings organization `OpenECE`, application `OpenECE`, key
+`projects/recentPaths`**, outside the project file. At most ten absolute paths are
+retained, de-duplicated through the same path-equivalence policy as the document.
+Successful Open/Save/Save As moves its path to the front. A successfully saved
+current project still enters history if a later pending Open re-stage fails.
+Preference failure is reported separately and cannot undo or misreport a successful
+project commit. No recent project opens automatically on startup.
+
+Missing paths remain listed with `(missing)`. Opening one reports a normal read
+error, preserves the active document and keeps history order. The submenu
+**Remove from recent projects** explicitly removes a selected entry without
+removing its file. There is no moved-file search or path substitution. Menu labels
+escape ampersands so filesystem names are not interpreted as accelerators.
+
+Structured errors are presented as plain text with the file path, JSON field path,
+byte offset and Qt/OS detail when available. Unknown optional fields produce a
+separate warning that re-saving discards them. No exception stack or rich-text
+interpretation of project-controlled strings is exposed.
+
+`project_file_workflow` scripts every dialog choice and preference operation. It
+covers unsaved decisions for New/Open/Close, atomic-save failure through a real
+QSaveFile wrapper, exact pending line/delegate text across five save routes,
+same-file re-staging, extension/overwrite policy, title/dirty behavior, missing
+recent paths, settings recreation, preference failure, and session destruction.
+No undo/redo, autosave, recovery, startup reopening, external assets or results
+are included in persistence.

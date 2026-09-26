@@ -601,3 +601,16 @@ preserved and no temporary file remains. Real POSIX directory permission tests a
 skipped only when privileges bypass them or on Windows ACL-based filesystems; all
 injected failures run on both platforms. No existing engineering tests or timeouts
 are weakened. Full controller details are in [project-transactions.md](project-transactions.md).
+
+
+## v0.9 checkpoint 4: File-menu workflows
+
+`project_file_workflow` adds deterministic scripted dialogs and preferences around
+real ProjectDocument/FileStore transactions. It tests all Save/Discard/Cancel and
+failed/cancelled-save branches for New/Open/Close; line/delegate pending text;
+same-file Open after Save; extension and overwrite confirmation; recent ordering,
+alias de-duplication, ten-entry cap, missing-file removal and QSettings recreation;
+window titles, path presentation, close vetoes and runtime cleanup. No existing
+suite is weakened. See [project-transactions.md](project-transactions.md) for the
+user-facing workflow contract and test seams. The full milestone documentation
+and release validation remain checkpoint 5.

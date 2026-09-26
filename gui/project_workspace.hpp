@@ -10,6 +10,8 @@ class ProjectWorkspace final : public DraftView {
     ~ProjectWorkspace() override;
     void synchronize_pending_text() override;
     project::ProjectSnapshot capture();
+    // Stop cooperative GUI-thread execution before an accepted application close.
+    void stop_execution();
     const project::ProjectSnapshot& draft() const { return snapshot_; }
 
   private:

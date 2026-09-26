@@ -1,8 +1,8 @@
 # OpenECE project schema 1
 
-Status: checkpoints 1–3 provide the model/codec, authoritative GUI bindings,
-transactional file storage and document-controller APIs. Menu/dialog/prompt/recent
-project workflows are not implemented yet. See [project-transactions.md](project-transactions.md).
+Status: checkpoints 1–4 provide the model/codec, authoritative GUI bindings,
+transactional file storage, document-controller APIs, and File-menu workflows
+with unsaved-change prompts and application-global recent projects. See [project-transactions.md](project-transactions.md).
 The complete, loadable cross-domain fixture is `tests/fixtures/project-v1.openece`.
 It deliberately includes pending phase text, missing node references, an incomplete
 timing pin list, and odd QPSK input. None is a structural project error.

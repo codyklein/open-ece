@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QStackedWidget>
+#include <QTimer>
 namespace openece::gui {
 ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert, QWidget* parent)
     : DraftView(parent), snapshot_(std::move(snapshot)) {
@@ -58,6 +59,10 @@ void ProjectWorkspace::synchronize_pending_text() {
     auto* pages = host_->findChild<QStackedWidget*>("domain_pages");
     for (int i = 0; i < pages->count(); ++i)
         static_cast<DraftView*>(pages->widget(i))->synchronize_pending_text();
+}
+void ProjectWorkspace::stop_execution() {
+    for (auto* timer : findChildren<QTimer*>())
+        timer->stop();
 }
 project::ProjectSnapshot ProjectWorkspace::capture() {
     synchronize_pending_text();
