@@ -42,9 +42,7 @@ QTableWidgetItem* fixed_item(const QString& text) {
 QComboBox* combo(QTableWidget* t, int row, int column) {
     return static_cast<QComboBox*>(t->cellWidget(row, column));
 }
-QLineEdit* line(QTableWidget* t, int row, int column) {
-    return static_cast<QLineEdit*>(t->cellWidget(row, column));
-}
+
 QString number(double value) { return QString::number(value, 'g', 12); }
 QString diagnostic(const circuits::CircuitError& e) {
     QString text = QString::fromUtf8(e.what());
@@ -54,30 +52,7 @@ QString diagnostic(const circuits::CircuitError& e) {
         text += " Component ID " + QString::number(id.value) + ".";
     return text;
 }
-void units(QComboBox* unit, int kind) {
-    const QSignalBlocker block(unit);
-    unit->clear();
-    if (kind == 0) {
-        unit->addItem(QString::fromUtf8("Ω"), 1.);
-        unit->addItem(QString::fromUtf8("kΩ"), 1e3);
-        unit->addItem(QString::fromUtf8("MΩ"), 1e6);
-    } else if (kind == 1) {
-        unit->addItem("F", 1.);
-        unit->addItem(QString::fromUtf8("µF"), 1e-6);
-        unit->addItem("nF", 1e-9);
-        unit->addItem("pF", 1e-12);
-    } else if (kind == 2) {
-        unit->addItem("H", 1.);
-        unit->addItem("mH", 1e-3);
-        unit->addItem(QString::fromUtf8("µH"), 1e-6);
-    } else {
-        const QString base = kind == 3 ? "V" : "A";
-        unit->addItem(base, 1.);
-        unit->addItem("m" + base, 1e-3);
-        unit->addItem(QString::fromUtf8("µ") + base, 1e-6);
-    }
-    unit->setProperty("previousUnit", 0);
-}
+
 circuits::NodeId selected_node(QComboBox* selector) {
     if (!selector->currentData().isValid())
         throw std::invalid_argument("Select a node for every required connection and probe.");
@@ -99,7 +74,8 @@ void phasor_cells(QTableWidget* t, int row, const QString& name, ac::Phasor valu
     t->setItem(row, 4, fixed_item(phase ? number(*phase) : QString::fromUtf8("—")));
 }
 } // namespace
-AcView::AcView(QWidget* parent) : QWidget(parent) {
+AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
+    : DraftView(parent), state_(draft, project::default_project().circuits.ac) {
     loading_ = true;
     auto* layout = new QVBoxLayout(this);
     layout->addWidget(
@@ -133,7 +109,7 @@ AcView::AcView(QWidget* parent) : QWidget(parent) {
     button("ac_add_node", "Add node", node_actions, [this] { add_node(); });
     button("ac_remove_node", "Remove", node_actions, [this] {
         if (nodes_->currentRow() >= 0) {
-            nodes_->removeRow(nodes_->currentRow());
+            rows_->remove_node(nodes_->currentRow());
             refresh_connections();
             invalidate();
         }
@@ -150,7 +126,7 @@ AcView::AcView(QWidget* parent) : QWidget(parent) {
     button("ac_add_component", "Add component", part_actions, [this] { add_component(); });
     button("ac_remove_component", "Remove", part_actions, [this] {
         if (components_->currentRow() >= 0) {
-            components_->removeRow(components_->currentRow());
+            rows_->remove_component(components_->currentRow());
             refresh_sources();
             invalidate();
         }
@@ -200,7 +176,7 @@ AcView::AcView(QWidget* parent) : QWidget(parent) {
     spacing_->setObjectName("ac_spacing");
     spacing_->addItems({"Logarithmic", "Linear"});
     sweep_controls->addWidget(spacing_);
-    count_ = new QSpinBox(this);
+    count_ = new DraftInt(this);
     count_->setObjectName("ac_point_count");
     count_->setRange(2, ac_gui_limits::sweep_points);
     count_->setValue(201);
@@ -284,22 +260,59 @@ AcView::AcView(QWidget* parent) : QWidget(parent) {
     timer_ = new QTimer(this);
     timer_->setInterval(0);
     connect(timer_, &QTimer::timeout, this, [this] { advance_sweep(); });
-    connect(nodes_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_connections();
-            invalidate();
-        }
-    });
-    connect(components_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_sources();
-            invalidate();
-        }
-    });
-    connect(ground_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(spacing_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(count_, &QSpinBox::valueChanged, this, [this] { invalidate(); });
-    load_example(false);
+    rows_ = std::make_unique<CircuitDraftRows<project::AcDraft>>(
+        state_.get(), nodes_, components_, ground_, status_, this,
+        [this](CircuitDraftChange change) {
+            edited();
+            invalidate();
+            if (change == CircuitDraftChange::nodes) {
+                refresh_connection(probe_positive_);
+                refresh_connection(probe_negative_);
+            } else if (change == CircuitDraftChange::components)
+                refresh_sources();
+        });
+    bind_table(nodes_,
+               [this](int r, int c, const QString& t) { rows_->text_edit(nodes_, r, c, t); });
+    bind_table(components_,
+               [this](int r, int c, const QString& t) { rows_->text_edit(components_, r, c, t); });
+    rows_->render();
+    auto& d = state_.get();
+    bind_text(frequency_, d.frequency.text);
+    bind_text(start_, d.start.text);
+    bind_text(stop_, d.stop.text);
+    bind_spin(count_, d.count_text);
+    bind_choice(frequency_unit_, d.frequency.unit, {"Hz", "kHz", "MHz", "GHz"});
+    bind_choice(start_unit_, d.start.unit, {"Hz", "kHz", "MHz", "GHz"});
+    bind_choice(stop_unit_, d.stop.unit, {"Hz", "kHz", "MHz", "GHz"});
+    for (auto* u : {frequency_unit_, start_unit_, stop_unit_})
+        u->setProperty("previousUnit", u->currentIndex());
+    bind_choice(mode_, d.mode, {"transfer", "absolute"});
+    bind_choice(spacing_, d.spacing, {"logarithmic", "linear"});
+    refresh_connections();
+    refresh_sources();
+    select_reference(probe_positive_, d.probe_positive);
+    select_reference(probe_negative_, d.probe_negative);
+    select_reference(reference_, d.reference_source);
+    connect(probe_positive_, &QComboBox::currentIndexChanged, this,
+            [this] { edit(state_.get().probe_positive, selected_reference(probe_positive_)); });
+    connect(probe_negative_, &QComboBox::currentIndexChanged, this,
+            [this] { edit(state_.get().probe_negative, selected_reference(probe_negative_)); });
+    connect(reference_, &QComboBox::currentIndexChanged, this,
+            [this] { edit(state_.get().reference_source, selected_reference(reference_)); });
+    reference_->setEnabled(d.mode == "transfer");
+    bind_tabs(tabs_, d.selected_tab, {"editor", "single", "sweep", "help"});
+    loading_ = false;
+    restoring_ = false;
+    if (!inert) {
+        solve();
+        QSignalBlocker b(tabs_);
+        tabs_->setCurrentIndex(0);
+    } else {
+        invalidate();
+        status_->clear();
+    }
 }
 void AcView::connect_units(QComboBox* unit, QLineEdit* value) {
     connect(unit, &QComboBox::currentIndexChanged, this, [this, unit, value](int selected) {
@@ -339,40 +352,10 @@ void AcView::invalidate() {
     phase_plot_->clear();
     status_->setText("Draft changed. Solve AC or run a sweep to validate it.");
 }
-void AcView::add_node(const QString& name) {
-    if (nodes_->rowCount() >= ac_gui_limits::nodes ||
-        next_node_ > std::numeric_limits<std::uint32_t>::max()) {
-        status_->setText("Node limit reached.");
-        return;
-    }
-    const QSignalBlocker block(nodes_);
-    int row = nodes_->rowCount();
-    nodes_->insertRow(row);
-    auto id = static_cast<unsigned>(next_node_++);
-    auto* item = fixed_item(QString::number(id));
-    item->setData(Qt::UserRole, id);
-    nodes_->setItem(row, 0, item);
-    nodes_->setItem(row, 1,
-                    new QTableWidgetItem(name.isEmpty() ? "N" + QString::number(id) : name));
-    refresh_connections();
-    invalidate();
-}
+void AcView::add_node(const QString& name) { rows_->add_node(name); }
 void AcView::refresh_connection(QComboBox* selector) {
-    const auto old = selector->currentData();
-    QSignalBlocker block(selector);
-    selector->clear();
-    selector->addItem("Select node");
-    for (int i = 0; i < nodes_->rowCount(); ++i)
-        selector->addItem(nodes_->item(i, 1)->text() + " [" + nodes_->item(i, 0)->text() + "]",
-                          nodes_->item(i, 0)->data(Qt::UserRole));
-    if (old.isValid()) {
-        int index = selector->findData(old);
-        if (index < 0) {
-            selector->addItem("Missing node " + old.toString(), old);
-            index = selector->count() - 1;
-        }
-        selector->setCurrentIndex(index);
-    }
+    if (rows_)
+        rows_->fill_nodes(selector, selected_reference(selector));
 }
 void AcView::refresh_connections() {
     for (auto* selector : {ground_, probe_positive_, probe_negative_})
@@ -386,11 +369,10 @@ void AcView::refresh_sources() {
     const QSignalBlocker block(reference_);
     reference_->clear();
     reference_->addItem("Select voltage source");
-    for (int row = 0; row < components_->rowCount(); ++row)
-        if (combo(components_, row, 2)->currentIndex() == 3)
-            reference_->addItem(components_->item(row, 1)->text() + " [" +
-                                    components_->item(row, 0)->text() + "]",
-                                components_->item(row, 0)->data(Qt::UserRole));
+    for (const auto& part : state_.get().components)
+        if (part.kind == "voltage_source")
+            reference_->addItem(qt_text(part.name) + " [" + QString::number(part.id.value) + "]",
+                                part.id.value);
     if (old.isValid()) {
         auto index = reference_->findData(old);
         if (index < 0) {
@@ -400,160 +382,110 @@ void AcView::refresh_sources() {
         reference_->setCurrentIndex(index);
     }
 }
-void AcView::add_component() {
-    if (components_->rowCount() >= ac_gui_limits::components ||
-        next_component_ > std::numeric_limits<std::uint32_t>::max()) {
-        status_->setText("Component limit reached.");
-        return;
-    }
-    const QSignalBlocker block(components_);
-    const int row = components_->rowCount();
-    components_->insertRow(row);
-    const auto id = static_cast<unsigned>(next_component_++);
-    auto* item = fixed_item(QString::number(id));
-    item->setData(Qt::UserRole, id);
-    components_->setItem(row, 0, item);
-    components_->setItem(row, 1, new QTableWidgetItem("P" + QString::number(id)));
-    auto* type = new QComboBox(components_);
-    type->addItems({"Resistor", "Capacitor", "Inductor", "AC voltage source", "AC current source"});
-    components_->setCellWidget(row, 2, type);
-    for (int column : {3, 4}) {
-        auto* selector = new QComboBox(components_);
-        components_->setCellWidget(row, column, selector);
-        refresh_connection(selector);
-        connect(selector, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
-    }
-    auto* value = new QLineEdit(components_);
-    value->setMaxLength(128);
-    value->setMinimumWidth(85);
-    components_->setCellWidget(row, 5, value);
-    auto* unit = new QComboBox(components_);
-    units(unit, 0);
-    components_->setCellWidget(row, 6, unit);
-    auto* phase = new QLineEdit("0", components_);
-    phase->setMaxLength(128);
-    phase->setMaximumWidth(90);
-    phase->setEnabled(false);
-    components_->setCellWidget(row, 7, phase);
-    connect(type, &QComboBox::currentIndexChanged, this, [this, unit, value, phase](int kind) {
-        units(unit, kind);
-        value->clear();
-        phase->setText("0");
-        phase->setEnabled(kind >= 3);
-        refresh_sources();
-        invalidate();
-    });
-    connect(value, &QLineEdit::textChanged, this, [this] { invalidate(); });
-    connect(phase, &QLineEdit::textChanged, this, [this] { invalidate(); });
-    connect_units(unit, value);
-    refresh_sources();
-    invalidate();
-}
+void AcView::add_component() { rows_->add_component(); }
 void AcView::load_example(bool rlc) {
     invalidate();
     loading_ = true;
-    components_->setRowCount(0);
-    nodes_->setRowCount(0);
-    next_node_ = next_component_ = 0;
-    ground_->clear();
-    probe_positive_->clear();
-    probe_negative_->clear();
-    reference_->clear();
-    add_node("Ground");
-    add_node("Input");
-    add_node(rlc ? "LC junction" : "Output");
-    if (rlc)
-        add_node("Output");
-    ground_->setCurrentIndex(ground_->findData(0u));
-    const int count = rlc ? 4 : 3;
-    const int types[] = {3, rlc ? 2 : 0, 1, 0};
-    const unsigned positive[] = {1, 1, 2, 3}, negative[] = {0, 2, rlc ? 3u : 0u, 0};
-    const QString names[] = {"V1", rlc ? "L1" : "R1", "C1", "R1"};
-    const QString values[] = {"1", rlc ? "0.01" : "1000", "1e-6", "100"};
-    for (int row = 0; row < count; ++row) {
-        add_component();
-        combo(components_, row, 2)->setCurrentIndex(types[row]);
-        components_->item(row, 1)->setText(names[row]);
-        combo(components_, row, 3)
-            ->setCurrentIndex(combo(components_, row, 3)->findData(positive[row]));
-        combo(components_, row, 4)
-            ->setCurrentIndex(combo(components_, row, 4)->findData(negative[row]));
-        line(components_, row, 5)->setText(values[row]);
-        if (row > 0)
-            combo(components_, row, 6)->setCurrentIndex(1);
+    restoring_ = true;
+    auto& d = state_.get();
+    d = project::default_project().circuits.ac;
+    if (rlc) {
+        d.next_node = {4};
+        d.next_component = {4};
+        d.nodes = {{{0}, "Ground"}, {{1}, "Input"}, {{2}, "LC junction"}, {{3}, "Output"}};
+        d.components = {
+            {{0}, "V1", "voltage_source", project::Id{1}, project::Id{0}, {"1", "V"}, {"0", "deg"}},
+            {{1}, "L1", "inductor", project::Id{1}, project::Id{2}, {"10", "mH"}, {"0", "deg"}},
+            {{2}, "C1", "capacitor", project::Id{2}, project::Id{3}, {"1", "uF"}, {"0", "deg"}},
+            {{3}, "R1", "resistor", project::Id{3}, project::Id{0}, {"0.1", "kohm"}, {"0", "deg"}}};
+        d.probe_positive = project::Id{3};
+        d.frequency.text = draft_text(
+            QString::number(1 / (2 * std::numbers::pi * std::sqrt(.01 * 1e-6)), 'g', 17));
+        d.stop.text = "100000";
     }
+    rows_->render();
+    refresh_connections();
     refresh_sources();
-    reference_->setCurrentIndex(reference_->findData(0u));
-    probe_positive_->setCurrentIndex(probe_positive_->findData(rlc ? 3u : 2u));
-    probe_negative_->setCurrentIndex(probe_negative_->findData(0u));
+    select_reference(probe_positive_, d.probe_positive);
+    select_reference(probe_negative_, d.probe_negative);
+    select_reference(reference_, d.reference_source);
     for (auto* unit : {frequency_unit_, start_unit_, stop_unit_}) {
-        const QSignalBlocker block(unit);
+        QSignalBlocker block(unit);
         unit->setCurrentIndex(0);
         unit->setProperty("previousUnit", 0);
     }
-    frequency_->setText(QString::number(rlc ? 1 / (2 * std::numbers::pi * std::sqrt(.01 * 1e-6))
-                                            : 1 / (2 * std::numbers::pi * 1000 * 1e-6),
-                                        'g', 17));
-    start_->setText("10");
-    stop_->setText(rlc ? "100000" : "10000");
-    count_->setValue(201);
-    mode_->setCurrentIndex(0);
-    spacing_->setCurrentIndex(0);
+    frequency_->setText(qt_text(d.frequency.text));
+    start_->setText(qt_text(d.start.text));
+    stop_->setText(qt_text(d.stop.text));
+    static_cast<DraftInt*>(count_)->restore_text(d.count_text);
+    {
+        QSignalBlocker b(mode_);
+        mode_->setCurrentIndex(0);
+    }
+    {
+        QSignalBlocker b(spacing_);
+        spacing_->setCurrentIndex(0);
+    }
+    reference_->setEnabled(true);
     loading_ = false;
+    restoring_ = false;
+    edited();
     solve();
-    tabs_->setCurrentIndex(0);
+    {
+        QSignalBlocker b(tabs_);
+        tabs_->setCurrentIndex(0);
+    }
 }
 ac::Circuit AcView::validated_circuit() const {
     using circuits::ComponentId;
     using circuits::NodeId;
     ac::CircuitDefinition draft;
-    for (int row = 0; row < nodes_->rowCount(); ++row)
-        draft.nodes.push_back({{nodes_->item(row, 0)->data(Qt::UserRole).toUInt()},
-                               nodes_->item(row, 1)->text().toStdString()});
-    if (ground_->currentData().isValid())
-        draft.ground = NodeId{ground_->currentData().toUInt()};
+    const auto& model = state_.get();
+    for (const auto& node : model.nodes)
+        draft.nodes.push_back({{node.id.value}, node.name});
+    if (model.ground)
+        draft.ground = NodeId{model.ground->value};
     int voltage_count = 0;
-    for (int row = 0; row < components_->rowCount(); ++row) {
-        const auto name = components_->item(row, 1)->text().toStdString();
-        const ComponentId id{components_->item(row, 0)->data(Qt::UserRole).toUInt()};
-        const auto p = selected_node(combo(components_, row, 3)),
-                   n = selected_node(combo(components_, row, 4));
-        const double value = physical_value(line(components_, row, 5), combo(components_, row, 6));
-        const int kind = combo(components_, row, 2)->currentIndex();
+    for (const auto& part : model.components) {
+        const auto& name = part.name;
+        const ComponentId id{part.id.value};
+        if (!part.positive || !part.negative)
+            throw std::invalid_argument("Select a node for every required connection and probe.");
+        const NodeId p{part.positive->value}, n{part.negative->value};
+        auto parsed =
+            circuit_value_si(qt_text(part.value.text), unit_factor(qt_text(part.value.unit)));
+        if (!parsed)
+            throw std::invalid_argument(
+                "Invalid numeric value; correct the visible text before calculating.");
+        const double value = *parsed;
         ac::Phasor phasor;
-        if (kind >= 3) {
-            const auto degrees = circuit_value_si(line(components_, row, 7)->text(), 1);
+        if (part.kind == "voltage_source" || part.kind == "current_source") {
+            const auto degrees = circuit_value_si(qt_text(part.phase.text), 1);
             if (!degrees || value < 0)
                 throw std::invalid_argument("Source RMS magnitude must be nonnegative and phase "
                                             "must be a finite number of degrees.");
             phasor = std::polar(value, std::remainder(*degrees, 360.) * std::numbers::pi / 180);
         }
-        switch (kind) {
-        case 0:
+        if (part.kind == "resistor")
             draft.components.push_back(circuits::Resistor{id, name, p, n, value});
-            break;
-        case 1:
+        else if (part.kind == "capacitor")
             draft.components.push_back(ac::Capacitor{id, name, p, n, value});
-            break;
-        case 2:
+        else if (part.kind == "inductor")
             draft.components.push_back(ac::Inductor{id, name, p, n, value});
-            break;
-        case 3:
+        else if (part.kind == "voltage_source") {
             draft.components.push_back(ac::VoltageSource{id, name, p, n, phasor});
             ++voltage_count;
-            break;
-        case 4:
+        } else if (part.kind == "current_source")
             draft.components.push_back(ac::CurrentSource{id, name, p, n, phasor});
-            break;
-        default:
+        else
             throw std::invalid_argument("Unknown AC component type.");
-        }
     }
     if (voltage_count > ac_gui_limits::voltage_sources)
         throw std::invalid_argument("GUI voltage-source limit exceeded.");
     return ac::Circuit(std::move(draft));
 }
 void AcView::solve() {
+    synchronize_pending_text();
     invalidate();
     try {
         const auto circuit = validated_circuit();
@@ -579,7 +511,10 @@ void AcView::solve() {
                              .arg(number(solution.frequency_hz))
                              .arg(number(solution.quality.scaled_reciprocal_condition))
                              .arg(number(solution.quality.backward_error)));
-        tabs_->setCurrentIndex(1);
+        {
+            QSignalBlocker b(tabs_);
+            tabs_->setCurrentIndex(1);
+        }
     } catch (const circuits::CircuitError& e) {
         status_->setText(diagnostic(e));
     } catch (const std::exception& e) {
@@ -587,6 +522,7 @@ void AcView::solve() {
     }
 }
 void AcView::start_sweep() {
+    synchronize_pending_text();
     invalidate();
     try {
         auto circuit = validated_circuit();
@@ -607,7 +543,7 @@ void AcView::start_sweep() {
         frequencies_ = ac::frequency_grid(
             circuit,
             {physical_value(start_, start_unit_), physical_value(stop_, stop_unit_),
-             static_cast<std::size_t>(count_->value()),
+             static_cast<std::size_t>(draft_value(count_)),
              logarithmic_ ? ac::FrequencySpacing::logarithmic : ac::FrequencySpacing::linear});
         run_circuit_.emplace(std::move(circuit));
         points_.reserve(frequencies_.size());
@@ -629,7 +565,10 @@ void AcView::start_sweep() {
             sweep_->setItem(row, 5, fixed_item("Pending"));
         }
         update_plots();
-        tabs_->setCurrentIndex(2);
+        {
+            QSignalBlocker b(tabs_);
+            tabs_->setCurrentIndex(2);
+        }
         cancel_->setEnabled(true);
         status_->setText("Sweep running: 0 frequencies evaluated.");
         timer_->start();

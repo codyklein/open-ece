@@ -46,7 +46,7 @@
       "cacheVariables": {
         "BUILD_TESTING": "ON",
         "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
-        "CMAKE_PREFIX_PATH": "$env{QT_ROOT};${sourceDir}/build/windows-deps/gtest;${sourceDir}/build/windows-deps/eigen",
+        "CMAKE_PREFIX_PATH": "$env{QT_ROOT};${sourceDir}/build/windows-deps/gtest;${sourceDir}/build/windows-deps/eigen;${sourceDir}/build/windows-deps/json",
         "QWT_ROOT": "${sourceDir}/build/windows-deps/qwt"
       }
     }

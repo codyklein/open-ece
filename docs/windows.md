@@ -1,11 +1,11 @@
-# Windows build and portable ZIP (v0.8.0)
+# Windows build and portable ZIP (v0.9.0)
 
-The v0.8.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
+The v0.9.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
-**GoogleTest 1.17.0** and **Eigen 5.0.0**. CI uses an actual Windows Server 2022 GitHub runner with
+**GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
 hardware test. MinGW has not been validated and is not a supported configuration
-for this milestone. Existing DSP, digital and circuit APIs remain unchanged; v0.8 adds an independent communications domain.
+for this milestone. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ The package described below needs none of these development environment settings
 ## Dependency bootstrap
 
 Normal CMake configuration **never downloads anything**. The explicit bootstrap
-verifies SHA-256-pinned Qwt, GoogleTest and Eigen ZIPs before extracting them into the
+verifies SHA-256-pinned Qwt, GoogleTest, Eigen and nlohmann/json ZIPs before extracting them into the
 ignored `build/windows-deps` directory. Re-running rechecks the archives and
 reuses installations only when the script/toolchain/Qt fingerprint matches and
 all installed outputs still match their recorded hashes. CI caches this verified
@@ -87,12 +87,16 @@ installed through upstream CMake with `gtest_force_shared_crt=ON`, both configs,
 a distinct Debug library postfix, and no GoogleMock. Eigen is installed as headers
 and CMake package metadata with tests/docs disabled, shared by Debug and Release.
 It adds no runtime DLL. Its pinned source hash and installed files participate in
-the same cache verification. Third-party code stays outside version control.
+the same cache verification. nlohmann/json 3.12.0 is also installed as headers and
+CMake metadata with its tests disabled. CMake requires >=3.12 on other platforms;
+`json-devel` supplies it on Fedora 44. JSON headers remain private to the project
+codec and require no runtime DLL. The MIT and embedded Hedley MIT notices accompany
+the ZIP. Third-party code stays outside version control.
 
 Fedora continues to use `dnf` and `Qt6Qwt6` pkg-config discovery. Windows uses
-standard Qt/GTest/Eigen CMake package discovery and `QWT_ROOT`; no package-management
+standard Qt/GTest/Eigen/nlohmann_json CMake package discovery and `QWT_ROOT`; no package-management
 framework or alternate plotting layer is introduced. For custom dependency
-locations, pass `-DQWT_ROOT=...` and `-DCMAKE_PREFIX_PATH='Qt-path;GTest-path;Eigen-path'` at
+locations, pass `-DQWT_ROOT=...` and `-DCMAKE_PREFIX_PATH='Qt-path;GTest-path;Eigen-path;JSON-path'` at
 configure time (or use ignored `CMakeUserPresets.json`). Custom Windows Qwt
 installations can explicitly set `Qwt_LIBRARY_DEBUG/RELEASE` and
 `Qwt_RUNTIME_DEBUG/RELEASE` if their artifact names differ from upstream defaults.
@@ -104,7 +108,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.8.0-windows-x86_64.zip
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.9.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -119,7 +123,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v0.8.0-windows-x86_64/
+OpenECE-v0.9.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -134,7 +138,7 @@ OpenECE-v0.8.0-windows-x86_64/
     SHA256SUMS.txt
 ```
 
-Runtime notes and original Qwt/GoogleTest/Eigen license texts are included. Qt's license
+Runtime notes and original Qwt/GoogleTest/Eigen/nlohmann-json license texts are included. Qt's license
 texts and third-party attribution are retained in the checked-in
 `packaging/Qt-6.8.3-NOTICES.txt`, with source-relative headings and the upstream
 archive checksum. Packaging copies this notice file without network access or
@@ -155,12 +159,25 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v0.8.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v0.9.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
 ZIP, and closes it normally. Existing numerical and offscreen GUI tests run
-unchanged beforehand; the startup check does not replace them. No GitHub Release
+unchanged beforehand; the startup check does not replace them.
+
+The fresh-runner job also downloads a separate Release persistence probe linked
+against the same workbench library without Qt Test. It temporarily places that
+executable beside the extracted package's DLLs, uses only those Qt/Qwt/CRT runtimes
+with a native Windows platform plugin, and exercises actual File actions with
+scripted dialogs and isolated real QSettings. It edits every domain, saves to a
+space/Unicode path, closes/reopens with exact invalid drafts and empty results,
+modifies and atomically overwrites, checks recent preferences cannot alter project
+bytes, and closes normally. It is removed afterward; it is **not in the release ZIP**.
+The original ZIP is unchanged and is the release candidate. Running the command
+without `-PersistenceProbe` performs only startup/manifest verification. CI requires
+both checks. The test script verifies every manifest hash and rejects development
+artifacts before launch. No GitHub Release
 is published automatically. CTest, configure and plugin-loader diagnostics are
 retained as separate CI artifacts even after failures.
 
@@ -171,7 +188,8 @@ Clang ASan/UBSan in both modes. Windows CI covers MSVC Debug and Release, all
 numerical, phase and GUI tests, and the native packaged launch. Existing numerical
 tolerances are unchanged. Additional tests check explicit UTF-8 π bytes, dot
 parsing under a German default locale, comma rejection, and screenshot paths
-containing spaces and Unicode. The app has no other persistence/file workflows.
+containing spaces and Unicode. Project tests additionally cover exact invalid drafts, file transactions, failure
+injection, Unicode paths, prompts, recent projects and complete inert restoration.
 
 MSVC's `long double` has double precision; reference calculations retain their
 independent algorithms rather than assuming extra precision. MSVC warnings and

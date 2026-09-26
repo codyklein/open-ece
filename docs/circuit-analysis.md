@@ -139,7 +139,7 @@ solver, background worker or hard latency guarantee.
 
 ## GUI workflow
 
-Circuits is the third persistent sidebar page. The editable widget state is the
+Circuits is the third persistent sidebar page. Widgets edit a borrowed project
 draft, including invalid numeric text and unresolved connections. Solve converts
 text/prefixes into an owning definition, constructs Circuit, then calls solve_dc.
 It never solves an unvalidated definition. Switching domains preserves state.
@@ -164,7 +164,8 @@ explains signs and failure behavior. Load voltage divider restores the example.
 
 v0.6 is linear DC only: no capacitors, inductors, AC, transients, dependent sources,
 nonlinear devices, SPICE, graphical schematics, or cross-domain coupling. Raw named
-SI doubles avoid a general units framework. Dense bounded solves, GUI-local drafts,
-no save/load or undo, and no exhaustive multi-error report are deliberate limits.
+SI doubles avoid a general units framework. Dense bounded solves,
+no undo and no exhaustive multi-error report remain deliberate limits. v0.9 saves
+editable drafts via the project layer without changing the DC API or saving solutions.
 No future-analysis placeholder APIs or universal circuit/signal representation
 are introduced. Existing DSP and Digital Logic behavior is unchanged.

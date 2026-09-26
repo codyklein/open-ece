@@ -171,3 +171,9 @@ user-adaptive cancellation does not imply the fixed-N statistical coverage guara
 Nine GUI workflows test mapping, odd/invalid inputs, pending unit conversion,
 Run/Step repeatability, cancellation/resume/destruction, zero-error plot semantics,
 resource/plot limits, locale/seed handling and persistence across all four domains.
+
+
+v0.9 project persistence saves the editable configuration described above, including
+invalid pending text and unit/selection choices. Numerical results and runtime
+progress are excluded. Open leaves results empty and starts no execution; invoke
+the relevant solve/simulation explicitly after loading. See [project guide](projects.md).

@@ -31,7 +31,7 @@ namespace openece::gui {
 namespace {
 QDoubleSpinBox* field(QWidget* parent, const char* name, double minimum, double maximum,
                       double value, int decimals, const QString& suffix = {}) {
-    auto* spin = new QDoubleSpinBox(parent);
+    auto* spin = new DraftDouble(parent);
     spin->setObjectName(name);
     spin->setDecimals(decimals);
     spin->setRange(minimum, maximum);
@@ -42,7 +42,8 @@ QDoubleSpinBox* field(QWidget* parent, const char* name, double minimum, double 
 }
 } // namespace
 
-SignalsDspView::SignalsDspView(QWidget* parent) : QWidget(parent) {
+SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bool inert)
+    : DraftView(parent), state_(draft, project::default_project().signals) {
     auto* central = this;
     auto* layout = new QHBoxLayout(central);
 
@@ -95,7 +96,7 @@ SignalsDspView::SignalsDspView(QWidget* parent) : QWidget(parent) {
     cutoff_ = field(controls, "filter_cutoff", 0.000001, 5e8, 64.0, 6, " Hz");
     cutoff_->setToolTip(
         "Ideal sinc cutoff: strictly between DC and Nyquist; not an exact -3 dB frequency.");
-    tap_count_ = new QSpinBox(controls);
+    tap_count_ = new DraftInt(controls);
     tap_count_->setObjectName("filter_taps");
     tap_count_->setRange(3, 511);
     tap_count_->setSingleStep(2);
@@ -241,7 +242,29 @@ SignalsDspView::SignalsDspView(QWidget* parent) : QWidget(parent) {
         status_->setText("Parameters changed. Generate to update the displayed result.");
     });
     connect(phase_unit_, &QComboBox::currentIndexChanged, this, [this] { change_phase_unit(); });
-    generate();
+    auto& d = state_.get();
+    bind_spin(amplitude_, d.amplitude.text);
+    bind_spin(frequency_, d.frequency.text);
+    bind_spin(sample_rate_, d.sample_rate.text);
+    bind_spin(duration_, d.duration.text);
+    bind_spin(cutoff_, d.cutoff.text);
+    bind_spin(tap_count_, d.taps_text);
+    bind_text(phase_, d.phase.text);
+    bind_choice(phase_unit_, d.phase.unit, {"deg", "rad"});
+    phase_in_radians_ = d.phase.unit == "rad";
+    pi_button_->setEnabled(phase_in_radians_);
+    bind_choice(window_, d.window, {"rectangular", "hann_periodic"});
+    bind_choice(filter_, d.filter, {"off", "fir_lowpass"});
+    cutoff_->setEnabled(d.filter != "off");
+    tap_count_->setEnabled(d.filter != "off");
+    bind_tabs(tabs, d.selected_tab, {"signals", "help", "response"});
+    restoring_ = false;
+    if (!inert)
+        generate();
+    else {
+        clear_results();
+        status_->clear();
+    }
 }
 
 void SignalsDspView::change_phase_unit() {
@@ -253,6 +276,7 @@ void SignalsDspView::change_phase_unit() {
         const QSignalBlocker blocker(phase_);
         phase_->setText(converted);
         pi_button_->setEnabled(new_unit);
+        edit(state_.get().phase.text, draft_text(converted));
         status_->setText(
             "Parameters changed. Phase converted to selected units; Generate to update.");
     } catch (const std::exception& error) {
@@ -273,10 +297,11 @@ void SignalsDspView::clear_results() {
 }
 
 void SignalsDspView::generate() {
+    synchronize_pending_text();
     try {
-        const signals::SineParameters parameters{amplitude_->value(), frequency_->value(),
+        const signals::SineParameters parameters{draft_value(amplitude_), draft_value(frequency_),
                                                  parse_phase(phase_->text(), phase_in_radians_),
-                                                 sample_rate_->value(), duration_->value()};
+                                                 draft_value(sample_rate_), draft_value(duration_)};
         const double count =
             std::floor(parameters.sample_rate_hz * parameters.duration_seconds + 0.5);
         if (count > 65536.0) {
@@ -311,13 +336,13 @@ void SignalsDspView::generate() {
                 .arg(window_->currentText())
                 .arg(spectrum.coherent_gain, 0, 'g', 8));
         if (filter_->currentIndex() != 0) {
-            const auto taps = static_cast<std::size_t>(tap_count_->value());
+            const auto taps = static_cast<std::size_t>(draft_value(tap_count_));
             if (signal.size() > 65536 - (taps - 1)) {
                 throw std::invalid_argument(
                     "Full FIR output exceeds 65,536 samples. Reduce duration or tap count.");
             }
             const auto coefficients =
-                dsp::design_lowpass(taps, cutoff_->value(), signal.sample_rate_hz());
+                dsp::design_lowpass(taps, draft_value(cutoff_), signal.sample_rate_hz());
             const auto filtered = dsp::apply_fir_full(signal, coefficients);
             const auto filtered_spectrum = dsp::amplitude_spectrum(
                 filtered, static_cast<dsp::Window>(window_->currentData().toInt()));
@@ -378,7 +403,7 @@ void SignalsDspView::generate() {
                         "Nyquist included.\nSignal spectra use different record lengths and "
                         "normalization; their peak ratio need not equal this gain.")
                     .arg(static_cast<qulonglong>(taps))
-                    .arg(cutoff_->value(), 0, 'g', 8)
+                    .arg(draft_value(cutoff_), 0, 'g', 8)
                     .arg(delay_text));
         } else {
             response_plot_->clear();

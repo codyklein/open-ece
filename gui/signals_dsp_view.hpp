@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "draft_view.hpp"
 
 class QDoubleSpinBox;
 class QSpinBox;
@@ -13,11 +13,14 @@ namespace openece::gui {
 
 class PlotWidget;
 
-class SignalsDspView final : public QWidget {
+class SignalsDspView final : public DraftView {
   public:
-    explicit SignalsDspView(QWidget* parent = nullptr);
+    explicit SignalsDspView(QWidget* parent = nullptr, project::SignalsDraft* draft = nullptr,
+                            bool inert = false);
+    const project::SignalsDraft& draft() const { return state_.get(); }
 
   private:
+    DraftOwner<project::SignalsDraft> state_;
     void generate();
     void change_phase_unit();
     void clear_results();

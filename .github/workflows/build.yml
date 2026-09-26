@@ -1,7 +1,7 @@
 name: Build, test and package
 on:
   push:
-    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis, feature/communications]
+    branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis, feature/communications, feature/project-persistence]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -22,7 +22,7 @@ jobs:
           - {compiler: clang++, gui: 'OFF', sanitize: 'ON'}
     steps:
       - name: Install Fedora system packages
-        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel clang-tools-extra
+        run: dnf --disable-repo=fedora-cisco-openh264 install -y gcc-c++ clang compiler-rt cmake ninja-build git-core pkgconf-pkg-config qt6-qtbase-devel qwt-qt6-devel gtest-devel eigen3-devel json-devel clang-tools-extra
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Configure
         run: cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DOPENECE_BUILD_GUI=${{ matrix.gui }} -DOPENECE_ENABLE_SANITIZERS=${{ matrix.sanitize }}
@@ -77,7 +77,7 @@ jobs:
         with:
           path: build/windows-deps
           key: windows-x64-qt6.8.3-msvc${{ steps.msvc.outputs.version }}-${{ hashFiles('scripts/windows/bootstrap.ps1') }}
-      - name: Bootstrap pinned Qwt, GoogleTest and Eigen
+      - name: Bootstrap pinned Qwt, GoogleTest, Eigen and JSON
         shell: pwsh
         run: ./scripts/windows/bootstrap.ps1 -QtRoot $env:QT_ROOT
       - name: Verify bootstrap reuse
@@ -115,13 +115,18 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ./build/windows/tests/Release/openece_communications_benchmark.exe | Tee-Object build/windows/communications-benchmark.log
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-persistence-probe
+          path: build/windows/tests/Release/openece_packaged_persistence.exe
+          if-no-files-found: error
       - name: Package Release
         shell: pwsh
         run: ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: OpenECE-v0.8.0-windows-x86_64
-          path: build/packages/OpenECE-v0.8.0-windows-x86_64.zip
+          name: OpenECE-v0.9.0-windows-x86_64
+          path: build/packages/OpenECE-v0.9.0-windows-x86_64.zip
           if-no-files-found: error
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -141,11 +146,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: OpenECE-v0.8.0-windows-x86_64
+          name: OpenECE-v0.9.0-windows-x86_64
           path: build/artifact
-      - name: Extract and launch with sanitized environment
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-persistence-probe
+          path: build/persistence-probe
+      - name: Extract, launch and test persistence with sanitized environment
         shell: pwsh
-        run: ./scripts/windows/test-package.ps1 -Archive build/artifact/OpenECE-v0.8.0-windows-x86_64.zip -Destination "$env:RUNNER_TEMP/OpenECE fresh π path"
+        run: ./scripts/windows/test-package.ps1 -Archive build/artifact/OpenECE-v0.9.0-windows-x86_64.zip -Destination "$env:RUNNER_TEMP/OpenECE fresh π path" -PersistenceProbe build/persistence-probe/openece_packaged_persistence.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

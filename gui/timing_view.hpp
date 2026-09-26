@@ -1,5 +1,5 @@
 #pragma once
-#include <QWidget>
+#include "draft_view.hpp"
 #include <memory>
 #include <openece/digital/simulation.hpp>
 
@@ -17,14 +17,19 @@ inline constexpr std::size_t queued = 10'000, processed = 100'000, pin_visits = 
 inline constexpr int batch_timestamps = 100;
 } // namespace timing_gui_limits
 class TimingDiagramWidget;
-class TimingView final : public QWidget {
+class TimingView final : public DraftView {
   public:
-    explicit TimingView(QWidget* parent = nullptr);
+    explicit TimingView(QWidget* parent = nullptr, project::TimingDraft* draft = nullptr,
+                        bool inert = false);
+    const project::TimingDraft& draft() const { return state_.get(); }
     void load_combinational(const digital::Circuit& circuit,
                             const std::vector<digital::LogicValue>& inputs,
                             digital::timing::Delay delay);
 
   private:
+    DraftOwner<project::TimingDraft> state_;
+    void restore_rows();
+    void text_edit(QTableWidget*, int, int, const QString&);
     void invalidate();
     void fail(const std::exception& error);
     void initialize();
@@ -42,6 +47,5 @@ class TimingView final : public QWidget {
     std::unique_ptr<digital::timing::Simulation> simulation_;
     std::vector<std::string> output_names_;
     QStringList trace_labels_;
-    std::uint64_t next_id_ = 4;
 };
 } // namespace openece::gui

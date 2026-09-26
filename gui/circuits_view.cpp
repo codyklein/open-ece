@@ -36,24 +36,10 @@ QTableWidgetItem* fixed_item(const QString& text) {
 QComboBox* combo(QTableWidget* table, int row, int column) {
     return static_cast<QComboBox*>(table->cellWidget(row, column));
 }
-void units(QComboBox* selector, int type) {
-    QSignalBlocker block(selector);
-    selector->clear();
-    if (type == 0) {
-        selector->addItem(QString::fromUtf8("Ω"), 1.0);
-        selector->addItem(QString::fromUtf8("kΩ"), 1e3);
-        selector->addItem(QString::fromUtf8("MΩ"), 1e6);
-        selector->addItem(QString::fromUtf8("mΩ"), 1e-3);
-    } else {
-        const QString base = type == 1 ? "V" : "A";
-        selector->addItem(base, 1.0);
-        selector->addItem("m" + base, 1e-3);
-        selector->addItem(QString::fromUtf8("µ") + base, 1e-6);
-    }
-    selector->setProperty("previousUnit", 0);
-}
+
 } // namespace
-CircuitsView::CircuitsView(QWidget* parent) : QWidget(parent) {
+CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
+    : DraftView(parent), state_(draft, project::default_project().circuits.dc) {
     auto* layout = new QVBoxLayout(this);
     auto* title = new QLabel("Linear DC circuit analysis", this);
     auto font = title->font();
@@ -61,6 +47,8 @@ CircuitsView::CircuitsView(QWidget* parent) : QWidget(parent) {
     title->setFont(font);
     layout->addWidget(title);
     auto* tabs = new QTabWidget(this);
+    tabs_ = tabs;
+    tabs->setObjectName("dc_view_tabs");
     layout->addWidget(tabs);
     auto* editor = new QWidget(tabs);
     tabs->addTab(editor, "Circuit and results");
@@ -150,28 +138,38 @@ CircuitsView::CircuitsView(QWidget* parent) : QWidget(parent) {
     connect(add_c, &QPushButton::clicked, this, [this] { add_component(); });
     connect(remove_n, &QPushButton::clicked, this, [this] {
         if (nodes_->currentRow() >= 0) {
-            nodes_->removeRow(nodes_->currentRow());
+            rows_->remove_node(nodes_->currentRow());
             refresh_connections();
             invalidate();
         }
     });
     connect(remove_c, &QPushButton::clicked, this, [this] {
         if (components_->currentRow() >= 0) {
-            components_->removeRow(components_->currentRow());
+            rows_->remove_component(components_->currentRow());
             invalidate();
         }
     });
-    connect(nodes_, &QTableWidget::itemChanged, this, [this] {
-        if (!loading_) {
-            refresh_connections();
-            invalidate();
-        }
-    });
-    connect(components_, &QTableWidget::itemChanged, this, [this] { invalidate(); });
-    connect(ground_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(solve_button, &QPushButton::clicked, this, [this] { solve(); });
     connect(example, &QPushButton::clicked, this, [this] { load_divider(); });
-    load_divider();
+    rows_ = std::make_unique<CircuitDraftRows<project::DcDraft>>(
+        state_.get(), nodes_, components_, ground_, status_, this, [this](CircuitDraftChange) {
+            edited();
+            invalidate();
+        });
+    bind_table(nodes_,
+               [this](int r, int c, const QString& t) { rows_->text_edit(nodes_, r, c, t); });
+    bind_table(components_,
+               [this](int r, int c, const QString& t) { rows_->text_edit(components_, r, c, t); });
+    rows_->render();
+    bind_tabs(tabs_, state_.get().selected_tab, {"editor", "help"});
+    loading_ = false;
+    restoring_ = false;
+    if (!inert) {
+        solve();
+    } else {
+        invalidate();
+        status_->clear();
+    }
 }
 void CircuitsView::invalidate() {
     if (loading_)
@@ -180,98 +178,11 @@ void CircuitsView::invalidate() {
     currents_->setRowCount(0);
     status_->setText("Draft changed. Solve to validate and calculate results.");
 }
-void CircuitsView::add_node(const QString& name) {
-    if (nodes_->rowCount() >= circuit_gui_limits::nodes ||
-        next_node_ > std::numeric_limits<std::uint32_t>::max()) {
-        status_->setText("Node limit reached.");
-        return;
-    }
-    const QSignalBlocker block(nodes_);
-    int row = nodes_->rowCount();
-    nodes_->insertRow(row);
-    auto id = static_cast<unsigned>(next_node_++);
-    auto* item = fixed_item(QString::number(id));
-    item->setData(Qt::UserRole, id);
-    nodes_->setItem(row, 0, item);
-    nodes_->setItem(row, 1,
-                    new QTableWidgetItem(name.isEmpty() ? "N" + QString::number(id) : name));
-    refresh_connections();
-    invalidate();
-}
-void CircuitsView::add_component() {
-    if (components_->rowCount() >= circuit_gui_limits::components ||
-        next_component_ > std::numeric_limits<std::uint32_t>::max()) {
-        status_->setText("Component limit reached.");
-        return;
-    }
-    const QSignalBlocker block(components_);
-    int row = components_->rowCount();
-    components_->insertRow(row);
-    auto id = static_cast<unsigned>(next_component_++);
-    auto* item = fixed_item(QString::number(id));
-    item->setData(Qt::UserRole, id);
-    components_->setItem(row, 0, item);
-    components_->setItem(row, 1, new QTableWidgetItem("C" + QString::number(id)));
-    auto* type = new QComboBox(components_);
-    type->addItems({"Resistor", "Voltage source", "Current source"});
-    components_->setCellWidget(row, 2, type);
-    for (int column : {3, 4}) {
-        auto* selector = new QComboBox(components_);
-        components_->setCellWidget(row, column, selector);
-        connect(selector, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
-    }
-    auto* value = new QLineEdit(components_);
-    value->setMaxLength(128);
-    value->setMinimumWidth(85);
-    value->setPlaceholderText("SI value");
-    components_->setCellWidget(row, 5, value);
-    auto* unit = new QComboBox(components_);
-    units(unit, 0);
-    components_->setCellWidget(row, 6, unit);
-    connect(type, &QComboBox::currentIndexChanged, this, [this, unit, value](int kind) {
-        units(unit, kind);
-        value->clear();
-        invalidate();
-    });
-    connect(value, &QLineEdit::textChanged, this, [this] { invalidate(); });
-    connect(unit, &QComboBox::currentIndexChanged, this, [this, unit, value](int selected) {
-        int previous = unit->property("previousUnit").toInt();
-        if (selected == previous)
-            return;
-        auto si = circuit_value_si(value->text(), unit->itemData(previous).toDouble());
-        double converted = si ? *si / unit->itemData(selected).toDouble() : 0;
-        if (!si || !std::isfinite(converted) || (*si != 0 && converted == 0)) {
-            QSignalBlocker block_unit(unit);
-            unit->setCurrentIndex(previous);
-            invalidate();
-            status_->setText("Invalid pending value. Correct it before changing units.");
-            return;
-        }
-        unit->setProperty("previousUnit", selected);
-        value->setText(QString::number(converted, 'g', 17));
-        invalidate();
-    });
-    // Adding a component does not change any existing node selector.
-    refresh_connection(combo(components_, row, 3));
-    refresh_connection(combo(components_, row, 4));
-    invalidate();
-}
+void CircuitsView::add_node(const QString& name) { rows_->add_node(name); }
+void CircuitsView::add_component() { rows_->add_component(); }
 void CircuitsView::refresh_connection(QComboBox* selector) {
-    const auto old = selector->currentData();
-    QSignalBlocker block(selector);
-    selector->clear();
-    selector->addItem("Select node");
-    for (int i = 0; i < nodes_->rowCount(); ++i)
-        selector->addItem(nodes_->item(i, 1)->text() + " [" + nodes_->item(i, 0)->text() + "]",
-                          nodes_->item(i, 0)->data(Qt::UserRole));
-    if (old.isValid()) {
-        int index = selector->findData(old);
-        if (index < 0) {
-            selector->addItem("Missing node " + old.toString(), old);
-            index = selector->count() - 1;
-        }
-        selector->setCurrentIndex(index);
-    }
+    if (rows_)
+        rows_->fill_nodes(selector, selected_reference(selector));
 }
 void CircuitsView::refresh_connections() {
     refresh_connection(ground_);
@@ -280,67 +191,44 @@ void CircuitsView::refresh_connections() {
             refresh_connection(combo(components_, i, column));
 }
 void CircuitsView::load_divider() {
+    const auto selected_tab = state_.get().selected_tab;
+    state_.get() = project::default_project().circuits.dc;
+    state_.get().selected_tab = selected_tab;
     loading_ = true;
-    components_->setRowCount(0);
-    nodes_->setRowCount(0);
-    next_node_ = next_component_ = 0;
-    ground_->clear();
-    add_node("Ground");
-    add_node("Supply");
-    add_node("Midpoint");
-    ground_->setCurrentIndex(ground_->findData(0u));
-    for (int i = 0; i < 3; ++i)
-        add_component();
-    combo(components_, 0, 2)->setCurrentIndex(1);
-    const unsigned positives[] = {1, 1, 2}, negatives[] = {0, 2, 0};
-    for (int i = 0; i < 3; ++i) {
-        components_->item(i, 1)->setText(i == 0 ? "V1" : "R" + QString::number(i));
-        combo(components_, i, 3)->setCurrentIndex(combo(components_, i, 3)->findData(positives[i]));
-        combo(components_, i, 4)->setCurrentIndex(combo(components_, i, 4)->findData(negatives[i]));
-        static_cast<QLineEdit*>(components_->cellWidget(i, 5))->setText(i == 0 ? "10" : "1000");
-    }
+    rows_->render();
     loading_ = false;
-    invalidate();
+    edited();
     solve();
 }
 void CircuitsView::solve() {
+    synchronize_pending_text();
     invalidate();
     try {
         using namespace circuits;
         CircuitDefinition draft;
-        for (int i = 0; i < nodes_->rowCount(); ++i)
-            draft.nodes.push_back({{nodes_->item(i, 0)->data(Qt::UserRole).toUInt()},
-                                   nodes_->item(i, 1)->text().toStdString()});
-        if (ground_->currentData().isValid())
-            draft.ground = NodeId{ground_->currentData().toUInt()};
+        const auto& model = state_.get();
+        for (const auto& node : model.nodes)
+            draft.nodes.push_back({{node.id.value}, node.name});
+        if (model.ground)
+            draft.ground = NodeId{model.ground->value};
         int voltage_count = 0;
-        for (int row = 0; row < components_->rowCount(); ++row) {
-            auto name = components_->item(row, 1)->text();
-            ComponentId id{components_->item(row, 0)->data(Qt::UserRole).toUInt()};
-            if (!combo(components_, row, 3)->currentData().isValid() ||
-                !combo(components_, row, 4)->currentData().isValid())
-                throw std::invalid_argument("Select both terminals for component " +
-                                            name.toStdString());
-            NodeId p{combo(components_, row, 3)->currentData().toUInt()},
-                n{combo(components_, row, 4)->currentData().toUInt()};
+        for (const auto& part : model.components) {
+            const auto& name = part.name;
+            ComponentId id{part.id.value};
+            if (!part.positive || !part.negative)
+                throw std::invalid_argument("Select both terminals for component " + name);
+            NodeId p{part.positive->value}, n{part.negative->value};
             auto value =
-                circuit_value_si(static_cast<QLineEdit*>(components_->cellWidget(row, 5))->text(),
-                                 combo(components_, row, 6)->currentData().toDouble());
+                circuit_value_si(qt_text(part.value.text), unit_factor(qt_text(part.value.unit)));
             if (!value)
-                throw std::invalid_argument("Invalid numeric value for component " +
-                                            name.toStdString());
-            switch (combo(components_, row, 2)->currentIndex()) {
-            case 0:
-                draft.components.push_back(Resistor{id, name.toStdString(), p, n, *value});
-                break;
-            case 1:
-                draft.components.push_back(VoltageSource{id, name.toStdString(), p, n, *value});
+                throw std::invalid_argument("Invalid numeric value for component " + name);
+            if (part.kind == "resistor")
+                draft.components.push_back(Resistor{id, name, p, n, *value});
+            else if (part.kind == "voltage_source") {
+                draft.components.push_back(VoltageSource{id, name, p, n, *value});
                 ++voltage_count;
-                break;
-            default:
-                draft.components.push_back(CurrentSource{id, name.toStdString(), p, n, *value});
-                break;
-            }
+            } else
+                draft.components.push_back(CurrentSource{id, name, p, n, *value});
         }
         if (voltage_count > circuit_gui_limits::voltage_sources)
             throw std::invalid_argument("GUI voltage-source limit exceeded.");
@@ -350,7 +238,9 @@ void CircuitsView::solve() {
         for (int i = 0; i < voltages_->rowCount(); ++i) {
             voltages_->setItem(
                 i, 0,
-                fixed_item(nodes_->item(i, 1)->text() + " [" + nodes_->item(i, 0)->text() + "]"));
+                fixed_item(qt_text(model.nodes[static_cast<std::size_t>(i)].name) + " [" +
+                           QString::number(model.nodes[static_cast<std::size_t>(i)].id.value) +
+                           "]"));
             voltages_->setItem(
                 i, 1,
                 fixed_item(QString::number(

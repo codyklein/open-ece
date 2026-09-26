@@ -14,6 +14,9 @@ flowchart TD
     UI --> Circuits[circuits]
     Circuits --> Eigen[Eigen: private dense linear algebra]
     CircuitTests[Independent DC tests] --> Circuits
+    UI --> Project[project: owned editable drafts and codec]
+    Project --> JSON[nlohmann/json: private headers]
+    ProjectTests[Codec / allocator / round-trip tests] --> Project
     UI --> Qt[Qt Widgets and Qwt]
     Signals --> Core[core]
     DSP --> Core
@@ -180,8 +183,8 @@ for the API, exact naming rules, gate semantics, cycle diagnostics and limits.
 
 `MainWindow` now only composes a sidebar and persistent stacked domain views.
 `SignalsDspView` contains the previous signal controls, generation, plots and help;
-its calculation path is unchanged. `DigitalLogicView` owns a possibly invalid draft
-and input assignments. Qt parents own each page and its widgets. Each explicit
+its calculation path is unchanged. `DigitalLogicView` edits a possibly invalid project subdraft
+containing input assignments. Qt parents own each page and its widgets. Each explicit
 Evaluate/Table action constructs a local validated circuit; failed validation
 leaves the draft visible while clearing results. This small bounded editor does
 not need a separate generic controller or shared simulation hierarchy. A future
@@ -257,8 +260,8 @@ sparse framework are unnecessary at the centralized 191-unknown cap.
 Fedora uses system Eigen; Windows adds a pinned, verified header-only bootstrap
 installation. Normal configure remains offline and no Eigen DLL is needed.
 MainWindow gains only a Circuits navigation item and persistent CircuitsView;
-other domain implementations remain unchanged. The view owns invalid editable
-widget state, converts prefixes to SI only on parsing, and clears results on edits.
+other domain implementations remain unchanged. The view edits a project subdraft, converts prefixes to SI only on execution or
+explicit unit changes, and clears results on edits.
 See [Circuit Analysis contracts](circuit-analysis.md) for all policies and tradeoffs.
 
 ## AC Circuit Analysis (v0.7)
@@ -286,17 +289,18 @@ CTest timing assertions. Response helpers separate V RMS from normalized voltage
 gain, enforce excitation restrictions, and define wrapped phase and display floor.
 
 CircuitsWorkspace composes persistent DC and AC views. Existing CircuitsView is
-unchanged; MainWindow only composes the workspace. AcView owns invalid widget
-drafts and captures a validated snapshot/grid on Run. A QTimer performs one solve
+unchanged; MainWindow only composes the workspace. AcView edits an invalid-capable project subdraft and captures a validated
+snapshot/grid on Run. A QTimer performs one solve
 per event, allowing progress/cancellation without threads. Completed rows own core
 results; pending/cancelled rows explicitly remain unevaluated. Edits discard the
 old run. AcResponsePlot makes separate Qwt-owned curves for contiguous valid runs,
 so failed frequencies and undefined/wrapped phase never get joined accidentally.
 
 Tradeoffs are bounded dense factorization per frequency, repeated topology checks,
-separate DC/AC editor code, GUI-local drafts, and no cancellation inside one solve.
-There is no persistence, undo, schematic canvas, transient/nonlinear/dependent-source
-model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
+separate DC/AC numerical paths and no cancellation inside one solve.
+The editors now borrow project drafts and share row bindings. v0.9 saves editable
+state without saving solutions. There is no undo, schematic canvas,
+transient/nonlinear/dependent-source model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
 
 ## Digital Communications (v0.8)
 
@@ -313,7 +317,7 @@ There is no global generator, standard-library distribution, worker thread or
 cross-domain scheduler. The specified mt19937_64/open-uniform/Box-Muller algorithm
 and statistical acceptance tests are documented in communications.md.
 
-CommunicationsView owns editable widget state and snapshots each link or BER
+CommunicationsView edits its project subdraft and snapshots each link or BER
 request. Its QTimer advances at most 4096 BER bits per event; Step and Run use
 the same operation. Cancelling preserves partial counts; edits discard stale
 snapshots. MainWindow only composes the fourth persistent domain. Qwt owns copied
@@ -321,7 +325,77 @@ curve/marker data; constellation scaling preserves I/Q geometry. Zero-error
 markers represent explicit statistical upper bounds, not measured nonzero BER.
 
 Tradeoffs are bounded synchronous waveform generation, cancellation between BER
-chunks, truncated labelled plot previews, and GUI-local drafts without persistence
-or undo. Floating Gaussian values may differ slightly across math libraries, while
+chunks, truncated labelled plot previews, and no undo. Editable communications
+state is now saved by v0.9; results and in-progress execution remain transient. Floating Gaussian values may differ slightly across math libraries, while
 integer streams are specified exactly. No generalized modem/filter framework or
 RF carrier/recovery path is introduced. Existing DSP/digital/circuit APIs stay intact.
+
+
+## Project bindings (v0.9 checkpoint 2)
+
+`ProjectWorkspace` owns exactly one `ProjectSnapshot`. Its child views borrow the
+corresponding subdrafts through `DraftOwner<T>`; a standalone test view instead owns
+one subdraft. Widget callbacks edit this model immediately. The only deferred state
+is active editor text, synchronized verbatim by `DraftView::synchronize_pending_text()`.
+`capture()` returns the model after synchronization, not a reconstruction from
+widget values. IDs, reference order, counters, text and stable unit/mode tokens
+remain project-owned. Circuit rows share a small GUI binding helper, not a new
+engineering-domain abstraction. Numerical APIs remain unchanged.
+
+The session accepts an inert construction mode: no default-example replacement,
+solver, FFT, simulation, sweep or BER execution occurs. It validates storage limits
+before creating widgets and compares capture against the supplied model before
+returning a prepared session. Results and runtime objects are view-local and empty.
+Views are destroyed before the snapshot, including failed session construction.
+MainWindow still starts the ordinary application examples through explicit non-inert
+construction; later Open/New workflows can install an already-prepared inert session.
+
+Raw spin-editor text replaces the spin box's cached numeric value as editable state.
+Execution parses current text explicitly and rejects invalid/out-of-range values.
+Table delegates forward pending text without committing or interpreting it. Restoring
+controls blocks unit conversion/type-change callbacks. Exact storage limits account
+for Qt UTF-16 text capacity, so accepted snapshots are not silently truncated.
+`draftEdited` bubbles to the session for later document dirty tracking; automatic
+result-tab navigation is blocked from changing persisted user selection.
+
+This checkpoint introduces no file commands, file path state, preferences, dirty
+revision counter, or save transaction. The project codec and all numerical libraries
+remain Qt-independent. Qt bindings deliberately remain in the workbench library.
+
+
+## Transactional document boundary (v0.9 checkpoint 3)
+
+`ProjectFileStore` wraps Qt filesystem I/O around complete project values;
+`ProjectDocument` owns the session and its path/revision bookkeeping. Move-only
+prepared candidates contain complete inert workspaces and are installed only by
+an explicit session swap. Failed staging never mutates the current workspace.
+QSaveFile commit is the save boundary; no path or clean revision changes before
+it succeeds. A later save invalidates pending Open bytes and forces re-staging
+before installation. The production backend has no numerical/runtime dependencies.
+
+The Qt-independent codec remains unchanged apart from shared error-code additions.
+Device and workspace-factory seams support deterministic rollback tests without
+a second editable project model. Checkpoint 4 adds `ProjectWorkflow` for File-menu
+decisions through injectable dialog/preference interfaces. MainWindow composes the
+document-owned workspace and wires actions; QSettings history stays outside the
+project model. See [project-transactions.md](project-transactions.md)
+for API ownership, load/save sequences, path identity and limitations.
+
+
+## v0.9 release boundary
+
+The user guide is [projects.md](projects.md); the complete schema/extension rules
+are in [project-format.md](project-format.md). ProjectSnapshot is the only editable
+persisted state. Child views borrow subdrafts, while validated numerical requests,
+simulation objects, results and Qwt samples are derived. Exact pending-editor
+synchronization never invokes engineering parsing or execution. Inert restore
+blocks normal conversion/default/example side effects and verifies capture fidelity.
+
+ProjectDocument owns the live session, revision/path state and temporary prepared
+sessions. ProjectWorkflow owns dialog decisions and coordinates unsaved-change
+handling. MainWindow only wires actions, presents title/path and swaps the hosted
+workspace. Complete loads are staged before replacement; saves use checked
+QSaveFile commit with direct-write fallback disabled. Recent projects belong to
+QSettings under OpenECE/OpenECE, never to the project schema. The packaged-runtime
+probe uses these same layers with scripted decisions, without shipping a test API
+or test executable inside the release package.

@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital circuits communications gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits communications project gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -541,3 +541,120 @@ previews; GUI-local state without project files or undo. Integer random streams
 are portable, while floating Gaussian results may vary slightly with the math
 library. Physical Windows 10/11, high-DPI/accessibility behavior and MinGW remain
 unvalidated.
+
+## v0.9 checkpoint 1: project model and codec
+
+The schema is fully specified in [project-format.md](project-format.md), with the
+complete invalid-draft fixture in `tests/fixtures/project-v1.openece`. The project
+target has no Qt or engineering-domain dependency. JSON types stay private.
+
+Fedora uses `json-devel` (nlohmann/json 3.12). Windows explicitly bootstraps pinned
+3.12.0 headers/CMake metadata with SHA-256 verification and no additional DLL.
+Normal configuration remains offline. For a local non-system installation, use
+`-Dnlohmann_json_DIR=/absolute/prefix/share/cmake/nlohmann_json`. The optional
+dependency acquisition/install step is separate from OpenECE configuration.
+
+Checkpoint 1 covers the owned DTOs, strict codec, parser budgets, canonical IDs,
+monotonic allocation that reserves dangling references, and schema tests. GUI
+adapters, pending-edit synchronization, transactional storage and file menus are
+not yet implemented at this checkpoint.
+
+Checkpoint 1 local validation: GCC desktop 184/184; Clang ASan/UBSan headless
+177/177. These include 19 new project codec/allocator tests. Formatting and diff
+checks passed without compiler warnings or sanitizer findings. Cross-platform CI
+validation is recorded separately once the branch run completes.
+
+
+## v0.9 checkpoint 2: authoritative workspace bindings
+
+`project_gui_workflow` exercises the complete session and each of its six engineering
+editors with default and invalid drafts. Its 20 workflow/data cases cover inert
+restoration, model-only capture after pending synchronization, invalid/empty numeric
+text, Unicode/whitespace, disabled retained fields, active table delegates, spin focus
+and hide/show behavior, unit conversion/rollback, stable/dangling references, ordering,
+allocator exhaustion, missing-reference recovery, tab/mode selections and storage
+boundaries. Executing operations does not emit persisted-edit notifications. A pending
+timing cell is also tested through execution to exclude stale table-item reads.
+QtTest additionally reports its initialization and cleanup cases (22 total).
+
+The Signals selected-tab field was added to the unreleased schema-1 specification
+and complete fixture when the adapter audit found it missing. All existing engineering
+workflow suites remain unchanged. Run the same desktop CTest matrix; headless builds
+continue exercising the codec and engineering tests without any Qt dependency.
+
+No file-storage/controller workflows are introduced here. Later tests must exercise
+transactional replacement and failure injection on top of these owned, inert sessions.
+
+
+## v0.9 checkpoint 3: file transactions and document state
+
+`project_document_workflow` adds real-filesystem and injected-failure tests to
+the unchanged desktop test matrix. It covers a complete cross-domain fixture,
+Unicode/spaces/nested paths, overwrites, Save As, semantic re-save equivalence,
+bounded reads, codec diagnostics, atomic-save failures, exact pending text,
+inert candidate restoration/fidelity checks, revision transitions and cancellation.
+Same-file Save As while Open is staged is tested through conservative re-staging.
+
+Failure decorators exercise real QSaveFile temporary writes before refusing commit;
+tests assert original destination bytes, path, revision and session identity are
+preserved and no temporary file remains. Real POSIX directory permission tests are
+skipped only when privileges bypass them or on Windows ACL-based filesystems; all
+injected failures run on both platforms. No existing engineering tests or timeouts
+are weakened. Full controller details are in [project-transactions.md](project-transactions.md).
+
+
+## v0.9 checkpoint 4: File-menu workflows
+
+`project_file_decisions`, `project_file_editing` and `project_file_session` add deterministic scripted dialogs and preferences around
+real ProjectDocument/FileStore transactions. It tests all Save/Discard/Cancel and
+failed/cancelled-save branches for New/Open/Close; line/delegate pending text;
+same-file Open after Save; extension and overwrite confirmation; recent ordering,
+alias de-duplication, ten-entry cap, missing-file removal and QSettings recreation;
+window titles, path presentation, close vetoes and runtime cleanup. No existing
+suite is weakened. See [project-transactions.md](project-transactions.md) for the
+user-facing workflow contract and test seams. The full milestone documentation
+and release validation remain checkpoint 5.
+
+
+## v0.9 final validation and contributor checklist
+
+Build/setup instructions are in README.md and docs/windows.md. Fedora 44 needs
+`json-devel` (nlohmann/json >=3.12) for desktop and headless builds; Windows bootstrap
+installs checksum-pinned 3.12.0 headers/CMake metadata for both configurations.
+Normal configure remains offline. The project library exposes no JSON types and
+adds no runtime dependency. Qt widgets/file transactions are confined to the GUI.
+
+`packaged_persistence_workflow` runs in every desktop CTest configuration. The same
+Release probe runs on a fresh Windows runner beside the release ZIP's runtime,
+without any SDK/test DLL deployment. See docs/windows.md for reproduction. The ZIP
+is not modified by testing, and its complete SHA256SUMS manifest is verified.
+
+Persistence review coverage:
+
+| Boundary | Tests |
+|---|---|
+| Schema/types/version/UTF-8/duplicate keys/unknown fields/limits | Project GoogleTests, including the complete project-v1.openece fixture. |
+| IDs/dangling references/allocator exhaustion/order | Project codec/allocator tests and project_gui_workflow. |
+| Exact active text/units/disabled fields/no truncation | project_gui_workflow; project_document_workflow; project_file_editing. |
+| Transactional failed read/decode/prepare and open/write/commit failure | project_document_workflow with deterministic injection and real QSaveFile/filesystem checks. |
+| Dirty state/prompts/close veto/same-file Open/Save As/extension/overwrite | project_file_decisions, project_file_editing and project_file_session. |
+| Recents/settings/Unicode paths/missing entries | project_file_session and packaged_persistence_workflow. |
+| Empty results and inactive runtimes after load | all-domain GUI/document tests and packaged probe inspect timers, result tables and every Qwt curve. |
+| Existing engineering correctness | unchanged DSP/digital/timing/DC/AC/communications tests, numerical tolerances and reference calculations. |
+
+The three File-workflow groups retain all 46 data cases. They are separate CTest
+entries because the combined suite exceeded 120 seconds on MSVC Debug; none of its
+assertions or cases were removed. Keep their explicit CMake function lists in sync
+when adding test functions. Read-only filesystem fault tests may skip under root or
+Windows ACL differences; deterministic injected failures still run everywhere.
+
+Before a release: run all six Fedora configurations, MSVC Debug/Release, native
+packaged startup and packaged persistence on the same branch-tip artifact; inspect
+compiler/sanitizer logs, formatting and diff checks; record the ZIP SHA-256 and
+manifest counts externally with the release report. Do not rebuild/recompress the
+verified artifact before release upload. A tag/release is a separate authorized step.
+
+Remaining limitations are documented in docs/projects.md. Physical Windows 10/11,
+high-DPI/accessibility and MinGW are not covered by the hosted runner. Recent-project
+preferences persist via QSettings; other incidental UI/runtime state remains in
+memory. No new engineering domain, execution model or numerical policy is introduced.

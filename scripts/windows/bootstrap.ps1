@@ -19,6 +19,7 @@ if ($env:VSCMD_ARG_TGT_ARCH -ne 'x64') { throw 'Use a VS 2022 x64 developer shel
 Get-Command cl.exe, nmake.exe, cmake.exe -ErrorAction Stop | Out-Null
 New-Item -ItemType Directory -Force "$DependenciesRoot/downloads", "$DependenciesRoot/sources" | Out-Null
 $archives = @(
+    @{ Name='json-3.12.0'; Directory='json-3.12.0'; Urls=@('https://codeload.github.com/nlohmann/json/zip/refs/tags/v3.12.0'); Hash='34660b5e9a407195d55e8da705ed26cc6d175ce5a6b1fb957e701fb4d5b04022' },
     @{ Name='qwt-6.3.0'; Directory='qwt-6.3.0'; Urls=@('https://downloads.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip', 'https://psychz.dl.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip', 'https://netix.dl.sourceforge.net/project/qwt/qwt/6.3.0/qwt-6.3.0.zip'); Hash='268d8d41974d263014fea13168324452f41e02880db573794f559995a4e11331' },
     @{ Name='googletest-1.17.0'; Directory='googletest-1.17.0'; Urls=@('https://codeload.github.com/google/googletest/zip/refs/tags/v1.17.0'); Hash='40d4ec942217dcc84a9ebe2a68584ada7d4a33a8ee958755763278ea1c5e18ff' },
     @{ Name='eigen-5.0.0'; Directory='eigen-5.0.0'; Urls=@('https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.zip'); Hash='795a5412b6ead1b82c43704b640d4642d75b5755a08d8f12b4f13615fea3f36d' }
@@ -98,7 +99,9 @@ foreach ($config in @('Debug', 'Release')) {
 }
 Run 'cmake.exe' @('-S', "$DependenciesRoot/sources/eigen-5.0.0", '-B', "$DependenciesRoot/build/eigen", '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DBUILD_TESTING=OFF', '-DEIGEN_BUILD_DOC=OFF', "-DCMAKE_INSTALL_PREFIX=$DependenciesRoot/eigen")
 Run 'cmake.exe' @('--install', "$DependenciesRoot/build/eigen", '--config', 'Release')
-$files = @(Get-ChildItem "$DependenciesRoot/qwt", "$DependenciesRoot/gtest", "$DependenciesRoot/eigen" -File -Recurse | ForEach-Object {
+Run 'cmake.exe' @('-S', "$DependenciesRoot/sources/json-3.12.0", '-B', "$DependenciesRoot/build/json", '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DJSON_BuildTests=OFF', "-DCMAKE_INSTALL_PREFIX=$DependenciesRoot/json")
+Run 'cmake.exe' @('--install', "$DependenciesRoot/build/json", '--config', 'Release')
+$files = @(Get-ChildItem "$DependenciesRoot/qwt", "$DependenciesRoot/gtest", "$DependenciesRoot/eigen", "$DependenciesRoot/json" -File -Recurse | ForEach-Object {
     @{ Path=$_.FullName; Hash=(Get-FileHash $_.FullName).Hash }
 })
 @{ Fingerprint=$fingerprint; Files=$files } | ConvertTo-Json -Depth 4 | Set-Content $stateFile

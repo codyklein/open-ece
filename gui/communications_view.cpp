@@ -54,7 +54,9 @@ QTableWidget* table(const QStringList& labels, const char* name) {
     return result;
 }
 } // namespace
-CommunicationsView::CommunicationsView(QWidget* parent) : QWidget(parent) {
+CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsDraft* draft,
+                                       bool inert)
+    : DraftView(parent), state_(draft, project::default_project().communications) {
     auto* layout = new QVBoxLayout(this);
     auto* title = new QLabel("Digital Communications — ideal coherent BPSK / QPSK");
     layout->addWidget(title);
@@ -73,10 +75,10 @@ CommunicationsView::CommunicationsView(QWidget* parent) : QWidget(parent) {
     modulation_->setCurrentIndex(1);
     source_ = new QComboBox;
     source_->addItems({"Seeded random", "Manual bits"});
-    count_ = new QSpinBox;
+    count_ = new DraftInt;
     count_->setRange(1, communications_gui_limits::bits);
     count_->setValue(256);
-    samples_ = new QSpinBox;
+    samples_ = new DraftInt;
     samples_->setRange(1, 64);
     samples_->setValue(16);
     rate_ = new QLineEdit("1");
@@ -139,10 +141,10 @@ CommunicationsView::CommunicationsView(QWidget* parent) : QWidget(parent) {
     ber_layout->addLayout(ber_form);
     start_ = new QLineEdit("-2");
     stop_ = new QLineEdit("10");
-    points_ = new QSpinBox;
+    points_ = new DraftInt;
     points_->setRange(1, communications_gui_limits::points);
     points_->setValue(7);
-    budget_ = new QSpinBox;
+    budget_ = new DraftInt;
     budget_->setRange(1, communications_gui_limits::bits_per_point);
     budget_->setValue(100000);
     auto ber_field = [&](const QString& label, QWidget* widget, const char* name, int col) {
@@ -233,6 +235,7 @@ CommunicationsView::CommunicationsView(QWidget* parent) : QWidget(parent) {
             QSignalBlocker block(rate_);
             rate_->setText(QString::number(physical / std::pow(1000., index), 'g', 17));
             previous_unit_ = index;
+            edit(state_.get().symbol_rate.text, draft_text(rate_->text()));
             invalidate();
         } catch (const std::exception& e) {
             QSignalBlocker block(rate_unit_);
@@ -266,8 +269,40 @@ CommunicationsView::CommunicationsView(QWidget* parent) : QWidget(parent) {
     });
     connect(cancel_, &QPushButton::clicked, this, &CommunicationsView::cancel);
     connect(reset, &QPushButton::clicked, this, [this] { invalidate(); });
+    auto& d = state_.get();
+    bind_text(manual_, d.manual_bits_text);
+    bind_text(rate_, d.symbol_rate.text);
+    bind_text(eb_, d.eb_n0.text);
+    bind_text(bit_seed_, d.bit_seed_text);
+    bind_text(noise_seed_, d.noise_seed_text);
+    bind_text(start_, d.start.text);
+    bind_text(stop_, d.stop.text);
+    bind_spin(count_, d.bit_count_text);
+    bind_spin(samples_, d.samples_text);
+    bind_spin(points_, d.points_text);
+    bind_spin(budget_, d.budget_text);
+    bind_choice(modulation_, d.modulation, {"bpsk", "qpsk"});
+    bind_choice(source_, d.source_mode, {"random", "manual"});
+    bind_choice(rate_unit_, d.symbol_rate.unit, {"symbol/s", "ksymbol/s", "Msymbol/s"});
+    previous_unit_ = rate_unit_->currentIndex();
+    {
+        QSignalBlocker b(noise_);
+        noise_->setChecked(d.noise_enabled);
+    }
+    connect(noise_, &QCheckBox::toggled, this,
+            [this](bool on) { edit(state_.get().noise_enabled, on); });
+    manual_->setEnabled(d.source_mode == "manual");
+    count_->setEnabled(d.source_mode == "random");
+    eb_->setEnabled(d.noise_enabled);
+    bind_tabs(tabs_, d.selected_tab, {"waveforms", "constellation", "ber", "help"});
     loading_ = false;
-    simulate();
+    restoring_ = false;
+    if (!inert)
+        simulate();
+    else {
+        invalidate();
+        status_->clear();
+    }
 }
 communications::Modulation CommunicationsView::modulation() const {
     return modulation_->currentIndex() == 0 ? communications::Modulation::bpsk
@@ -291,12 +326,13 @@ void CommunicationsView::invalidate() {
     status_->setText("Inputs changed; results cleared.");
 }
 void CommunicationsView::simulate() {
+    synchronize_pending_text();
     invalidate();
     try {
         const auto bit_seed = seed(bit_seed_), noise_seed = seed(noise_seed_);
         auto bits = [&] {
             if (source_->currentIndex() == 0)
-                return communications::generate_bits(static_cast<std::size_t>(count_->value()),
+                return communications::generate_bits(static_cast<std::size_t>(draft_value(count_)),
                                                      bit_seed);
             std::vector<std::uint8_t> values;
             for (auto ch : manual_->text()) {
@@ -313,7 +349,7 @@ void CommunicationsView::simulate() {
         }();
         communications::FrameSpec frame{modulation(),
                                         number(rate_) * std::pow(1000., rate_unit_->currentIndex()),
-                                        static_cast<std::size_t>(samples_->value())};
+                                        static_cast<std::size_t>(draft_value(samples_))};
         if (communications::validate_frame(bits.size(), frame) > communications_gui_limits::samples)
             throw std::invalid_argument(
                 "GUI waveform limit is 65536 complex samples; reduce bits or samples/symbol.");
@@ -352,16 +388,20 @@ void CommunicationsView::simulate() {
                       format(communications::zero_error_upper_bound95(result.bits_tested)) + ".";
         link_summary_->setText(report);
         status_->setText(report);
-        tabs_->setCurrentIndex(0);
+        {
+            QSignalBlocker b(tabs_);
+            tabs_->setCurrentIndex(0);
+        }
     } catch (const std::exception& e) {
         status_->setText(QString::fromUtf8(e.what()));
     }
 }
 void CommunicationsView::ensure_experiment() {
+    synchronize_pending_text();
     if (experiment_)
         return;
-    const auto count = static_cast<std::size_t>(points_->value());
-    const auto budget = static_cast<std::uint64_t>(budget_->value());
+    const auto count = static_cast<std::size_t>(draft_value(points_));
+    const auto budget = static_cast<std::uint64_t>(draft_value(budget_));
     if (budget > communications_gui_limits::aggregate_bits / count)
         throw std::invalid_argument(
             "GUI aggregate BER limit is 10000000 bits; reduce points or bit budget.");
@@ -383,7 +423,10 @@ void CommunicationsView::ensure_experiment() {
     experiment_ = std::make_unique<communications::BerExperiment>(communications::BerRequest{
         experiment_modulation_, std::move(grid), budget, seed(bit_seed_), seed(noise_seed_)});
     render_ber();
-    tabs_->setCurrentIndex(2);
+    {
+        QSignalBlocker b(tabs_);
+        tabs_->setCurrentIndex(2);
+    }
 }
 void CommunicationsView::advance() {
     if (!experiment_)

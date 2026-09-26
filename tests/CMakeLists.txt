@@ -1,5 +1,10 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
+find_package(nlohmann_json 3.12 REQUIRED CONFIG)
+add_executable(openece_project_tests project_test.cpp)
+target_link_libraries(openece_project_tests PRIVATE OpenECE::project nlohmann_json::nlohmann_json GTest::gtest_main openece_options)
+target_compile_definitions(openece_project_tests PRIVATE OPENECE_PROJECT_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/project-v1.openece")
+gtest_discover_tests(openece_project_tests DISCOVERY_MODE PRE_TEST)
 add_executable(openece_communications_tests communications_model_test.cpp communications_link_test.cpp communications_ber_test.cpp)
 target_link_libraries(openece_communications_tests PRIVATE OpenECE::communications GTest::gtest_main openece_options)
 target_include_directories(openece_communications_tests PRIVATE ${PROJECT_SOURCE_DIR}/communications/src)
@@ -22,6 +27,38 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    # Same workbench as openece.exe, with scripted decisions and no QtTest dependency.
+    # CI runs the Release probe using only the extracted package's runtime DLLs.
+    add_executable(openece_packaged_persistence packaged_persistence.cpp)
+    target_link_libraries(openece_packaged_persistence PRIVATE openece_workbench openece_options)
+    add_test(NAME packaged_persistence_workflow COMMAND openece_packaged_persistence)
+    set_tests_properties(packaged_persistence_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
+    add_executable(openece_project_workflow_tests project_workflow_test.cpp)
+    set_target_properties(openece_project_workflow_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_project_workflow_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    # Keep the full workflow coverage in focused groups. MSVC Debug builds spend
+    # substantially longer constructing/restoring complete cross-domain sessions.
+    add_test(NAME project_file_decisions COMMAND openece_project_workflow_tests replacementDecisions)
+    add_test(NAME project_file_editing COMMAND openece_project_workflow_tests
+        saveAsAndExistingSave extensionAndOverwrite openFailureCancellationAndUnknownFields
+        sameFileOpenRestages activeEditorWorkflows)
+    add_test(NAME project_file_session COMMAND openece_project_workflow_tests
+        recentOrderingLimitsMissingRemovalAndSettings preferencesFailureDoesNotFailSaveAndReentryIsBlocked
+        windowActionsTitlesAndCloseVeto windowSessionReplacementAndRecentOpen resultNavigationAndUserEdits
+        newAndCloseStopExecution realExecutionReplacement missingRecentMenuIsActionable)
+    set_tests_properties(project_file_decisions project_file_editing project_file_session
+        PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+    add_executable(openece_project_document_tests project_document_test.cpp)
+    set_target_properties(openece_project_document_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_project_document_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    target_compile_definitions(openece_project_document_tests PRIVATE OPENECE_PROJECT_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/project-v1.openece")
+    add_test(NAME project_document_workflow COMMAND openece_project_document_tests)
+    set_tests_properties(project_document_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
+    add_executable(openece_project_gui_tests project_gui_test.cpp)
+    set_target_properties(openece_project_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_project_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    add_test(NAME project_gui_workflow COMMAND openece_project_gui_tests)
+    set_tests_properties(project_gui_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     add_executable(openece_communications_gui_tests communications_gui_test.cpp)
     set_target_properties(openece_communications_gui_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_communications_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -61,7 +98,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <QWidget>
+#include "draft_view.hpp"
 #include <openece/digital/circuit.hpp>
 
 class QTableWidget;
@@ -16,11 +16,14 @@ inline constexpr int outputs = 16;
 inline constexpr int pins = 8;
 } // namespace digital_limits
 
-class DigitalLogicView final : public QWidget {
+class DigitalLogicView final : public DraftView {
   public:
-    explicit DigitalLogicView(QWidget* parent = nullptr);
-    digital::Circuit validated_circuit() const { return digital::Circuit(draft_); }
-    std::vector<digital::LogicValue> input_values() const { return assignments_; }
+    explicit DigitalLogicView(QWidget* parent = nullptr,
+                              project::CombinationalDraft* draft = nullptr, bool inert = false);
+    const project::CombinationalDraft& draft() const { return draft_; }
+    digital::Circuit validated_circuit() const;
+    void synchronize_pending_text() override;
+    std::vector<digital::LogicValue> input_values() const;
 
   private:
     void refresh();
@@ -29,15 +32,14 @@ class DigitalLogicView final : public QWidget {
     void invalidate();
     void evaluate(bool table);
     void update_gate_row(int row);
-    QComboBox* source_selector(digital::NodeId source, const QString& name, QWidget* parent);
-    void populate_sources(QComboBox* selector, digital::NodeId source);
-    digital::NodeId new_id();
+    QComboBox* source_selector(project::Reference source, const QString& name, QWidget* parent);
+    void populate_sources(QComboBox* selector, project::Reference source);
+    project::Id new_id();
 
     // The editable draft may be invalid. Only local validated Circuit snapshots are evaluated.
     // GUI-generated IDs start at 1; 0 is the GUI's explicit unconnected reference.
-    digital::CircuitDefinition draft_;
-    std::vector<digital::LogicValue> assignments_;
-    std::uint32_t next_id_ = 5;
+    DraftOwner<project::CombinationalDraft> state_;
+    project::CombinationalDraft& draft_;
     bool refreshing_ = false;
     // Observing pointers; Qt parents own all widgets.
     QTableWidget* inputs_;
