@@ -22,7 +22,7 @@ input validation relies on IEEE finite/nonfinite behavior. Do not enable it casu
 Format C++ files using the checked-in style:
 
 ```bash
-rg --files core signals dsp digital circuits communications gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
+rg --files core signals dsp digital circuits communications project gui tests benchmarks -g '*.cpp' -g '*.hpp' | xargs clang-format -i
 git diff --check
 ```
 
@@ -614,3 +614,47 @@ window titles, path presentation, close vetoes and runtime cleanup. No existing
 suite is weakened. See [project-transactions.md](project-transactions.md) for the
 user-facing workflow contract and test seams. The full milestone documentation
 and release validation remain checkpoint 5.
+
+
+## v0.9 final validation and contributor checklist
+
+Build/setup instructions are in README.md and docs/windows.md. Fedora 44 needs
+`json-devel` (nlohmann/json >=3.12) for desktop and headless builds; Windows bootstrap
+installs checksum-pinned 3.12.0 headers/CMake metadata for both configurations.
+Normal configure remains offline. The project library exposes no JSON types and
+adds no runtime dependency. Qt widgets/file transactions are confined to the GUI.
+
+`packaged_persistence_workflow` runs in every desktop CTest configuration. The same
+Release probe runs on a fresh Windows runner beside the release ZIP's runtime,
+without any SDK/test DLL deployment. See docs/windows.md for reproduction. The ZIP
+is not modified by testing, and its complete SHA256SUMS manifest is verified.
+
+Persistence review coverage:
+
+| Boundary | Tests |
+|---|---|
+| Schema/types/version/UTF-8/duplicate keys/unknown fields/limits | Project GoogleTests, including the complete project-v1.openece fixture. |
+| IDs/dangling references/allocator exhaustion/order | Project codec/allocator tests and project_gui_workflow. |
+| Exact active text/units/disabled fields/no truncation | project_gui_workflow; project_document_workflow; project_file_editing. |
+| Transactional failed read/decode/prepare and open/write/commit failure | project_document_workflow with deterministic injection and real QSaveFile/filesystem checks. |
+| Dirty state/prompts/close veto/same-file Open/Save As/extension/overwrite | project_file_decisions, project_file_editing and project_file_session. |
+| Recents/settings/Unicode paths/missing entries | project_file_session and packaged_persistence_workflow. |
+| Empty results and inactive runtimes after load | all-domain GUI/document tests and packaged probe inspect timers, result tables and every Qwt curve. |
+| Existing engineering correctness | unchanged DSP/digital/timing/DC/AC/communications tests, numerical tolerances and reference calculations. |
+
+The three File-workflow groups retain all 46 data cases. They are separate CTest
+entries because the combined suite exceeded 120 seconds on MSVC Debug; none of its
+assertions or cases were removed. Keep their explicit CMake function lists in sync
+when adding test functions. Read-only filesystem fault tests may skip under root or
+Windows ACL differences; deterministic injected failures still run everywhere.
+
+Before a release: run all six Fedora configurations, MSVC Debug/Release, native
+packaged startup and packaged persistence on the same branch-tip artifact; inspect
+compiler/sanitizer logs, formatting and diff checks; record the ZIP SHA-256 and
+manifest counts externally with the release report. Do not rebuild/recompress the
+verified artifact before release upload. A tag/release is a separate authorized step.
+
+Remaining limitations are documented in docs/projects.md. Physical Windows 10/11,
+high-DPI/accessibility and MinGW are not covered by the hosted runner. Recent-project
+preferences persist via QSettings; other incidental UI/runtime state remains in
+memory. No new engineering domain, execution model or numerical policy is introduced.

@@ -1,8 +1,8 @@
 # OpenECE project schema 1
 
-Status: checkpoints 1–4 provide the model/codec, authoritative GUI bindings,
-transactional file storage, document-controller APIs, and File-menu workflows
-with unsaved-change prompts and application-global recent projects. See [project-transactions.md](project-transactions.md).
+Implemented in v0.9: a Qt-independent model/codec, authoritative GUI bindings,
+transactional file storage and File-menu workflows with unsaved-change prompts
+and application-global recent projects. See [project-transactions.md](project-transactions.md).
 The complete, loadable cross-domain fixture is `tests/fixtures/project-v1.openece`.
 It deliberately includes pending phase text, missing node references, an incomplete
 timing pin list, and odd QPSK input. None is a structural project error.
@@ -21,7 +21,7 @@ Every field listed below is required. There are no optional known fields and no
 missing-field defaults. Null is legal only for explicitly nullable references.
 Unknown optional fields are accepted within the same resource limits, reported
 as JSON Pointer paths in `DecodedProject::ignored_fields`, and discarded on save.
-The GUI must show that warning; this is not lossless forward compatibility.
+The GUI shows that warning; this is not lossless forward compatibility.
 Required new semantics must change the schema version. No migration is implemented.
 
 Object key order is irrelevant; the writer uses deterministic keys/indentation.
@@ -218,8 +218,9 @@ Limits are centralized in `openece::project::limits`: 8 MiB input/output, depth 
 bytes/string, 256 decoded bytes/key, 4 MiB aggregate decoded string/key bytes, and
 12000 aggregate typed array entries (including pin references).
 All fields have the more specific limits above; all unknown data uses the same
-parser budgets. No file may introduce external paths, assets, commands or plugins.
-Unknown text is never dereferenced or executed.
+parser budgets. No field is interpreted as an external path, asset, command or plugin.
+Arbitrary path/URL/command-looking text is allowed only as inert draft/unknown text;
+it is never dereferenced or executed.
 
 Read is bounded before parse. A lexical preflight validates UTF-8 and bounds decoded
 string storage and numeric token length (64 bytes) before the JSON lexer allocates
@@ -236,7 +237,7 @@ invalid_identity, duplicate_identity, invalid_allocator_state, resource_limit.
 Invalid enum/unit tokens use invalid_value. Lexer/SAX-wide errors may have no field
 path. Allocation failures are not hidden as engineering errors.
 
-## Ownership and next checkpoints
+## Ownership and contributor contract
 
 ProjectSnapshot is the authoritative editable model; numeric libraries are unchanged.
 GUI controls edit it. A narrow capture synchronization transfers pending editor
@@ -248,7 +249,8 @@ preferences, or global mutable state. Copies are owned independent values.
 Qt file storage uses QSaveFile with direct-write fallback disabled: write checked
 bytes then commit(), with no public flush/close finalization contract. Transactional
 Open prepares and verifies a complete inert replacement session before replacing
-live state. The controller is implemented; user-facing file workflows remain checkpoint 4.
+live state. ProjectWorkflow implements user-facing File actions through injectable
+dialogs and preferences; MainWindow composes the active document and wires actions.
 
 `ProjectWorkspace(snapshot, true)` validates storage structure, creates all domain
 views without executing engineering operations, and verifies that capture equals
@@ -264,3 +266,22 @@ cells; Escape restores the pre-edit text. Reference selectors explicitly retain
 missing IDs. Normal user unit changes still perform the documented conversions;
 restoration blocks those handlers. `draftEdited` reports persisted edits only.
 Automatic result navigation leaves the last user-selected persisted tab unchanged.
+
+
+For a new domain, first define an owned draft with exact text, unit/enum tokens,
+ID namespaces and storage limits. Add its explicit required fields in `fields.hpp`,
+then validation, reservations, codec fixtures and negative tests. Borrow that draft
+from ProjectWorkspace; do not copy it into an independently editable view model.
+Bind user edits to the draft and synchronize any active editor buffer before capture.
+An inert constructor must reproduce the supplied draft exactly, including dangling
+references and disabled fields, while blocking normal edit side effects. Never
+construct numerical/runtime objects as part of restoration. Add individual and
+cross-domain capture/restore/capture tests, dirty-state and failure-transaction tests,
+and extend the packaged-runtime probe. Required new fields/semantics need a schema
+version change; do not retrofit them as silently defaulted schema-1 fields.
+
+The codec is the only production consumer of nlohmann/json: CMake requires 3.12
+or newer, Windows bootstrap pins 3.12.0 and verifies its SHA-256. Its headers are
+private to OpenECE::project; no nlohmann types occur in public OpenECE headers.
+The dependency is header-only and adds no runtime DLL. See [Windows setup](windows.md)
+for bootstrap/package notices; Fedora uses `json-devel`.

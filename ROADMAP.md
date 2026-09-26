@@ -125,6 +125,19 @@ This is an ideal synchronized complex-baseband link. No RF carrier, recovery,
 configurable pulse shaping, coding, higher-order QAM, eye diagrams, SDR or OFDM.
 Existing engineering APIs remain unchanged. See docs/communications.md.
 
+## v0.9 — Project Persistence (implemented; pending PR/release review)
+
+- [x] Owned Qt-independent project drafts and strict bounded schema-1 JSON codec.
+- [x] Exact invalid-text, Unicode, stable-ID, unit and seed preservation across every domain.
+- [x] Authoritative model/view bindings, inert restoration and cross-domain round trips.
+- [x] Transactional Open and atomic Save/Save As, with injected failure tests.
+- [x] New/Open/Save/Close workflows, dirty titles and separate recent-project preferences.
+- [x] User/schema/contributor documentation and Windows packaged persistence validation.
+
+Editable experiment state only: no results, execution progress, external assets,
+undo/redo, autosave, recovery, migrations or cloud features. Existing engineering
+APIs remain unchanged. See docs/projects.md and docs/project-format.md.
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP
@@ -137,8 +150,6 @@ Existing engineering APIs remain unchanged. See docs/communications.md.
    design and approval; simulated validation must precede live SDR input.
 5. Extend digital timing only through separately designed requirements; consider
    FSM tools or FPGA/HDL interoperability when a concrete experiment needs them.
-6. Add versioned experiment persistence when round-trip and malformed-file contracts
-   are designed, with explicit sample-rate and unit metadata.
 
 A runtime plugin ABI, cross-domain simulation scheduler, node editor, hardware drivers,
 and custom linear algebra are deliberately absent from the foundation. Each needs

@@ -27,6 +27,12 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    # Same workbench as openece.exe, with scripted decisions and no QtTest dependency.
+    # CI runs the Release probe using only the extracted package's runtime DLLs.
+    add_executable(openece_packaged_persistence packaged_persistence.cpp)
+    target_link_libraries(openece_packaged_persistence PRIVATE openece_workbench openece_options)
+    add_test(NAME packaged_persistence_workflow COMMAND openece_packaged_persistence)
+    set_tests_properties(packaged_persistence_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
     add_executable(openece_project_workflow_tests project_workflow_test.cpp)
     set_target_properties(openece_project_workflow_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_project_workflow_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -92,7 +98,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 

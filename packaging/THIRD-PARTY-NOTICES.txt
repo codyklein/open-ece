@@ -46,5 +46,7 @@ https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.zip
 JSON for Modern C++ 3.12.0: copyright Niels Lohmann and contributors; MIT license.
 Unmodified header-only JSON codec implementation dependency. Includes Hedley
 compatibility macros under their embedded MIT notice (hedley.hpp).
-License: licenses/nlohmann-json/LICENSE.MIT. Corresponding source:
+Private build-time headers; no JSON runtime DLL or public OpenECE JSON types.
+Licenses: licenses/nlohmann-json/LICENSE.MIT and the embedded notice in
+licenses/nlohmann-json/hedley.hpp. Corresponding source:
 https://github.com/nlohmann/json/tree/v3.12.0

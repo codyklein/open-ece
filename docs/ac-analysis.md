@@ -206,3 +206,9 @@ invalid pending input, explicit missing references, both source-type normalizati
 restrictions, exact singular-point gaps, cancellation/edit invalidation/destruction,
 zero gain/phase, plot gap and phase-wrap segmentation, domain/DC/AC persistence,
 RLC example, resource bounds, Unicode labels and locale independence.
+
+
+v0.9 project persistence saves the editable configuration described above, including
+invalid pending text and unit/selection choices. Numerical results and runtime
+progress are excluded. Open leaves results empty and starts no execution; invoke
+the relevant solve/simulation explicitly after loading. See [project guide](projects.md).

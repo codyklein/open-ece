@@ -12,7 +12,16 @@ OpenECE is a student-led engineering project, with numerical correctness,
 understandable code, and incremental development as priorities. It is not yet a
 general simulator, real-time system, or validated measurement instrument.
 
-## Current status: v0.8 Digital Communications
+## Current status: v0.9 Project Persistence
+
+- Save/reopen all editable domain workspaces in versioned `.openece` files.
+- Preserve incomplete drafts, pending text, Unicode, stable IDs, units and seeds.
+- Transactional Open, atomic Save/Save As, modified titles and unsaved-change prompts.
+- Recent projects stored separately from project content; no automatic startup reopening.
+- Derived results are excluded and remain empty after load until explicitly recomputed.
+
+See [Saving and reopening projects](docs/projects.md) for workflows and limitations.
+
 
 - Separate Qt-independent communications model with owned bits and complex baseband records.
 - Exact BPSK/Gray-QPSK mappings, rectangular unit-energy pulses, AWGN and coherent reception.
@@ -77,6 +86,7 @@ sudo dnf install gcc-c++ cmake ninja-build git-core pkgconf-pkg-config qt6-qtbas
 | Qt 6 ≥ 6.4 Widgets | Desktop controls, layout, event loop, and widget ownership |
 | Qwt ≥ 6.2, built for Qt 6 | Scientific axes, curves, and zoom; no custom plotting infrastructure |
 | Eigen ≥ 3.4 (Windows pins 5.0.0) | Private header-only real/complex linear algebra |
+| nlohmann/json ≥ 3.12 (Windows pins 3.12.0) | Private header-only project codec; no runtime DLL |
 | GoogleTest ≥ 1.12 | Numerical unit tests, discovered by CTest |
 | Qt Test (with Qt development packages) | Phase parser and desktop integration tests |
 | pkg-config | Discover Fedora's `Qt6Qwt6` imported dependency |
@@ -116,8 +126,9 @@ The **π** button is enabled in Radians and inserts at the cursor or replaces se
 Generate (or Enter in the phase field) parses the current text immediately.
 Switching units first parses in the old unit, then converts to decimal text with
 up to 17 significant digits. Invalid input stays visible with an error and clears
-the results; a failed unit switch keeps the previous unit. Inputs are limited to
-128 characters and rejected outside the range, without wrapping. The signal
+the results; a failed unit switch keeps the previous unit. Execution accepts at most
+128 characters and rejects values outside the range, without wrapping. Longer raw
+draft text can be retained and saved within the documented project storage limits. The signal
 library still accepts radians only.
 
 **Filter** defaults to Off, preserving the unfiltered workflow. Select **FIR low-pass
@@ -253,7 +264,7 @@ for one point), then Run/resume, Step or Cancel. Each point preserves its intege
 error/tested counts. Zero errors is shown as "0 errors in N bits" with a fixed-N
 95% upper-bound marker, never an invented measured BER floor. Both modulations
 share the theoretical BER at equal Eb/N0. Edits discard stale results; domain
-switching preserves the workspace. The v0.9 work-in-progress File menu saves and
+switching preserves the workspace. The File menu saves and
 opens editable `.openece` projects across all domains; derived results are recomputed
 by running the relevant operation after load. See [project workflows](docs/project-transactions.md).
 

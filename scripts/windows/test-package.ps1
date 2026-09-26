@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Archive,
-    [string]$Destination = (Join-Path $env:TEMP ('OpenECE fresh π path ' + [guid]::NewGuid()))
+    [string]$Destination = (Join-Path $env:TEMP ('OpenECE fresh π path ' + [guid]::NewGuid())),
+    [string]$PersistenceProbe
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -11,6 +12,34 @@ $executables = @(Get-ChildItem $Destination -Recurse -Filter openece.exe)
 if ($executables.Count -ne 1) { throw 'Expected one packaged application.' }
 $exe = $executables[0].FullName
 $root = $executables[0].DirectoryName
+# Check the artifact before placing the separate probe in the extracted directory.
+$entries = @(Get-Content "$root/SHA256SUMS.txt")
+$seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($entry in $entries) {
+    if ($entry -notmatch '^([0-9a-f]{64})  (.+)$') { throw 'Malformed package manifest.' }
+    $digest = $Matches[1]
+    $relative = $Matches[2]
+    $file = [IO.Path]::GetFullPath((Join-Path $root $relative))
+    if (!$file.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or !$seen.Add($file)) {
+        throw 'Duplicate or escaping manifest path.'
+    }
+    if (!(Test-Path -LiteralPath $file -PathType Leaf) -or (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $digest) {
+        throw "Package manifest mismatch: $relative"
+    }
+}
+$files = @(Get-ChildItem $root -Recurse -File)
+if ($files.Count -ne $entries.Count + 1) { throw 'Unmanifested package files.' }
+foreach ($file in $files) {
+    $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
+    if ($relative -ne 'SHA256SUMS.txt' -and !$seen.Contains($file.FullName)) { throw "Unmanifested file: $relative" }
+    # Original license headers are notices, not build inputs.
+    if (!$relative.StartsWith('licenses/') -and $relative -match '(?i)(\.(pdb|obj|lib|ilk|cmake|cpp|hpp|h|log)$|CMakeCache.txt|(^|/)(sources|build|CMakeFiles)/)') {
+        throw "Development artifact in release package: $relative"
+    }
+}
+Write-Host "Verified package: $($files.Count) files, $($entries.Count) manifest hashes. ZIP SHA-256: $((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant())"
+$probePath = $null
+if ($PersistenceProbe) { $probePath = (Resolve-Path $PersistenceProbe).Path }
 $variables = @('PATH', 'QT_PLUGIN_PATH', 'QT_QPA_PLATFORM_PLUGIN_PATH', 'QT_QPA_PLATFORM', 'QTDIR', 'QT_ROOT', 'QWT_ROOT', 'QML2_IMPORT_PATH', 'QML_IMPORT_PATH', 'QT_DEBUG_PLUGINS')
 $saved = @{}
 foreach ($variable in $variables) {
@@ -49,6 +78,25 @@ try {
     if (!$process.CloseMainWindow() -or !$process.WaitForExit(10000)) { throw 'Application did not close normally.' }
     if ($process.ExitCode -ne 0) { throw "Application exit code: $($process.ExitCode)" }
     Write-Host 'PASS: packaged application opened a native Windows window, loaded packaged Qt/Qwt/CRT modules, and closed normally.'
+    if ($probePath) {
+        # Probe is a separate CI artifact, never part of the release ZIP. Copy it
+        # beside the extracted DLLs; no development/test DLLs may be added.
+        $probe = Join-Path $root 'openece_packaged_persistence.exe'
+        if (Test-Path $probe) { throw 'Release ZIP unexpectedly contains the persistence probe.' }
+        Copy-Item -LiteralPath $probePath -Destination $probe
+        try {
+            $process = Start-Process -FilePath $probe -WorkingDirectory $Destination -PassThru -RedirectStandardOutput "$Destination/persistence-stdout.log" -RedirectStandardError "$Destination/persistence-stderr.log"
+            if (!$process.WaitForExit(90000)) { throw 'Packaged persistence validation timed out.' }
+            if ($process.ExitCode -ne 0) { throw "Packaged persistence exit code: $($process.ExitCode)" }
+            if ((Get-Content "$Destination/persistence-stdout.log" -Raw) -notmatch 'PASS: packaged-runtime persistence:') {
+                throw 'Persistence probe did not report a completed round trip.'
+            }
+            Write-Host 'PASS: packaged persistence round trip using only the Release ZIP runtime.'
+        } finally {
+            if ($process -and !$process.HasExited) { $process.Kill(); $process.WaitForExit() }
+            Remove-Item -LiteralPath $probe
+        }
+    }
 } finally {
     if ($process -and !$process.HasExited) { $process.Kill(); $process.WaitForExit() }
     foreach ($variable in $variables) { [Environment]::SetEnvironmentVariable($variable, $saved[$variable], 'Process') }

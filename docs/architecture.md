@@ -14,6 +14,9 @@ flowchart TD
     UI --> Circuits[circuits]
     Circuits --> Eigen[Eigen: private dense linear algebra]
     CircuitTests[Independent DC tests] --> Circuits
+    UI --> Project[project: owned editable drafts and codec]
+    Project --> JSON[nlohmann/json: private headers]
+    ProjectTests[Codec / allocator / round-trip tests] --> Project
     UI --> Qt[Qt Widgets and Qwt]
     Signals --> Core[core]
     DSP --> Core
@@ -294,9 +297,10 @@ old run. AcResponsePlot makes separate Qwt-owned curves for contiguous valid run
 so failed frequencies and undefined/wrapped phase never get joined accidentally.
 
 Tradeoffs are bounded dense factorization per frequency, repeated topology checks,
-separate DC/AC editor code, GUI-local drafts, and no cancellation inside one solve.
-There is no persistence, undo, schematic canvas, transient/nonlinear/dependent-source
-model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
+separate DC/AC numerical paths and no cancellation inside one solve.
+The editors now borrow project drafts and share row bindings. v0.9 saves editable
+state without saving solutions. There is no undo, schematic canvas,
+transient/nonlinear/dependent-source model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
 
 ## Digital Communications (v0.8)
 
@@ -321,8 +325,8 @@ curve/marker data; constellation scaling preserves I/Q geometry. Zero-error
 markers represent explicit statistical upper bounds, not measured nonzero BER.
 
 Tradeoffs are bounded synchronous waveform generation, cancellation between BER
-chunks, truncated labelled plot previews, and GUI-local drafts without persistence
-or undo. Floating Gaussian values may differ slightly across math libraries, while
+chunks, truncated labelled plot previews, and no undo. Editable communications
+state is now saved by v0.9; results and in-progress execution remain transient. Floating Gaussian values may differ slightly across math libraries, while
 integer streams are specified exactly. No generalized modem/filter framework or
 RF carrier/recovery path is introduced. Existing DSP/digital/circuit APIs stay intact.
 
@@ -376,3 +380,22 @@ decisions through injectable dialog/preference interfaces. MainWindow composes t
 document-owned workspace and wires actions; QSettings history stays outside the
 project model. See [project-transactions.md](project-transactions.md)
 for API ownership, load/save sequences, path identity and limitations.
+
+
+## v0.9 release boundary
+
+The user guide is [projects.md](projects.md); the complete schema/extension rules
+are in [project-format.md](project-format.md). ProjectSnapshot is the only editable
+persisted state. Child views borrow subdrafts, while validated numerical requests,
+simulation objects, results and Qwt samples are derived. Exact pending-editor
+synchronization never invokes engineering parsing or execution. Inert restore
+blocks normal conversion/default/example side effects and verifies capture fidelity.
+
+ProjectDocument owns the live session, revision/path state and temporary prepared
+sessions. ProjectWorkflow owns dialog decisions and coordinates unsaved-change
+handling. MainWindow only wires actions, presents title/path and swaps the hosted
+workspace. Complete loads are staged before replacement; saves use checked
+QSaveFile commit with direct-write fallback disabled. Recent projects belong to
+QSettings under OpenECE/OpenECE, never to the project schema. The packaged-runtime
+probe uses these same layers with scripted decisions, without shipping a test API
+or test executable inside the release package.
