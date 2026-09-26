@@ -197,7 +197,7 @@ byte offset and Qt/OS detail when available. Unknown optional fields produce a
 separate warning that re-saving discards them. No exception stack or rich-text
 interpretation of project-controlled strings is exposed.
 
-`project_file_workflow` scripts every dialog choice and preference operation. It
+`project_file_decisions`, `project_file_editing` and `project_file_session` script every dialog choice and preference operation. It
 covers unsaved decisions for New/Open/Close, atomic-save failure through a real
 QSaveFile wrapper, exact pending line/delegate text across five save routes,
 same-file re-staging, extension/overwrite policy, title/dirty behavior, missing

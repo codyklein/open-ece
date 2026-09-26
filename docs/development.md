@@ -605,7 +605,7 @@ are weakened. Full controller details are in [project-transactions.md](project-t
 
 ## v0.9 checkpoint 4: File-menu workflows
 
-`project_file_workflow` adds deterministic scripted dialogs and preferences around
+`project_file_decisions`, `project_file_editing` and `project_file_session` add deterministic scripted dialogs and preferences around
 real ProjectDocument/FileStore transactions. It tests all Save/Discard/Cancel and
 failed/cancelled-save branches for New/Open/Close; line/delegate pending text;
 same-file Open after Save; extension and overwrite confirmation; recent ordering,
