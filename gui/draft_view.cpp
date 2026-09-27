@@ -43,6 +43,14 @@ class TextDelegate final : public QStyledItemDelegate {
     }
 };
 } // namespace
+DraftView::~DraftView() {
+    // QWidget teardown can commit a focused table delegate. Derived members
+    // (including owned drafts/row adapters) have already been destroyed here.
+    // Disconnect editor/model callbacks before QWidget starts that teardown.
+    restoring_ = true;
+    for (auto* child : findChildren<QObject*>())
+        QObject::disconnect(child, nullptr, this, nullptr);
+}
 void DraftView::bind_text(QLineEdit* widget, std::string& field) {
     widget->setText(qt_text(field));
     auto sync = [this, widget, &field] { edit(field, draft_text(widget->text())); };

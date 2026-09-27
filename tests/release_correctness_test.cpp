@@ -173,6 +173,46 @@ class ReleaseCorrectnessTest : public QObject {
         QVERIFY(control<QLabel>(timing, "timing_status")->text().contains("Cannot simulate"));
         QCOMPARE(control<QTableWidget>(timing, "timing_results")->rowCount(), 0);
     }
+    void destroyWithActiveDelegate_data() {
+        QTest::addColumn<QString>("domain");
+        for (const char* name : {"digital", "timing", "dc", "ac"})
+            QTest::newRow(name) << QString(name);
+    }
+    void destroyWithActiveDelegate() {
+        QFETCH(QString, domain);
+        std::unique_ptr<DraftView> view;
+        const char* table_name = nullptr;
+        if (domain == "digital") {
+            view = std::make_unique<DigitalLogicView>();
+            table_name = "digital_inputs";
+        } else if (domain == "timing") {
+            view = std::make_unique<TimingView>();
+            table_name = "timing_inputs";
+        } else if (domain == "dc") {
+            view = std::make_unique<CircuitsView>();
+            table_name = "circuit_nodes";
+        } else {
+            view = std::make_unique<AcView>();
+            table_name = "ac_nodes";
+        }
+        view->show();
+        QApplication::processEvents();
+        auto* table = control<QTableWidget>(*view, table_name);
+        auto* item = table->item(0, 1);
+        QVERIFY(item);
+        table->setCurrentItem(item);
+        table->editItem(item);
+        auto* editor = table->findChild<QLineEdit*>();
+        QVERIFY(editor);
+        const auto committed = item->text();
+        erase(editor);
+        QTest::keyClicks(editor, "pending name");
+        QCOMPARE(item->text(), committed);
+        QSignalSpy edits(view.get(), &DraftView::draftEdited);
+        view.reset(); // Focus loss must not call back into destroyed draft members.
+        QCOMPARE(edits.count(), 0);
+        QApplication::processEvents();
+    }
     void rawDigitalPinCountInvalidates() {
         DigitalLogicView v;
         v.show();

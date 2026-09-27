@@ -38,6 +38,7 @@ class DraftView : public QWidget {
     Q_OBJECT
   public:
     explicit DraftView(QWidget* parent = nullptr) : QWidget(parent) {}
+    ~DraftView() override;
     virtual void synchronize_pending_text();
   Q_SIGNALS:
     void draftEdited();

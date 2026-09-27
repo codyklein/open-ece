@@ -57,6 +57,15 @@ still allowed. Tests cover markup-like Unicode names, long bounded diagnostic
 content, timing labels and a real project error dialog. This is rendering
 correctness hardening, not a claim of a demonstrated security exploit.
 
+The first branch CI run also exposed a use-after-free during destruction of a
+focused timing table editor: QWidget focus-loss processing could commit the
+editor after the derived view's owned draft had been destroyed. The shared
+DraftView destructor now disconnects descendant editor/model signals targeting
+the view before QWidget teardown. This leaves normal editing and save-time
+synchronization unchanged. Active-delegate destruction regressions cover
+combinational, timing, DC and AC views, including no teardown draft edits.
+The original timing test reproduced the ASan failure locally before this fix.
+
 ## Remaining release gates
 
 Checkpoint 2 must complete result-state/replacement-operation review and practical
