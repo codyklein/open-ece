@@ -100,6 +100,7 @@ CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
     status_ = new QLabel(editor);
     status_->setObjectName("circuit_status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     body->addWidget(status_);
     auto* results = new QHBoxLayout;

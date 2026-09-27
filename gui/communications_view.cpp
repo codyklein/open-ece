@@ -117,6 +117,7 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
     link_summary_ = new QLabel;
     link_summary_->setObjectName("comm_link_summary");
     link_summary_->setWordWrap(true);
+    link_summary_->setTextFormat(Qt::PlainText);
     wave_layout->addWidget(link_summary_);
     i_plot_ = new CommunicationsPlot;
     q_plot_ = new CommunicationsPlot;
@@ -207,6 +208,7 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
     status_ = new QLabel;
     status_->setObjectName("comm_status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     layout->addWidget(status_);
     timer_ = new QTimer(this);
     timer_->setInterval(0);
@@ -214,7 +216,8 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
     for (auto* edit : {manual_, rate_, eb_, bit_seed_, noise_seed_, start_, stop_})
         connect(edit, &QLineEdit::textChanged, this, [this] { invalidate(); });
     for (auto* spin : {count_, samples_, points_, budget_})
-        connect(spin, &QSpinBox::valueChanged, this, [this] { invalidate(); });
+        connect(static_cast<DraftInt*>(spin)->editor(), &QLineEdit::textChanged, this,
+                [this] { invalidate(); });
     connect(modulation_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
     connect(source_, &QComboBox::currentIndexChanged, this, [this] {
         manual_->setEnabled(source_->currentIndex() == 1);

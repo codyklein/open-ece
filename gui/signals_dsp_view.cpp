@@ -115,10 +115,12 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     status_ = new QLabel(controls);
     status_->setObjectName("status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     left->addWidget(status_);
     summary_ = new QLabel(controls);
     summary_->setObjectName("summary");
     summary_->setWordWrap(true);
+    summary_->setTextFormat(Qt::PlainText);
     summary_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     left->addWidget(summary_);
     left->addStretch();
@@ -208,6 +210,7 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
         "Filter off. Select FIR low-pass and Generate to inspect its response.", response_page);
     response_summary_->setObjectName("response_summary");
     response_summary_->setWordWrap(true);
+    response_summary_->setTextFormat(Qt::PlainText);
     response_layout->addWidget(response_summary_);
     response_plot_ = new PlotWidget("FIR magnitude response", "Frequency (Hz)", "Gain (dB)", false,
                                     response_page);
@@ -218,12 +221,13 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
 
     connect(button, &QPushButton::clicked, this, [this] { generate(); });
     for (auto* spin : {amplitude_, frequency_, sample_rate_, duration_, cutoff_}) {
-        connect(spin, &QDoubleSpinBox::valueChanged, this, [this] {
-            status_->setText("Parameters changed. Generate to update the displayed result.");
+        connect(static_cast<DraftDouble*>(spin)->editor(), &QLineEdit::textChanged, this, [this] {
+            status_->setText(
+                "Parameters changed. Displayed results are stale; Generate to update.");
         });
     }
     connect(phase_, &QLineEdit::textChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
     connect(phase_, &QLineEdit::returnPressed, this, [this] { generate(); });
     connect(pi_button_, &QPushButton::clicked, this, [this] {
@@ -231,15 +235,15 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
         phase_->setFocus();
     });
     connect(window_, &QComboBox::currentIndexChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
     connect(filter_, &QComboBox::currentIndexChanged, this, [this] {
         cutoff_->setEnabled(filter_->currentIndex() != 0);
         tap_count_->setEnabled(filter_->currentIndex() != 0);
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
-    connect(tap_count_, &QSpinBox::valueChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+    connect(static_cast<DraftInt*>(tap_count_)->editor(), &QLineEdit::textChanged, this, [this] {
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
     connect(phase_unit_, &QComboBox::currentIndexChanged, this, [this] { change_phase_unit(); });
     auto& d = state_.get();
@@ -277,8 +281,8 @@ void SignalsDspView::change_phase_unit() {
         phase_->setText(converted);
         pi_button_->setEnabled(new_unit);
         edit(state_.get().phase.text, draft_text(converted));
-        status_->setText(
-            "Parameters changed. Phase converted to selected units; Generate to update.");
+        status_->setText("Parameters changed. Phase converted; displayed results are stale. "
+                         "Generate to update.");
     } catch (const std::exception& error) {
         const QSignalBlocker blocker(phase_unit_);
         phase_unit_->setCurrentIndex(phase_in_radians_ ? 1 : 0);

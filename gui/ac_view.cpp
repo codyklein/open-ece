@@ -255,13 +255,15 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
     status_ = new QLabel(this);
     status_->setObjectName("ac_status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(status_);
     timer_ = new QTimer(this);
     timer_->setInterval(0);
     connect(timer_, &QTimer::timeout, this, [this] { advance_sweep(); });
     connect(spacing_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
-    connect(count_, &QSpinBox::valueChanged, this, [this] { invalidate(); });
+    connect(static_cast<DraftInt*>(count_)->editor(), &QLineEdit::textChanged, this,
+            [this] { invalidate(); });
     rows_ = std::make_unique<CircuitDraftRows<project::AcDraft>>(
         state_.get(), nodes_, components_, ground_, status_, this,
         [this](CircuitDraftChange change) {

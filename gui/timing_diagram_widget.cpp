@@ -15,7 +15,8 @@ class LaneScale final : public QwtScaleDraw {
     QwtText label(double value) const override {
         const int index = static_cast<int>(labels_.size()) - 1 -
                           static_cast<int>(std::llround((value - 0.35) / 2.0));
-        return index >= 0 && index < labels_.size() ? QwtText(labels_[index]) : QwtText();
+        return index >= 0 && index < labels_.size() ? QwtText(labels_[index], QwtText::PlainText)
+                                                    : QwtText();
     }
 
   private:
@@ -60,8 +61,9 @@ void TimingDiagramWidget::present(const digital::timing::SimulationSnapshot& sna
         if (!points.empty())
             points.push_back(
                 {static_cast<double>(snapshot.reached.ticks) / ticks_per_unit, previous});
-        auto* curve = new QwtPlotCurve(
-            i < static_cast<std::size_t>(labels.size()) ? labels[static_cast<int>(i)] : QString());
+        auto* curve = new QwtPlotCurve(QwtText(
+            i < static_cast<std::size_t>(labels.size()) ? labels[static_cast<int>(i)] : QString(),
+            QwtText::PlainText));
         curve->setPen(QPen(QColor::fromHsv(static_cast<int>((i * 67) % 360), 190, 150), 2));
         curve->setSamples(points); // Qwt owns a copy; no pointers into a simulation session.
         curve->attach(this);
