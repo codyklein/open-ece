@@ -1,5 +1,6 @@
 #include "draft_view.hpp"
 #include <QComboBox>
+#include <QMessageBox>
 #include <QPersistentModelIndex>
 #include <QPointer>
 #include <QStyledItemDelegate>
@@ -50,6 +51,18 @@ DraftView::~DraftView() {
     restoring_ = true;
     for (auto* child : findChildren<QObject*>())
         QObject::disconnect(child, nullptr, this, nullptr);
+}
+bool DraftView::confirm_replacement(const QString& target) {
+    synchronize_pending_text();
+    QMessageBox box(QMessageBox::Warning, "Replace " + target + "?",
+                    "This replaces the entire " + target + " draft. There is no undo.",
+                    QMessageBox::Yes | QMessageBox::Cancel, this);
+    box.setTextFormat(Qt::PlainText);
+    box.setInformativeText("To keep this work, Cancel and save the project first.");
+    box.setButtonText(QMessageBox::Yes, "Replace draft");
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.setEscapeButton(QMessageBox::Cancel);
+    return box.exec() == QMessageBox::Yes;
 }
 void DraftView::bind_text(QLineEdit* widget, std::string& field) {
     widget->setText(qt_text(field));

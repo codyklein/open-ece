@@ -1,6 +1,7 @@
 #include "circuit_value.hpp"
 #include "circuits_view.hpp"
 #include "main_window.hpp"
+#include "replacement_test.hpp"
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -203,6 +204,7 @@ class CircuitGuiTest : public QObject {
             click(v, "circuit_add_component");
         QCOMPARE(parts(v)->rowCount(), circuit_gui_limits::components);
         QVERIFY(status(v).contains("limit"));
+        accept_replacement(v);
         click(v, "circuit_example");
         QVERIFY(status(v).startsWith("Solved DC"));
     }

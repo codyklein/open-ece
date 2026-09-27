@@ -69,7 +69,7 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
     setObjectName("timing_view");
     auto* layout = new QVBoxLayout(this);
     auto* help = new QLabel(
-        "Edit cells by double-clicking. Connect by stable node ID; pin lists use commas. "
+        "Edit cells with F2 or double-clicking. Connect by stable node ID; pin lists use commas. "
         "All times/delays are integer picoseconds (1000 ps = 1 ns). Gates: pin list; SR: S,R; "
         "D latch: D,enable; DFF: D,clock. Initial Q applies only to storage. "
         "Clock first edge toggles the initial level; high/low are level durations. "
@@ -85,8 +85,10 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
         auto* page_layout = new QVBoxLayout(page);
         auto* table = new QTableWidget(0, static_cast<int>(headers.size()), page);
         table->setObjectName(name);
+        table->setAccessibleName(title);
+        table->setTabKeyNavigation(false);
         table->setHorizontalHeaderLabels(headers);
-        table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        table->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
         table->setSelectionBehavior(QAbstractItemView::SelectRows);
         table->setSelectionMode(QAbstractItemView::SingleSelection);
         page_layout->addWidget(table);
@@ -153,12 +155,15 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
     auto* settings = new QHBoxLayout;
     horizon_ = new QLineEdit("30000", this);
     horizon_->setObjectName("timing_horizon");
+    horizon_->setAccessibleName("Simulation end in integer picoseconds");
     horizon_->setMaxLength(13);
     observed_ = new QLineEdit("1,2,3", this);
     observed_->setObjectName("timing_observed");
+    observed_->setAccessibleName("Observed node IDs, comma separated");
     observed_->setMaxLength(timing_gui_limits::observed * 12);
     scale_ = new QComboBox(this);
     scale_->setObjectName("timing_scale");
+    scale_->setAccessibleName("Timing diagram display unit");
     scale_->addItems({"ps", "ns", "µs", "ms", "s"});
     scale_->setCurrentIndex(1);
     settings->addWidget(new QLabel("End (ps):", this));
@@ -173,7 +178,7 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
     auto* pause = button(actions, "Pause", "timing_pause");
     auto* step = button(actions, "Step timestamp", "timing_step");
     auto* reset = button(actions, "Reset", "timing_reset");
-    auto* example_button = button(actions, "Load DFF example", "timing_example");
+    auto* example_button = button(actions, "Replace with DFF…", "timing_example");
     actions->addStretch();
     layout->addLayout(actions);
     status_ = new QLabel(this);
@@ -183,9 +188,11 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
     layout->addWidget(status_);
     results_ = new QTableWidget(0, 2, this);
     results_->setObjectName("timing_results");
+    results_->setAccessibleName("Timing visible output values");
+    results_->setTabKeyNavigation(false);
     results_->setHorizontalHeaderLabels({"Output", "Visible value"});
     results_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    results_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    results_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     results_->setMaximumHeight(95);
     layout->addWidget(results_);
     diagram_ = new TimingDiagramWidget(this);
@@ -225,7 +232,10 @@ TimingView::TimingView(QWidget* parent, project::TimingDraft* draft, bool /*iner
         advance(false);
     });
     connect(reset, &QPushButton::clicked, this, [this] { invalidate(); });
-    connect(example_button, &QPushButton::clicked, this, [this] { example(); });
+    connect(example_button, &QPushButton::clicked, this, [this] {
+        if (confirm_replacement("Timing"))
+            example();
+    });
     connect(horizon_, &QLineEdit::textChanged, this, [this] { invalidate(); });
     connect(observed_, &QLineEdit::textChanged, this, [this] { invalidate(); });
     connect(scale_, &QComboBox::currentIndexChanged, this, [this] {
@@ -279,6 +289,7 @@ void TimingView::append(QTableWidget* table, const QStringList& values, bool nod
     }
     if (table == elements_) {
         auto* type = new QComboBox(table);
+        type->setAccessibleName("Timing element " + values[0] + " type");
         type->addItems(kinds);
         type->setCurrentIndex(values[1].isEmpty() ? 0 : static_cast<int>(kinds.indexOf(values[1])));
         table->setCellWidget(row, 1, type);
@@ -381,7 +392,7 @@ void TimingView::invalidate() {
 }
 void TimingView::fail(const std::exception& error) {
     invalidate();
-    status_->setText("Cannot simulate: " + QString::fromUtf8(error.what()));
+    status_->setText("Failed — Cannot simulate: " + QString::fromUtf8(error.what()));
 }
 void TimingView::example() {
     invalidate();

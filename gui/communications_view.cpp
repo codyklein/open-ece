@@ -48,6 +48,7 @@ QTableWidgetItem* item(const QString& text) {
 QTableWidget* table(const QStringList& labels, const char* name) {
     auto* result = new QTableWidget(0, static_cast<int>(labels.size()));
     result->setObjectName(name);
+    result->setTabKeyNavigation(false);
     result->setHorizontalHeaderLabels(labels);
     result->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     result->horizontalHeader()->setStretchLastSection(true);
@@ -151,7 +152,9 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
     auto ber_field = [&](const QString& label, QWidget* widget, const char* name, int col) {
         widget->setObjectName(name);
         widget->setAccessibleName(label);
-        ber_form->addWidget(new QLabel(label), 0, col);
+        auto* caption = new QLabel(label);
+        caption->setBuddy(widget);
+        ber_form->addWidget(caption, 0, col);
         ber_form->addWidget(widget, 1, col);
     };
     ber_field("Start Eb/N0 (dB)", start_, "comm_start", 0);
@@ -204,7 +207,7 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
     auto* scroll = new QScrollArea;
     scroll->setWidget(help);
     scroll->setWidgetResizable(true);
-    tabs_->addTab(scroll, "Conventions");
+    tabs_->addTab(scroll, "Conventions and help");
     status_ = new QLabel;
     status_->setObjectName("comm_status");
     status_->setWordWrap(true);
@@ -255,8 +258,9 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
             cancelled_ = false;
             cancel_->setEnabled(true);
             timer_->start();
+            render_ber();
         } catch (const std::exception& e) {
-            status_->setText(QString::fromUtf8(e.what()));
+            status_->setText("Failed — " + QString::fromUtf8(e.what()));
         }
     });
     connect(step, &QPushButton::clicked, this, [this] {
@@ -267,7 +271,7 @@ CommunicationsView::CommunicationsView(QWidget* parent, project::CommunicationsD
             cancelled_ = false;
             advance();
         } catch (const std::exception& e) {
-            status_->setText(QString::fromUtf8(e.what()));
+            status_->setText("Failed — " + QString::fromUtf8(e.what()));
         }
     });
     connect(cancel_, &QPushButton::clicked, this, &CommunicationsView::cancel);
@@ -317,6 +321,7 @@ void CommunicationsView::invalidate() {
     timer_->stop();
     cancel_->setEnabled(false);
     cancelled_ = false;
+    failed_ = false;
     experiment_.reset();
     link_.reset();
     bits_->setRowCount(0);
@@ -390,17 +395,19 @@ void CommunicationsView::simulate() {
             report += " 95% fixed-N upper bound: " +
                       format(communications::zero_error_upper_bound95(result.bits_tested)) + ".";
         link_summary_->setText(report);
-        status_->setText(report);
+        status_->setText("Link complete. " + report);
         {
             QSignalBlocker b(tabs_);
             tabs_->setCurrentIndex(0);
         }
     } catch (const std::exception& e) {
-        status_->setText(QString::fromUtf8(e.what()));
+        status_->setText("Failed — " + QString::fromUtf8(e.what()));
     }
 }
 void CommunicationsView::ensure_experiment() {
     synchronize_pending_text();
+    if (failed_)
+        throw std::runtime_error("BER failed. Clear results or edit inputs before starting again.");
     if (experiment_)
         return;
     const auto count = static_cast<std::size_t>(draft_value(points_));
@@ -449,9 +456,9 @@ void CommunicationsView::advance() {
     } catch (const std::exception& e) {
         timer_->stop();
         cancel_->setEnabled(false);
-        cancelled_ = true;
+        failed_ = true;
         render_ber();
-        status_->setText("BER interrupted: " + QString::fromUtf8(e.what()));
+        status_->setText("BER failed (partial results retained): " + QString::fromUtf8(e.what()));
     }
 }
 void CommunicationsView::render_ber() {
@@ -490,18 +497,21 @@ void CommunicationsView::render_ber() {
             item(format(communications::theoretical_ber(experiment_modulation_, p.eb_n0_db))));
         ber_table_->setItem(row, 5,
                             item(p.complete()    ? "Complete"
+                                 : failed_       ? "Failed (partial results retained)"
                                  : cancelled_    ? (p.bits_tested ? "Cancelled (partial)"
                                                                   : "Not evaluated (cancelled)")
                                  : p.bits_tested ? "Partial"
                                                  : "Pending"));
     }
     ber_plot_->ber(results, experiment_modulation_);
-    status_->setText(QString(experiment_->complete() ? "BER complete: %1 / %2 bits tested."
-                             : cancelled_
-                                 ? "BER cancelled: %1 / %2 bits tested; unfinished points retained."
-                                 : "BER in progress: %1 / %2 bits tested.")
-                         .arg(static_cast<qulonglong>(total))
-                         .arg(static_cast<qulonglong>(requested)));
+    status_->setText(
+        QString(experiment_->complete() ? "BER complete: %1 / %2 bits tested."
+                : cancelled_ ? "BER cancelled: %1 / %2 bits tested; unfinished points retained."
+                : failed_    ? "BER failed: %1 / %2 bits tested; clear results to restart."
+                : timer_->isActive() ? "BER running: %1 / %2 bits tested."
+                                     : "BER partial: %1 / %2 bits tested; Run or Step to continue.")
+            .arg(static_cast<qulonglong>(total))
+            .arg(static_cast<qulonglong>(requested)));
 }
 void CommunicationsView::cancel() {
     timer_->stop();

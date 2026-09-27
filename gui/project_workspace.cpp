@@ -5,6 +5,7 @@
 #include "signals_dsp_view.hpp"
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QTimer>
 namespace openece::gui {
@@ -22,7 +23,8 @@ ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert
         navigation->setObjectName("domain_navigation");
         navigation->setAccessibleName("ECE domain");
         navigation->addItems({"Signals / DSP", "Digital Logic", "Circuits", "Communications"});
-        navigation->setFixedWidth(145);
+        navigation->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+        navigation->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding);
         auto* pages = new QStackedWidget(host_);
         pages->setObjectName("domain_pages");
         pages->addWidget(new SignalsDspView(pages, &snapshot_.signals, inert));
@@ -30,7 +32,12 @@ ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert
         pages->addWidget(new CircuitsWorkspace(pages, &snapshot_.circuits, inert));
         pages->addWidget(new CommunicationsView(pages, &snapshot_.communications, inert));
         layout->addWidget(navigation);
-        layout->addWidget(pages, 1);
+        auto* scroll = new QScrollArea(host_);
+        scroll->setObjectName("workspace_scroll");
+        scroll->setAccessibleName("Scrollable engineering workspace");
+        scroll->setWidgetResizable(true);
+        scroll->setWidget(pages);
+        layout->addWidget(scroll, 1);
         const QStringList tokens{"signals", "digital", "circuits", "communications"};
         connect(navigation, &QListWidget::currentRowChanged, pages,
                 &QStackedWidget::setCurrentIndex);
@@ -43,6 +50,7 @@ ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert
         for (int i = 0; i < pages->count(); ++i)
             connect(static_cast<DraftView*>(pages->widget(i)), &DraftView::draftEdited, this,
                     &DraftView::draftEdited);
+        navigation->setFocus(Qt::OtherFocusReason);
         restoring_ = false;
         if (inert && capture() != expected)
             throw project::Error(project::ErrorCode::invalid_value, "",

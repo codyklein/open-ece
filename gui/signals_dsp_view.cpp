@@ -414,10 +414,11 @@ void SignalsDspView::generate() {
             response_summary_->setText(
                 "Filter off. Select FIR low-pass and Generate to inspect its response.");
         }
-        status_->setText("Ready — plots match the current parameters.");
+        status_->setText("Ready — complete; plots match the current parameters.");
     } catch (const std::exception& error) {
         clear_results();
-        status_->setText(QString("Cannot generate: %1").arg(QString::fromUtf8(error.what())));
+        status_->setText(
+            QString("Failed — Cannot generate: %1").arg(QString::fromUtf8(error.what())));
     }
 }
 

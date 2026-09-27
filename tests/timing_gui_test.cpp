@@ -1,4 +1,5 @@
 #include "main_window.hpp"
+#include "replacement_test.hpp"
 #include "timing_view.hpp"
 #include <QComboBox>
 #include <QLabel>
@@ -97,6 +98,7 @@ class TimingGuiTest : public QObject {
         elements->item(0, 3)->setText("0");
         click(view, "timing_step");
         QVERIFY(status(view).contains("positive"));
+        accept_replacement(view);
         click(view, "timing_example");
         static_cast<QComboBox*>(elements->cellWidget(0, 1))->setCurrentText("SR latch");
         click(view, "timing_run");
@@ -104,6 +106,7 @@ class TimingGuiTest : public QObject {
         QVERIFY(status(view).contains("5000 ps"));
         QCOMPARE(curves(view).size(), 0);
         QCOMPARE(table(view, "timing_results")->rowCount(), 0);
+        accept_replacement(view);
         click(view, "timing_example");
         finish(view);
         widget<QLineEdit>(view, "timing_observed")->setText("3,3");
@@ -122,6 +125,7 @@ class TimingGuiTest : public QObject {
         QVERIFY(widget<QLabel>(view, "digital_copy_status")->text().startsWith("Cannot copy"));
         QCOMPARE(table(view, "timing_elements")->rowCount(), 1); // Existing timing draft retained.
         digital_inputs->item(0, 1)->setText(" π ");
+        accept_replacement(view);
         click(view, "digital_copy_timing");
         QCOMPARE(table(view, "timing_inputs")->item(0, 1)->text(), QString(" π "));
         QCOMPARE(table(view, "timing_elements")->rowCount(), 2);

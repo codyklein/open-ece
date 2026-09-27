@@ -45,6 +45,7 @@ class DraftView : public QWidget {
 
   protected:
     bool restoring_ = true;
+    bool confirm_replacement(const QString& target);
     template <class T> void edit(T& field, T value) {
         if (!restoring_ && field != value) {
             field = std::move(value);

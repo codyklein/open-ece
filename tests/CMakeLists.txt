@@ -27,6 +27,13 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_release_ux_tests release_ux_test.cpp)
+    set_target_properties(openece_release_ux_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_release_ux_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    foreach(scale IN ITEMS 1 1.25 1.5 2)
+        add_test(NAME release_ux_scale_${scale} COMMAND openece_release_ux_tests)
+        set_tests_properties(release_ux_scale_${scale} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_SCALE_FACTOR=${scale}" TIMEOUT 120)
+    endforeach()
     add_executable(openece_release_correctness_tests release_correctness_test.cpp)
     set_target_properties(openece_release_correctness_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_release_correctness_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -103,7 +110,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 
