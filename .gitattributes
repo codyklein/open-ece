@@ -1,0 +1,3 @@
+# Release-pinned compatibility evidence has byte-level SHA-256 assertions.
+# Keep tagged UTF-8 JSON bytes identical under Windows core.autocrlf checkouts.
+tests/fixtures/v0.9/*.openece text eol=lf

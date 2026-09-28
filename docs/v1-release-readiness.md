@@ -187,9 +187,9 @@ packaged persistence probe additionally opens all nine shipped examples with the
 packaged runtime, verifies empty results and semantic round trips. Numerical
 example assertions also run under normal Fedora/Windows test configurations.
 
-Validation adds eleven headless codec cases and two GUI CTest entries (nine
-example rows, two compatibility rows and About). The full suites total **188
-headless / 208 desktop**. The new 201-point RLC GUI example needs more than Qt
+Validation adds eleven headless codec cases and ten GUI CTest entries (nine
+individual examples, plus two compatibility rows and About). The full suites total **188
+headless / 216 desktop**. The new 201-point RLC GUI example needs more than Qt
 Test's default five seconds under sanitizers, so its bounded completion wait is
 30 seconds; point count and assertions are unchanged. Existing tests are intact.
 Branch-tip CI results are recorded in the checkpoint report, not assumed from
@@ -199,3 +199,9 @@ Remaining release gates are unchanged: exact-candidate native Fedora and physica
 Windows evidence, mixed-DPI/screen-reader gaps and final RC dependency/license/
 package review. The user has Windows 11 available; physical Windows 10 remains
 unverified and must stay an open criterion or receive an explicit support decision.
+
+The first Windows Debug run exposed test-infrastructure issues: Git's CRLF checkout
+conversion changed immutable fixture byte hashes, and the combined nine-example
+process exceeded 120 seconds. Fixture-only LF attributes now preserve release
+bytes. Each example runs in its own bounded CTest entry, with explicit Qt Test
+logs uploaded on both platforms. No example, sweep point or assertion was removed.

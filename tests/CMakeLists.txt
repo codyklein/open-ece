@@ -32,9 +32,17 @@ if(OPENECE_BUILD_GUI)
     set_target_properties(openece_example_gui_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_example_gui_tests PRIVATE openece_workbench OpenECE::dsp Qt6::Test openece_options)
     target_compile_definitions(openece_example_gui_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}" OPENECE_TEST_VERSION="${PROJECT_VERSION}")
-    add_test(NAME shipped_examples COMMAND openece_example_gui_tests examples)
-    add_test(NAME release_compatibility COMMAND openece_example_gui_tests compatibility aboutIsDiscoverable)
-    set_tests_properties(shipped_examples release_compatibility PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
+    # Separate examples keep MSVC Debug's complete workspace/plot tests bounded.
+    # Qt's Windows logger may not reach CTest stdout; always retain explicit logs.
+    set(example_tests)
+    foreach(example IN ITEMS sine-fft-fir half-adder dff-timing dc-divider rc-lowpass series-rlc bpsk-link-ber qpsk-link-ber intentionally-incomplete)
+        list(APPEND example_tests example_${example})
+        add_test(NAME example_${example} COMMAND openece_example_gui_tests "examples:${example}"
+            -o "${CMAKE_BINARY_DIR}/example-${example}-$<CONFIG>.log,txt")
+    endforeach()
+    add_test(NAME release_compatibility COMMAND openece_example_gui_tests compatibility aboutIsDiscoverable
+        -o "${CMAKE_BINARY_DIR}/compatibility-$<CONFIG>.log,txt")
+    set_tests_properties(${example_tests} release_compatibility PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     add_executable(openece_release_ux_tests release_ux_test.cpp)
     set_target_properties(openece_release_ux_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_release_ux_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -118,7 +126,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(shipped_examples release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 

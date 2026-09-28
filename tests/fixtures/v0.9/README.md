@@ -18,3 +18,5 @@ inert workspaces. Existing broader invalid-draft tests remain intact.
 
 - `complete.openece`: `0ba53c8e653ebbbc8720960743b40c3781ec717bbcaa3c718dfe1599a0e0ad0f`
 - `incomplete.openece`: `0b9b4580268de760fb4b27901fabeb3655ee94af2a4885fc13466e8e7ecc3ac2`
+
+`.gitattributes` pins these fixtures to LF on every checkout so Windows CRLF conversion cannot invalidate their byte-level provenance. Ordinary project parsing still accepts JSON whitespace normally.
