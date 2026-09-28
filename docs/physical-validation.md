@@ -16,7 +16,7 @@ was made. Rebuild and repeat affected checks after any subsequent code change.
 | --- | --- |
 | Physical Windows 11 | User reports the installation is not available for testing now. OS build, displays, package launch and workflows are **pending**. |
 | Physical Windows 10 | No installation available. Decision: may work, but **not validated or claimed supported for v1.0**. Windows Server CI is not substitute evidence. |
-| Native Fedora | Fedora 44 KDE Plasma Desktop, Plasma 6.7.5, Wayland, x86_64; Acer Predator PH315-55; Qt 6.11.2, GCC 16.2.1. |
+| Native Fedora | Fedora 44 KDE Plasma Desktop, Plasma 6.7.5, Wayland, x86_64; Acer Predator PH315-55; Qt 6.11.2, GCC 16.2.1. `loginctl` subsequently reported the active session locked (`LockedHint=yes`); this was not an interactive human desktop pass. |
 | Fedora display | One connected eDP-1 display, 2560×1440 at 240 Hz, desktop scale 125%, logical 2048×1152. Desktop settings were not changed. |
 | Native example workflows | `openece_example_gui_tests examples` using `QT_QPA_PLATFORM=wayland`: all nine example rows passed (11 including setup/cleanup). Includes explicit analytical calculations after inert opening, editable-state checks and screenshots. |
 | Native persistence | `openece_packaged_persistence` with the build-tree runtime and shipped examples: passed Unicode/space paths, invalid drafts, inert reopen, overwrite, isolated recent preferences, normal close and all nine example round trips. Uses scripted file choosers, not manual native dialogs. |
@@ -31,7 +31,10 @@ usability or physical Windows behavior. Offscreen 100/125/150/200% and 18-point
 text tests remain automated coverage, not physical display-scale evidence.
 Local probe logs/screenshots use `build/v1-cp4-native-*`; these ignored artifacts
 are not portable evidence unless copied with the report. The diagnostic failures
-remain recorded rather than being counted as passes.
+remain recorded rather than being counted as passes. The locked session is a
+relevant environment limitation, not proof of an application focus defect; repeat
+the keyboard/resize checks in an unlocked interactive session. No attempt was
+made to unlock or change the user’s session.
 
 ## Identifying the Windows candidate
 
