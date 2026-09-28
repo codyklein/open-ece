@@ -68,13 +68,13 @@ The original timing test reproduced the ASan failure locally before this fix.
 
 ## Remaining release gates
 
-Checkpoint 2 must complete result-state/replacement-operation review and practical
-keyboard/scaling validation. Checkpoint 3 must update onboarding and add tested
-ordinary examples and release-pinned v0.9 compatibility fixtures. Checkpoint 4
-requires recorded native Fedora and physical Windows 10/11 evidence; hosted CI
-and offscreen tests do not substitute for physical-platform checks. Checkpoint 5
-must review dependencies/notices and validate the exact final candidate package.
-No v1.0 support or release claim is made until these gates are resolved.
+Checkpoints 1–3 are approved. Checkpoint 4 remains open for physical Windows 11
+and practical native desktop evidence; hosted CI and offscreen tests do not
+substitute for these checks. Windows 10 cannot currently be physically validated
+and is no longer claimed supported for v1.0. Checkpoint 5 must review dependencies/
+notices and validate the exact final candidate package. No v1.0 release claim is
+made until the remaining gates are resolved. See [checkpoint-4 evidence and the
+manual checklist](physical-validation.md).
 
 ## Checkpoint 2: UX, focus and scaling
 
@@ -197,11 +197,24 @@ these expected counts.
 
 Remaining release gates are unchanged: exact-candidate native Fedora and physical
 Windows evidence, mixed-DPI/screen-reader gaps and final RC dependency/license/
-package review. The user has Windows 11 available; physical Windows 10 remains
-unverified and must stay an open criterion or receive an explicit support decision.
+package review. Windows 11 hardware exists but is not currently available for testing. The
+checkpoint-4 record below supersedes earlier platform-target wording.
 
 The first Windows Debug run exposed test-infrastructure issues: Git's CRLF checkout
 conversion changed immutable fixture byte hashes, and the combined nine-example
 process exceeded 120 seconds. Fixture-only LF attributes now preserve release
 bytes. Each example runs in its own bounded CTest entry, with explicit Qt Test
 logs uploaded on both platforms. No example, sweep point or assertion was removed.
+
+## Checkpoint 4 — validation in progress
+
+Physical Windows 11 testing is unavailable at present, so this checkpoint is not
+complete. The [evidence record](physical-validation.md) distinguishes native
+Fedora automated probes, hosted CI and still-pending manual checks.
+
+Two OpenECE-controlled Clang warnings have narrow corrections: the replacement
+confirmation labels its existing Yes button through `QAbstractButton::setText`
+instead of deprecated `QMessageBox::setButtonText`, and the Digital-to-Timing
+callback explicitly captures `this` under C++20. The replacement regression also
+checks the visible button text. No numerical, persistence, schema or dependency
+behavior changed. No release-pinned fixture bytes were modified.

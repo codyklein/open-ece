@@ -124,8 +124,10 @@ Incidental UI state such as geometry, selection highlights and runtime progress
 remains in memory; recent-project history is the explicit QSettings exception.
 There is no cross-process conflict detection, file watching or moved-file search.
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
-Server 2022. Physical Windows 10/11, high-DPI/accessibility and MinGW remain
-unvalidated; the portable ZIP is unsigned and has no installer/updater.
+Server 2022. Physical Windows 11 and native high-DPI/accessibility validation
+remain pending. Windows 10 and MinGW may work but are not validated or claimed
+supported for v1.0. The portable ZIP is unsigned and has no installer/updater.
+See the [physical validation record](physical-validation.md).
 
 ## v1.0 compatibility promise
 

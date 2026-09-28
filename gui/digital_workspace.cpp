@@ -37,7 +37,7 @@ DigitalWorkspace::DigitalWorkspace(QWidget* parent, project::DigitalDraft* draft
     status->setTextFormat(Qt::PlainText);
     status->setWordWrap(true);
     layout->addWidget(status);
-    connect(copy, &QPushButton::clicked, this, [=] {
+    connect(copy, &QPushButton::clicked, this, [=, this] {
         try {
             combinational->synchronize_pending_text();
             const auto circuit = combinational->validated_circuit();

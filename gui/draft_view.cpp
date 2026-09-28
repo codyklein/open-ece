@@ -1,4 +1,5 @@
 #include "draft_view.hpp"
+#include <QAbstractButton>
 #include <QComboBox>
 #include <QMessageBox>
 #include <QPersistentModelIndex>
@@ -59,7 +60,7 @@ bool DraftView::confirm_replacement(const QString& target) {
                     QMessageBox::Yes | QMessageBox::Cancel, this);
     box.setTextFormat(Qt::PlainText);
     box.setInformativeText("To keep this work, Cancel and save the project first.");
-    box.setButtonText(QMessageBox::Yes, "Replace draft");
+    box.button(QMessageBox::Yes)->setText("Replace draft");
     box.setDefaultButton(QMessageBox::Cancel);
     box.setEscapeButton(QMessageBox::Cancel);
     return box.exec() == QMessageBox::Yes;

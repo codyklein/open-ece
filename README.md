@@ -45,9 +45,10 @@ Studio 2022 x64 and explicitly acquired Qt 6.8.3, with checksum-pinned dependenc
 
 CI covers Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan, Windows MSVC
 Debug/Release, and a fresh Windows packaged-runtime test. The Windows desktop
-target is Windows 10/11 x86_64; hosted Windows Server tests do not establish
-physical Windows 10/11, mixed-DPI or screen-reader validation. Those remain
-[v1.0 release gates](docs/v1-release-readiness.md). MinGW is not validated.
+validation target for v1.0 is Windows 11 x86_64; physical validation is still
+pending. Windows 10 and MinGW may work but are not validated or claimed supported
+for v1.0. Hosted Windows Server tests do not establish desktop, mixed-DPI or
+screen-reader validation. See the [physical validation record and checklist](docs/physical-validation.md).
 
 ## Documentation
 

@@ -6,7 +6,8 @@ No Qt installation, environment configuration or administrator access is needed.
 The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
-Target: Windows 10 (1809 or later) / Windows 11 x86_64.
+v1.0 desktop validation target: Windows 11 x86_64 (physical testing pending).
+Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
 This is an unsigned portable application, not an installer. Windows may show
@@ -99,4 +100,5 @@ Help > About OpenECE identifies the actual built version, MIT license and notice
 Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
 The v1.0 stabilization branch still uses 0.9.0 package metadata until RC freeze;
-physical Windows 10/11 and mixed-monitor validation are not yet established.
+physical Windows 11 and mixed-monitor validation are not yet established.
+See docs/physical-validation.md for the checklist and evidence boundaries.

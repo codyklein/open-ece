@@ -1,11 +1,11 @@
 # Windows build and portable ZIP
 
-The Windows desktop target is Windows 10 (1809+) / Windows 11 x86_64,
+The v1.0 Windows desktop validation target is Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
-VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
-hardware test. MinGW has not been validated and is not a supported configuration
-for this milestone. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
+VS 2022; this is MSVC/Windows runtime validation, not a physical Windows 11
+hardware test. Physical Windows 11 validation is pending. Windows 10 and MinGW
+may work but are not validated or claimed supported for v1.0. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
 
 ## Prerequisites
 
@@ -198,8 +198,8 @@ the combined sanitizer option rejects MSVC/clang-cl explicitly.
 
 The ZIP is unsigned, has no installer or updater, and targets x86_64 only.
 Hosted Windows validation does not establish DPI, GPU, accessibility or visual
-correctness on every Windows 10/11 desktop. Manual checks on those systems remain
-useful. App-local runtime updates require a new package. Qt 6.8.3 is pinned for
+correctness on a Windows 11 desktop. Physical checks remain a release gate;
+see the [candidate checklist and evidence](physical-validation.md). App-local runtime updates require a new package. Qt 6.8.3 is pinned for
 this milestone, not promised to be the newest security-maintained Qt release.
 
 ## Candidate documentation and examples
