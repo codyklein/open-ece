@@ -8,6 +8,7 @@ target_link_libraries(openece_workbench
     PUBLIC OpenECE::project OpenECE::communications Qt6::Widgets Qwt::Qwt OpenECE::digital OpenECE::circuits
     PRIVATE OpenECE::signals OpenECE::dsp openece_options)
 target_compile_features(openece_workbench PUBLIC cxx_std_20)
+target_compile_definitions(openece_workbench PRIVATE OPENECE_VERSION="${PROJECT_VERSION}")
 # Keep Qt's optional `signals` macro from colliding with our domain namespace.
 target_compile_definitions(openece_workbench PUBLIC QT_NO_KEYWORDS)
 

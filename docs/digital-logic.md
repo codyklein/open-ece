@@ -1,4 +1,4 @@
-# Digital Logic conventions (v0.4)
+# Digital Logic conventions
 
 ## Public model and ownership
 
@@ -140,8 +140,10 @@ to absent ID 0. The core itself permits ID 0 as an ordinary node identity. It ne
 interprets it as a logical constant or repairs that reference. The draft UI can
 therefore remain incomplete without weakening the validated core API.
 
-This is a table-based editor, without schematic wiring, saving/loading, undo/redo,
+This is a table-based editor, without schematic wiring, undo/redo,
 Boolean expressions, minimization, or Karnaugh maps. There is no time axis: values
 are settled Boolean results, not physical transient behavior. The separate **Timing / Sequential** tab adds propagation delays, clocks, latches
 and flip-flops under [explicit timing contracts](digital-timing.md). FSMs, buses
 and HDL remain deferred.
+
+Project files preserve the editable logic draft, including missing references; evaluation and truth tables are not saved. See [project workflows](projects.md).

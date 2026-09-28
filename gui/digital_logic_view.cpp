@@ -140,7 +140,8 @@ DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft*
         "<p>Desktop limits: 8 inputs, 64 gates, 16 outputs, 8 pins per gate. "
         "Core limits: 64 inputs, 4096 gates, 256 outputs, 16384 references; tables at most "
         "10 inputs / 1024 rows. Timing and storage live in the separate Timing / Sequential tab. "
-        "No saving, constants, buses, Unknown/High-Z or minimization.</p>");
+        "File → Save preserves the editable draft, including missing connections; results are not "
+        "saved. No constants, buses, Unknown/High-Z or minimization.</p>");
     right->addWidget(help, 1);
     for (auto* label : content->findChildren<QLabel*>())
         label->setWordWrap(true);

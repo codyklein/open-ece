@@ -61,7 +61,35 @@ void inert(ProjectWorkspace& w) {
             require(static_cast<QwtPlotCurve*>(item)->dataSize() == 0,
                     "Restore populated derived plot");
 }
+void packaged_examples() {
+    const QDir examples(QCoreApplication::applicationDirPath() + "/examples");
+    // In a build-tree CTest run the shipped files are covered by example_gui_test.
+    // In the fresh package job the script requires this directory and all nine files.
+    if (!examples.exists())
+        return;
+    const auto files = examples.entryList({"*.openece"}, QDir::Files);
+    require(files.size() == 9, "Unexpected shipped example count");
+    for (const auto& file : files) {
+        const auto expected =
+            project::decode_project(bytes(examples.filePath(file)).toStdString()).snapshot;
+        ProjectDocument doc;
+        auto candidate = doc.prepare_open(examples.filePath(file));
+        require(std::holds_alternative<PreparedProject>(candidate),
+                "Packaged example did not stage");
+        require(std::holds_alternative<std::monostate>(
+                    doc.install(std::get<PreparedProject>(std::move(candidate)))),
+                "Packaged example did not install");
+        require(doc.workspace().capture() == expected, "Packaged example lost editable state");
+        inert(doc.workspace());
+        require(
+            project::decode_project(project::encode_project(doc.workspace().capture())).snapshot ==
+                expected,
+            "Packaged example round trip failed");
+    }
+    std::cout << "PASS: all nine packaged examples restored inertly and round-tripped.\n";
+}
 void run() {
+    packaged_examples();
     QTemporaryDir temp(QDir::currentPath() + "/OpenECE persistence π 名 XXXXXX");
     require(temp.isValid(), "Cannot create Unicode test workspace");
     const QString base = temp.filePath("editable π project"), path = base + ".openece";

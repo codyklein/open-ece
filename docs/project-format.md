@@ -285,3 +285,9 @@ or newer, Windows bootstrap pins 3.12.0 and verifies its SHA-256. Its headers ar
 private to OpenECE::project; no nlohmann types occur in public OpenECE headers.
 The dependency is header-only and adds no runtime DLL. See [Windows setup](windows.md)
 for bootstrap/package notices; Fedora uses `json-devel`.
+
+## Compatibility baseline
+
+OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 and preserves their supported editable project state.
+
+See [pinned fixtures](../tests/fixtures/v0.9/README.md) and [the precise limits of this promise](projects.md#v10-compatibility-promise). No schema tokens, units, namespaces or allocator semantics change for v1.0.

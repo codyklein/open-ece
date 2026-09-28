@@ -1,7 +1,8 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
 find_package(nlohmann_json 3.12 REQUIRED CONFIG)
-add_executable(openece_project_tests project_test.cpp)
+add_executable(openece_project_tests project_test.cpp example_codec_test.cpp)
+target_compile_definitions(openece_project_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 target_link_libraries(openece_project_tests PRIVATE OpenECE::project nlohmann_json::nlohmann_json GTest::gtest_main openece_options)
 target_compile_definitions(openece_project_tests PRIVATE OPENECE_PROJECT_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/project-v1.openece")
 gtest_discover_tests(openece_project_tests DISCOVERY_MODE PRE_TEST)
@@ -27,6 +28,13 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_example_gui_tests example_gui_test.cpp)
+    set_target_properties(openece_example_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_example_gui_tests PRIVATE openece_workbench OpenECE::dsp Qt6::Test openece_options)
+    target_compile_definitions(openece_example_gui_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}" OPENECE_TEST_VERSION="${PROJECT_VERSION}")
+    add_test(NAME shipped_examples COMMAND openece_example_gui_tests examples)
+    add_test(NAME release_compatibility COMMAND openece_example_gui_tests compatibility aboutIsDiscoverable)
+    set_tests_properties(shipped_examples release_compatibility PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     add_executable(openece_release_ux_tests release_ux_test.cpp)
     set_target_properties(openece_release_ux_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_release_ux_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -110,7 +118,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(shipped_examples release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 

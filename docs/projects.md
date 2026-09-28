@@ -1,6 +1,6 @@
 # Saving and reopening OpenECE projects
 
-OpenECE v0.9 saves editable experiments from all four domains in one `.openece`
+OpenECE saves editable experiments from all four domains in one `.openece`
 file. It is a UTF-8 JSON document with a versioned schema, not a snapshot of plots
 or a cache of numerical results. You can share it with another schema-1-compatible
 OpenECE installation on Fedora or Windows. No Qt installation is needed when using
@@ -85,7 +85,7 @@ restoring a file or using New.
 
 ## Compatibility, errors and file safety
 
-v0.9 supports exactly schema version **1**, identified by
+OpenECE supports exactly schema version **1**, identified by
 `format: "org.openece.project"` and integer `schema_version: 1`. Application version
 and schema version are different. Other schema versions are rejected clearly;
 there is no migration framework. Unknown optional fields within schema 1 are
@@ -126,3 +126,14 @@ There is no cross-process conflict detection, file watching or moved-file search
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
 Server 2022. Physical Windows 10/11, high-DPI/accessibility and MinGW remain
 unvalidated; the portable ZIP is unsigned and has no installer/updater.
+
+## v1.0 compatibility promise
+
+OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 and preserves their supported editable project state.
+
+This does not promise a stable C++ ABI, plugin ABI, arbitrary future-schema
+compatibility, automatic migration of unsupported schemas, preservation of unknown
+optional fields on re-save, or persisted numerical results. Unknown-field warnings
+remain meaningful. [Release-pinned fixtures](../tests/fixtures/v0.9/README.md)
+verify complete and incomplete v0.9 drafts; [examples](../examples/README.md) are
+editable teaching projects. Version 1.0 is still a candidate until its release gates pass.

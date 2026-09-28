@@ -89,3 +89,14 @@ autosave, crash recovery, cloud sync, collaboration or migration is included.
 
 User guide: https://github.com/codyklein/open-ece/blob/main/docs/projects.md
 Schema: https://github.com/codyklein/open-ece/blob/main/docs/project-format.md
+
+Candidate onboarding and examples
+--------------------------------
+Open examples/*.openece through File > Open. They are ordinary editable projects,
+not automatically running demos. Start with docs/first-session.md and
+examples/README.md for actions, analytical expectations and unit conventions.
+Help > About OpenECE identifies the actual built version, MIT license and notices.
+Documentation links to source/test files require the repository checkout; the
+packaged offline guides and examples contain everything needed for a first session.
+The v1.0 stabilization branch still uses 0.9.0 package metadata until RC freeze;
+physical Windows 10/11 and mixed-monitor validation are not yet established.

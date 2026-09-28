@@ -125,7 +125,7 @@ This is an ideal synchronized complex-baseband link. No RF carrier, recovery,
 configurable pulse shaping, coding, higher-order QAM, eye diagrams, SDR or OFDM.
 Existing engineering APIs remain unchanged. See docs/communications.md.
 
-## v0.9 — Project Persistence (implemented; pending PR/release review)
+## v0.9 — Project Persistence (released)
 
 - [x] Owned Qt-independent project drafts and strict bounded schema-1 JSON codec.
 - [x] Exact invalid-text, Unicode, stable-ID, unit and seed preservation across every domain.
@@ -137,6 +137,20 @@ Existing engineering APIs remain unchanged. See docs/communications.md.
 Editable experiment state only: no results, execution progress, external assets,
 undo/redo, autosave, recovery, migrations or cloud features. Existing engineering
 APIs remain unchanged. See docs/projects.md and docs/project-format.md.
+
+## v1.0 — Release readiness (in progress)
+
+Stabilize existing domains, rather than adding another engineering subsystem.
+
+- [x] Correct raw-edit execution invalidation and plain-text diagnostics.
+- [x] Clarify result states, keyboard access, replacement actions and scrolling layouts.
+- [x] Complete current onboarding, tested examples and pinned v0.9 schema-1 compatibility evidence.
+- [ ] Validate the exact candidate on native Fedora and physical Windows, including scaling and non-development users.
+- [ ] Complete final CI/package, dependency/license and release-scope review.
+
+No release/tag until the [release gates](docs/v1-release-readiness.md) are satisfied.
+No transient analysis, schematic capture, higher-order communications, undo/redo,
+autosave, cloud features or general migrations in this milestone.
 
 ## Later — Expand only through useful connections
 

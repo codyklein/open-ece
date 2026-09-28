@@ -13,7 +13,7 @@ flowchart TD
     CommunicationsTests[Mapping / channel / BER tests] --> Communications
     UI --> Circuits[circuits]
     Circuits --> Eigen[Eigen: private dense linear algebra]
-    CircuitTests[Independent DC tests] --> Circuits
+    CircuitTests[Independent DC / AC tests] --> Circuits
     UI --> Project[project: owned editable drafts and codec]
     Project --> JSON[nlohmann/json: private headers]
     ProjectTests[Codec / allocator / round-trip tests] --> Project
@@ -36,7 +36,7 @@ This prevents Qt's optional `signals` macro from colliding with the C++ domain n
 Separate small engineering targets are slightly more CMake work than one monolithic
 library, but make dependency direction visible and prevent accidental GUI coupling.
 Namespaced public headers and target-level include paths provide stable boundaries
-without claiming a stable ABI in v0.1. C++20 provides `std::span`, bit utilities,
+without claiming a stable C++ ABI. C++20 provides `std::span`, bit utilities,
 and mathematical constants without requiring a newer language baseline.
 
 We use `signals/` and `dsp/` directly rather than `modules/signals/` plus a separate
@@ -61,7 +61,7 @@ library/import-library map. Qt and GoogleTest use standard CMake package discove
 Windows dependency acquisition and runtime deployment are separate PowerShell
 scripts; ordinary CMake configure never uses the network. Compiler flags remain
 private to project targets. See [Windows build design](windows.md) for the pinned
-toolchain and portable ZIP deployment. Eigen is acquired separately for the DC solver.
+toolchain and portable ZIP deployment. Eigen is acquired separately for the DC and AC solvers.
 
 The internal `openece_workbench` target allows GUI integration tests to use the
 same implementation as the executable. It is not a public extension API.
@@ -399,3 +399,17 @@ QSaveFile commit with direct-write fallback disabled. Recent projects belong to
 QSettings under OpenECE/OpenECE, never to the project schema. The packaged-runtime
 probe uses these same layers with scripted decisions, without shipping a test API
 or test executable inside the release package.
+
+## Current workspace composition
+
+`MainWindow` wires File/Help actions, title/path and a document-owned
+`ProjectWorkspace`. That workspace contains scrollable persistent SignalsDspView,
+DigitalWorkspace (combinational/timing), CircuitsWorkspace (DC/AC) and
+CommunicationsView. The `project/` library owns editable ProjectSnapshot DTOs and
+strict serialization; `communications/` owns normalized baseband/BER types.
+Neither reuses unrelated signal, digital or circuit representations. About reports
+the CMake version and license locations; it introduces no document state.
+
+The v1.0 compatibility boundary is schema-1 editable files, not C++ ABI. Ordinary
+[examples](../examples/README.md) and [v0.9 fixtures](../tests/fixtures/v0.9/README.md)
+exercise this boundary without automatic execution or special example loaders.

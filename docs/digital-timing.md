@@ -1,4 +1,4 @@
-# Digital Timing and Sequential Logic (v0.5)
+# Digital Timing and Sequential Logic
 
 ## Public API and ownership
 

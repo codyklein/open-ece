@@ -1,6 +1,6 @@
-# Windows build and portable ZIP (v0.9.0)
+# Windows build and portable ZIP
 
-The v0.9.0 Windows target is Windows 10 (1809+) / Windows 11 x86_64,
+The Windows desktop target is Windows 10 (1809+) / Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a manual Windows 10/11
@@ -201,3 +201,15 @@ Hosted Windows validation does not establish DPI, GPU, accessibility or visual
 correctness on every Windows 10/11 desktop. Manual checks on those systems remain
 useful. App-local runtime updates require a new package. Qt 6.8.3 is pinned for
 this milestone, not promised to be the newest security-maintained Qt release.
+
+## Candidate documentation and examples
+
+Current candidate packages include `examples/` and offline `docs/`, including
+[first-session guidance](first-session.md). Open examples through the normal File
+menu; restoration is inert. The fresh Windows package probe stages, restores and
+round-trips all nine packaged files, in addition to its existing persistence test.
+The package manifest covers the examples, guide and screenshots as well as runtime
+files and licenses. Source/test links in developer docs refer to the repository.
+
+Version 0.9.0 filenames above match current CMake/CI metadata during stabilization;
+[release freeze](releasing.md) updates them together. They do not assert v1.0 is released.
