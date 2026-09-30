@@ -16,6 +16,7 @@
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QtTest>
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
@@ -29,6 +30,27 @@ template <class T> T* control(QObject& v, const char* name) {
     return result;
 }
 void click(QObject& v, const char* name) { control<QPushButton>(v, name)->click(); }
+QList<QPolygonF> plotSamples(QObject& v) {
+    QList<QPolygonF> result;
+    for (const auto* name : {"time_plot", "spectrum_plot", "filter_response_plot"})
+        for (auto* item : control<QwtPlot>(v, name)->itemList(QwtPlotItem::Rtti_PlotCurve)) {
+            auto* curve = static_cast<QwtPlotCurve*>(item);
+            QPolygonF samples;
+            for (std::size_t i = 0; i < curve->dataSize(); ++i)
+                samples.append(curve->sample(static_cast<int>(i)));
+            result.append(samples);
+        }
+    return result;
+}
+void stepUp(QWidget* spin, bool wheel) {
+    if (wheel) {
+        const QPointF local = spin->rect().center();
+        QWheelEvent event(local, spin->mapToGlobal(local.toPoint()), {}, {0, 120}, Qt::NoButton,
+                          Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(spin, &event);
+    } else
+        QTest::keyClick(spin, Qt::Key_Up);
+}
 void erase(QLineEdit* editor) {
     editor->setFocus();
     QTest::keyClick(editor, Qt::Key_A, Qt::ControlModifier, 0);
@@ -110,6 +132,144 @@ class ReleaseCorrectnessTest : public QObject {
         QVERIFY(!v.findChild<QTimer*>()->isActive());
         QApplication::processEvents();
         QCOMPARE(control<QTableWidget>(v, "comm_ber_results")->rowCount(), 0);
+    }
+    void acceptedSignalStepMarksStale_data() {
+        QTest::addColumn<bool>("wheel");
+        QTest::newRow("keyboard-up") << false;
+        QTest::newRow("mouse-wheel-up") << true;
+    }
+    void acceptedSignalStepMarksStale() {
+        QFETCH(bool, wheel);
+        auto p = openece::project::default_project();
+        p.signals.frequency.text = "20";
+        p.signals.filter = "fir_lowpass";
+        p.signals.cutoff.text = "40";
+        p.signals.taps_text = "127";
+        ProjectDocument document(std::make_unique<ProjectWorkspace>(p));
+        auto& w = document.workspace();
+        w.show();
+        QApplication::processEvents();
+        click(w, "generate");
+        auto* status = control<QLabel>(w, "status");
+        QVERIFY(status->text().contains("plots match the current parameters"));
+        QVERIFY(!document.dirty());
+        const auto original = plotSamples(w);
+        auto* spin = control<QDoubleSpinBox>(w, "frequency");
+        spin->setFocus();
+        // No erase/intermediate invalid buffer: each accepted step bypasses the
+        // inner editor's textChanged signal on Qt 6.11.2.
+        for (int i = 0; i < 5; ++i)
+            stepUp(spin, wheel);
+        QCOMPARE(static_cast<DraftDouble*>(spin)->raw_text(), QString("25.0000"));
+        QVERIFY2(status->text().contains("stale"), qPrintable(status->text()));
+        QCOMPARE(plotSamples(w), original);
+        QVERIFY(document.dirty());
+        const auto edited = w.capture();
+        QCOMPARE(edited.signals.frequency.text, std::string("25.0000"));
+        const auto revision = document.revision();
+        click(w, "generate");
+        QVERIFY(status->text().contains("plots match the current parameters"));
+        QVERIFY(plotSamples(w) != original);
+        QCOMPARE(w.capture(), edited);
+        QCOMPARE(document.revision(), revision); // Calculation is not a persisted edit.
+    }
+    void signalEditorPathsMarkStale_data() {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<QString>("input");
+        QTest::addColumn<QString>("method");
+        const std::pair<const char*, const char*> fields[] = {
+            {"amplitude", "2"},  {"frequency", "25"},     {"sample_rate", "2048"},
+            {"duration", "0.5"}, {"filter_cutoff", "45"}, {"filter_taps", "129"},
+            {"phase", "45"}};
+        for (const auto& [name, valid] : fields) {
+            QTest::newRow(qPrintable(QString(name) + "-typed"))
+                << QString(name) << QString(valid) << QString("typing");
+            QTest::newRow(qPrintable(QString(name) + "-pending"))
+                << QString(name) << QString(name == QString("phase") ? "3*pi/" : "1e-")
+                << QString("typing");
+            if (name != QString("phase"))
+                for (const auto* method : {"keyboard-step", "wheel-step"})
+                    QTest::newRow(qPrintable(QString(name) + "-" + method))
+                        << QString(name) << QString{} << QString(method);
+        }
+    }
+    void signalEditorPathsMarkStale() {
+        QFETCH(QString, name);
+        QFETCH(QString, input);
+        QFETCH(QString, method);
+        const bool step = method != "typing";
+        auto p = openece::project::default_project();
+        p.signals.filter = "fir_lowpass";
+        SignalsDspView v(nullptr, &p.signals, true);
+        v.show();
+        QApplication::processEvents();
+        click(v, "generate");
+        auto* status = control<QLabel>(v, "status");
+        QVERIFY(status->text().contains("plots match the current parameters"));
+        const auto original = plotSamples(v);
+        auto* object = v.findChild<QWidget*>(name);
+        QVERIFY(object);
+        auto* editor = qobject_cast<QLineEdit*>(object);
+        if (!editor)
+            editor = object->findChild<QLineEdit*>();
+        QVERIFY(editor);
+        editor->setFocus();
+        if (step) {
+            stepUp(object, method == "wheel-step");
+        } else {
+            QTest::keyClick(editor, Qt::Key_A, Qt::ControlModifier);
+            QTest::keyClicks(editor, input); // Replace selection, without first erasing it.
+        }
+        QVERIFY2(status->text().contains("stale"), qPrintable(status->text()));
+        const auto visible = editor->text();
+        QTest::keyClick(editor, Qt::Key_Tab);
+        QCOMPARE(editor->text(), visible);
+        QVERIFY(status->text().contains("stale"));
+        QCOMPARE(plotSamples(v), original); // No analysis ran during editing/focus loss.
+        v.synchronize_pending_text();
+        const auto saved = openece::project::encode_project(p);
+        auto restored = openece::project::decode_project(saved).snapshot;
+        QCOMPARE(restored, p);
+        SignalsDspView inert(nullptr, &restored.signals, true);
+        auto* restored_object = inert.findChild<QWidget*>(name);
+        auto* restored_editor = qobject_cast<QLineEdit*>(restored_object);
+        if (!restored_editor)
+            restored_editor = restored_object->findChild<QLineEdit*>();
+        QCOMPARE(restored_editor->text(), visible);
+        for (const auto& samples : plotSamples(inert))
+            QVERIFY(samples.isEmpty());
+        QVERIFY(control<QLabel>(inert, "status")->text().isEmpty());
+        if (!step) {
+            // Raw suffix-free draft text remains exact, including incomplete numbers.
+            QString raw = editor->text();
+            if (auto* d = qobject_cast<QDoubleSpinBox*>(object))
+                raw = static_cast<DraftDouble*>(d)->raw_text();
+            else if (auto* i = qobject_cast<QSpinBox*>(object))
+                raw = static_cast<DraftInt*>(i)->raw_text();
+            QCOMPARE(raw, input);
+        }
+    }
+    void signalSelectorsMarkStale_data() {
+        QTest::addColumn<QString>("name");
+        for (const char* name : {"phase_unit", "spectral_window", "filter_type"})
+            QTest::newRow(name) << QString(name);
+    }
+    void signalSelectorsMarkStale() {
+        QFETCH(QString, name);
+        SignalsDspView v;
+        v.show();
+        QApplication::processEvents();
+        const auto original = plotSamples(v);
+        auto* box = v.findChild<QComboBox*>(name);
+        QVERIFY(box);
+        box->setFocus();
+        QTest::keyClick(box, Qt::Key_Down);
+        QCOMPARE(box->currentIndex(), 1);
+        QVERIFY(control<QLabel>(v, "status")->text().contains("stale"));
+        QCOMPARE(plotSamples(v), original);
+        click(v, "generate");
+        QVERIFY(
+            control<QLabel>(v, "status")->text().contains("plots match the current parameters"));
     }
     void rawSignalsFieldsMarkStale_data() {
         QTest::addColumn<QString>("name");

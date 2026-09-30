@@ -220,11 +220,15 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     layout->addWidget(tabs, 1);
 
     connect(button, &QPushButton::clicked, this, [this] { generate(); });
+    const auto mark_stale = [this] {
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
+    };
     for (auto* spin : {amplitude_, frequency_, sample_rate_, duration_, cutoff_}) {
-        connect(static_cast<DraftDouble*>(spin)->editor(), &QLineEdit::textChanged, this, [this] {
-            status_->setText(
-                "Parameters changed. Displayed results are stale; Generate to update.");
-        });
+        connect(static_cast<DraftDouble*>(spin)->editor(), &QLineEdit::textChanged, this,
+                mark_stale);
+        // Accepted steps (arrows/wheel) update Qt's editor with its signals blocked.
+        // Observe the spin box too; raw/invalid edits still use the editor signal.
+        connect(spin, &QDoubleSpinBox::textChanged, this, mark_stale);
     }
     connect(phase_, &QLineEdit::textChanged, this, [this] {
         status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
@@ -242,9 +246,9 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
         tap_count_->setEnabled(filter_->currentIndex() != 0);
         status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
-    connect(static_cast<DraftInt*>(tap_count_)->editor(), &QLineEdit::textChanged, this, [this] {
-        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
-    });
+    connect(static_cast<DraftInt*>(tap_count_)->editor(), &QLineEdit::textChanged, this,
+            mark_stale);
+    connect(tap_count_, &QSpinBox::textChanged, this, mark_stale);
     connect(phase_unit_, &QComboBox::currentIndexChanged, this, [this] { change_phase_unit(); });
     auto& d = state_.get();
     bind_spin(amplitude_, d.amplitude.text);

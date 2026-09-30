@@ -4,7 +4,7 @@ Checkpoint 4 is **open**. This record does not claim physical Windows success or
 complete native keyboard/accessibility validation. Do not freeze or release v1.0
 on the strength of hosted/offscreen tests alone.
 
-## Evidence as of 2026-09-28
+## Initial evidence (2026-09-28)
 
 The source baseline was checkpoint 3 commit
 `c932f83d456fef6c69859737e6ec474ab0dfe372`. Native probes below used that source
@@ -14,7 +14,7 @@ was made. Rebuild and repeat affected checks after any subsequent code change.
 
 | Environment/check | Evidence and result |
 | --- | --- |
-| Physical Windows 11 | User reports the installation is not available for testing now. OS build, displays, package launch and workflows are **pending**. |
+| Physical Windows 11 | Initially unavailable; see the 2026-09-30 physical report below. A Signals stale-result blocker was found. |
 | Physical Windows 10 | No installation available. Decision: may work, but **not validated or claimed supported for v1.0**. Windows Server CI is not substitute evidence. |
 | Native Fedora | Fedora 44 KDE Plasma Desktop, Plasma 6.7.5, Wayland, x86_64; Acer Predator PH315-55; Qt 6.11.2, GCC 16.2.1. `loginctl` subsequently reported the active session locked (`LockedHint=yes`); this was not an interactive human desktop pass. |
 | Fedora display | One connected eDP-1 display, 2560×1440 at 240 Hz, desktop scale 125%, logical 2048×1152. Desktop settings were not changed. |
@@ -22,7 +22,7 @@ was made. Rebuild and repeat affected checks after any subsequent code change.
 | Native persistence | `openece_packaged_persistence` with the build-tree runtime and shipped examples: passed Unicode/space paths, invalid drafts, inert reopen, overwrite, isolated recent preferences, normal close and all nine example round trips. Uses scripted file choosers, not manual native dialogs. |
 | Protected Fedora destination | `openece_project_document_tests readOnlyDirectoryWhenEnforced`: passed, not skipped. Atomic save rejected a read-only directory and preserved existing destination bytes. |
 | Native keyboard/layout probe | Five test cases failed: focus/shortcut editing, modal observation, and two resize cases. Adding bounded exposure/activation/resize waits did not resolve them. The compositor did not report activation and the test window stayed at 900×650 after requesting 800×600. The temporary harness changes were removed; assertions remain unchanged. This does not establish an application defect or a native keyboard pass. Manual reproduction is required. |
-| True mixed-DPI | Not validated; only one connected Fedora display, Windows monitor configuration unknown. |
+| True mixed-DPI | Not validated; one connected Fedora display and one active Windows display. |
 | Native screen reader / enlarged system text | Not validated. |
 
 The native probes are automated Qt interactions on the real desktop. They do not
@@ -35,6 +35,48 @@ remain recorded rather than being counted as passes. The locked session is a
 relevant environment limitation, not proof of an application focus defect; repeat
 the keyboard/resize checks in an unlocked interactive session. No attempt was
 made to unlock or change the user’s session.
+
+## Physical Windows report: 2026-09-30
+
+User-reported environment: Windows 11 Pro 25H2, build 26200.9457, AMD64,
+2560×1440 at 150%, one active display. Package from commit
+`17f58597e2461cc40320cd7b0dce08ef4692a876`:
+`OpenECE-v0.9.0-windows-x86_64.zip`, SHA-256
+`4c2c23d875a2afe2a5a828d2245c37327ae4a77acc3653413d495f493a4d0347`.
+Extraction/launch path:
+`C:\Users\Cody\Desktop\OpenECE physical π test\OpenECE-v0.9.0-windows-x86_64`.
+Account privileges and installed development tools were not reported; no broader
+workflow/scaling/accessibility pass is inferred from this reproduction.
+
+**Blocker found:** open `examples/sine-fft-fir.openece`, Generate at 20 Hz with
+40 Hz FIR cutoff / 127 taps, then scroll the mouse wheel upward over Frequency to
+25 Hz. Old plots remain visible, but the status incorrectly says they match the
+current parameters. Generate again correctly recomputes at 25 Hz. The tester
+clarified that the change used the mouse wheel, not typed replacement digits.
+
+Local Qt-event tests reproduce this with five wheel events and also five keyboard
+Up presses. The visible field becomes `25.0000 Hz`. Qt's accepted stepping path
+updates the inner editor with its signals blocked, then emits the spin box's own
+`textChanged` signal. Persistence already observes both; Signals result invalidation
+observed only the inner editor. The same gap affects amplitude, sample rate,
+duration, FIR cutoff and taps. Typed valid/incomplete text, phase and the three
+selectors already invalidate correctly.
+
+The narrow fix observes both text signals for the six spin-box fields, leaving
+raw-text persistence, numerical parsing and dirty-state bookkeeping unchanged.
+Regression cases cover the exact 20→25 Hz wheel/keyboard reproduction, accepted
+steps for all six fields, typed valid/invalid text for all seven fields, and
+phase-unit/window/filter choices. They verify unchanged retained plot samples
+until Generate, stale status, exact draft round trips, inert restoration, and
+no extra document revision from calculation. Before the fix, fourteen stepping
+cases failed; all pass with the fix. Existing empty-buffer regressions remain.
+
+**Physical retest pending:** use the new candidate identified in the fix report,
+not the above defective ZIP. Repeat the exact wheel reproduction and keyboard
+Up/Down, then Generate; check stale immediately after editing and current only
+after generation. Repeat representative amplitude/rate/duration/cutoff/taps and
+phase/selector edits. Record the new hash and results here before closing this
+blocker. Other checkpoint-4 manual checks remain open.
 
 ## Identifying the Windows candidate
 

@@ -208,8 +208,8 @@ logs uploaded on both platforms. No example, sweep point or assertion was remove
 
 ## Checkpoint 4 — validation in progress
 
-Physical Windows 11 testing is unavailable at present, so this checkpoint is not
-complete. The [evidence record](physical-validation.md) distinguishes native
+Physical Windows 11 testing has started and found a Signals stale-result blocker;
+its narrow fix awaits physical retest, so this checkpoint is not complete. The [evidence record](physical-validation.md) distinguishes native
 Fedora automated probes, hosted CI and still-pending manual checks.
 
 Two OpenECE-controlled Clang warnings have narrow corrections: the replacement
@@ -218,3 +218,10 @@ instead of deprecated `QMessageBox::setButtonText`, and the Digital-to-Timing
 callback explicitly captures `this` under C++20. The replacement regression also
 checks the visible button text. No numerical, persistence, schema or dependency
 behavior changed. No release-pinned fixture bytes were modified.
+
+The 2026-09-30 physical Windows 11 wheel-edit report exposed a second Signals
+invalidation path: accepted spin steps suppress the inner editor signal. Signals
+now also observes each spin box's text signal. The [physical record](physical-validation.md)
+contains the defective artifact hash, environment, reproduction, root cause and
+required retest. The fix changes result invalidation only; schema-1, exact pending
+text, engineering algorithms and document dirty-state semantics are unchanged.
