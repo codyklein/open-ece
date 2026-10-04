@@ -353,6 +353,39 @@ class ReleaseUxTest : public QObject {
         }
     }
 
+    void signalEnlargedTextFits_data() {
+        QTest::addColumn<int>("points");
+        QTest::newRow("18-point") << 18;
+        QTest::newRow("24-point") << 24;
+    }
+    void signalEnlargedTextFits() {
+        QFETCH(int, points);
+        ProjectWorkspace w(openece::project::default_project());
+        auto font = w.font();
+        font.setPointSize(points);
+        w.setFont(font);
+        w.resize(1280, 900);
+        w.show();
+        QApplication::processEvents();
+        for (const char* text : {"Sample &rate", "Spectral &window"}) {
+            QLabel* label = nullptr;
+            for (auto* candidate : w.findChildren<QLabel*>())
+                if (candidate->text() == QString(text))
+                    label = candidate;
+            QVERIFY(label);
+            QVERIFY2(label->width() >= label->sizeHint().width(), qPrintable(label->text()));
+        }
+        for (auto name : {"phase_unit", "spectral_window", "filter_type"}) {
+            auto* box = get<QComboBox>(w, name);
+            QVERIFY2(box->width() >= box->minimumSizeHint().width(), name);
+        }
+        auto* pi = get<QPushButton>(w, "insert_pi");
+        QVERIFY(pi->width() >= pi->sizeHint().width());
+        if (auto dir = qEnvironmentVariable("OPENECE_UX_SCREENSHOTS"); !dir.isEmpty()) {
+            QDir().mkpath(dir);
+            w.grab().save(dir + "/signals-font-" + QString::number(points) + ".png");
+        }
+    }
     void smallWindow_data() {
         QTest::addColumn<int>("points");
         QTest::newRow("normal") << 0;

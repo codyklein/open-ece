@@ -48,9 +48,9 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     auto* layout = new QHBoxLayout(central);
 
     auto* controls = new QGroupBox("Signal and filter", central);
-    controls->setMaximumWidth(400);
     auto* left = new QVBoxLayout(controls);
     auto* form = new QFormLayout;
+    form->setRowWrapPolicy(QFormLayout::WrapLongRows);
     amplitude_ = field(controls, "amplitude", 0.0, 1e6, 1.0, 4);
     frequency_ = field(controls, "frequency", 0.0, 5e8, 8.0, 4, " Hz");
     phase_ = new QLineEdit("0", controls);
@@ -61,10 +61,11 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     pi_button_->setObjectName("insert_pi");
     pi_button_->setAccessibleName("Insert pi");
     pi_button_->setToolTip("Insert π at the cursor, replacing selected text (Radians only).");
-    pi_button_->setFixedWidth(28);
+    pi_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     pi_button_->setEnabled(false);
     phase_unit_ = new QComboBox(controls);
     phase_unit_->setObjectName("phase_unit");
+    phase_unit_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     phase_unit_->setAccessibleName("Phase unit");
     phase_unit_->addItems({"Degrees", "Radians"});
     phase_unit_->setToolTip(
@@ -135,7 +136,7 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     control_scroll->setWidgetResizable(true);
     control_scroll->setFrameShape(QFrame::NoFrame);
     control_scroll->setMinimumWidth(310);
-    control_scroll->setMaximumWidth(400);
+    control_scroll->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     control_scroll->setWidget(controls);
     layout->addWidget(control_scroll);
 
