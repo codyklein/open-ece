@@ -25,9 +25,10 @@ destination requires confirmation against this final filename.
 
 The title is `Untitled — OpenECE` or `lab.openece — OpenECE`. An asterisk immediately
 after the name means persisted editable content has changed. The status bar and
-window tooltip show the full current path. Changing saved domain/tab selections
-also marks the project modified. Computing results, progress, cancellation and
-automatic navigation to result tabs do not mark it modified by themselves.
+window tooltip show the full current path. Domain/tab navigation alone does not mark the project modified or prompt to save.
+An explicit Save still captures those selections. Physical inputs, units and
+configuration changes do mark it modified. Computing results, progress,
+cancellation and automatic navigation to result tabs do not mark it modified.
 
 Before dirty New/Open/Close, choose:
 

@@ -69,8 +69,9 @@ ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert
         navigation->setCurrentRow(
             static_cast<int>(tokens.indexOf(qt_text(snapshot_.selected_domain))));
         connect(navigation, &QListWidget::currentRowChanged, this, [this, tokens](int row) {
-            if (row >= 0)
-                edit(snapshot_.selected_domain, draft_text(tokens[row]));
+            if (!restoring_ && row >= 0 && row < tokens.size())
+                snapshot_.selected_domain =
+                    draft_text(tokens[row]); // Saved choice, not a data edit.
         });
         for (int i = 0; i < pages->count(); ++i)
             connect(static_cast<DraftView*>(pages->widget(i)), &DraftView::draftEdited, this,

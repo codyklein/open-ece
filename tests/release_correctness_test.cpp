@@ -399,12 +399,13 @@ class ReleaseCorrectnessTest : public QObject {
         QVERIFY(ber->rowCount() > 0);
         control<QListWidget>(w, "domain_navigation")->setCurrentRow(3);
         control<QTabWidget>(w, "comm_tabs")->setCurrentIndex(3);
-        QVERIFY(d.dirty()); // Persisted navigation edit, not an execution-input edit.
+        QVERIFY(!d.dirty()); // Navigation preserves results and does not mark data dirty.
         QVERIFY(ber->rowCount() > 0);
         control<QTabWidget>(w, "comm_tabs")->setCurrentIndex(2);
         auto* budget = control<QSpinBox>(w, "comm_budget");
         erase(budget->findChild<QLineEdit*>());
         QVERIFY(w.capture().communications.budget_text.empty());
+        QVERIFY(d.dirty());
         QCOMPARE(ber->rowCount(), 0);
     }
     void projectControlledTextIsPlainAndExact() {

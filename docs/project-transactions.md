@@ -110,8 +110,11 @@ identity/locking protocol. Per-directory case-sensitive Windows configurations a
 not claimed for prospective-path comparison; conservative re-staging does not depend
 on that comparison. Empty/embedded-NUL paths are invalid.
 
-Only `draftEdited` advances revisions and marks dirty. Derived results and automatic
-result navigation do not. Successful save records the captured revision; successful
+Only project-data `draftEdited` notifications advance revisions and mark dirty.
+Domain/tab selections update the authoritative snapshot without emitting that
+signal: explicit Save captures them, but navigation alone does not prompt to save.
+Units, configuration and raw pending input still emit data edits. Derived results
+and automatic result navigation do not. Successful save records the captured revision; successful
 Open/New installation starts new session bookkeeping. The counter saturates instead
 of wrapping; a separate dirty bit prevents saturation from implying cleanliness.
 

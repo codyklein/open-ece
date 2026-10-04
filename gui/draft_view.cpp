@@ -101,8 +101,8 @@ void DraftView::bind_choice(QComboBox* box, std::string& field, const QStringLis
 void DraftView::bind_tabs(QTabWidget* tabs, std::string& field, const QStringList& tokens) {
     tabs->setCurrentIndex(static_cast<int>(tokens.indexOf(qt_text(field))));
     connect(tabs, &QTabWidget::currentChanged, this, [this, &field, tokens](int index) {
-        if (index >= 0 && index < tokens.size())
-            edit(field, draft_text(tokens[index]));
+        if (!restoring_ && index >= 0 && index < tokens.size())
+            field = draft_text(tokens[index]); // Navigation is saved without marking data dirty.
     });
 }
 void DraftView::bind_table(QTableWidget* table,
