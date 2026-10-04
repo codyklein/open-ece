@@ -78,6 +78,69 @@ after generation. Repeat representative amplitude/rate/duration/cutoff/taps and
 phase/selector edits. Record the new hash and results here before closing this
 blocker. Other checkpoint-4 manual checks remain open.
 
+## Follow-up physical findings received 2026-10-04
+
+The tester reports completion of the Windows 11 and native Fedora pass and these
+four findings. The exact artifact hash, Fedora environment and enlarged-text
+setting for this follow-up were not supplied; the earlier Windows reproduction
+has its own identified hash above. Do not silently transfer earlier physical
+evidence to the new code/package. Targeted retests are pending after review.
+
+| Issue / priority | Physical observation | Contained correction / evidence | Retest status |
+| --- | --- | --- | --- |
+| [#14](https://github.com/codyklein/open-ece/issues/14), blocker | Tab/Shift+Tab focus and actions work on Windows/Fedora, but retained selection highlights disagree with active focus in Signals, Digital and Timing. | A contrasting Qt focus frame tracks the actual focused control. Existing selections, focus order and input behavior remain intact. Tests follow focus through Tab/Backtab, domains, tables and timing actions; inspect the current frame target and teardown. | Pending Windows/Fedora visual/keyboard retest. |
+| [#15](https://github.com/codyklein/open-ece/issues/15), blocker | Switching workspace alone marks a clean project dirty and prompts on close. | Domain/tab choices still update the authoritative snapshot and are captured on explicit Save. Navigation emits no project-data edit notification. Tests cover all saved tabs, no revision/prompt, explicit save/reopen, real raw/unit/configuration edits and result-only actions. | Pending Windows/Fedora workflow retest. |
+| [#16](https://github.com/codyklein/open-ece/issues/16), minor | BER upper-bound legend entry and adjacent labels shift during computation; result columns resize. Final results are stable. | Retain the four BER curves/legend entries across updates. Reserve bounded result-column widths once per experiment, retaining manual resizing. Tests cross pending, zero-error, partial and complete states, cancellation/resume, legend-widget identity and widths. Exact counts/confidence semantics stay unchanged. | Pending live-computation visual retest. |
+| [#17](https://github.com/codyklein/open-ece/issues/17), minor | Fedora enlarged text crowds/clips Signals Sample rate, Spectral window and Degrees; controls/scrolling remain usable. | Remove fixed form width caps, wrap long rows, size phase controls from their contents. 18/24-point test reproduced selector clipping before the fix and passes after it. Existing four scales and small-window checks remain. | Pending Fedora enlarged-text retest and short Windows layout smoke. |
+
+These corrections introduce no engineering feature or schema change. The latest
+user instruction supersedes the earlier checkpoint requirement that user
+navigation itself mark the project dirty. Navigation choices are still saved;
+physical input, units, configuration, IDs and pending text remain dirty-tracked.
+All four issues remain open until targeted retests have been reviewed.
+
+### Bounded retest for the new candidate
+
+Identify the **new inner ZIP hash** from the final fix report, extract freshly,
+and record OS/build, scaling/text setting, commit/hash and pass/fail per row.
+Review changes before starting the retest. The previous defective/stabilization
+hashes do not validate these corrections. This is an affected-behavior pass plus
+a short regression smoke, not a repeat of the entire physical checklist.
+
+Windows 11 and Fedora:
+
+1. **Focus (#14):** in Signals, Combinational and Timing, use Tab and Shift+Tab,
+   arrows and Space/Enter. Confirm the contrasting outline follows actual focus,
+   remains visible on light/dark backgrounds, and differs from retained selections.
+   Enter/leave a table editor with F2/Enter/Escape, switch tabs and scroll a focused
+   control into view. Verify no stuck outline or focus trap. Open a normal File
+   dialog and return; the workspace cue must resume on the actual focused control.
+2. **Navigation (#15):** open a saved clean project, switch all top-level domains
+   and representative domain/editor/result tabs. Verify no asterisk and no save
+   prompt on close. Explicitly Save navigation, reopen and check those selections.
+   Change a physical input/raw invalid text or unit/configuration, verify the
+   modified marker and Save/Discard/Cancel. Computation must not add a data edit.
+3. **BER (#16):** run BPSK/QPSK with a budget long enough to observe updates. Check
+   legend entries do not appear/disappear or shift, columns stay fixed, and long
+   text is available through horizontal scrolling. Cancel/resume/Step; inspect
+   exact errors/bits, partial/complete labels and zero-error upper-bound entries.
+   Resize a column manually and confirm updates retain the chosen width.
+4. **Short regression:** open examples inertly; Generate Signals and wheel-edit
+   20→25 Hz (immediate stale, then current after Generate), evaluate half-adder,
+   Step Timing, solve DC divider and RC corner, run a noiseless communications
+   link. Save/reopen one Unicode/space path, confirm preserved draft and empty
+   derived results, and exit normally.
+
+Fedora enlarged text (#17): use the previously problematic desktop-text setting,
+maximize and also shrink the window. Inspect Sample rate, Spectral window, phase
+Degrees/Radians and π, cutoff/taps, Generate/status and scrolling. Required
+controls must be readable and reachable. Windows: inspect the same form at the
+previous 150% scaling and one enlarged setting if available. Some horizontal
+workspace scrolling is expected with large text; this is not a responsive redesign.
+
+True mixed-DPI and screen-reader validation remain explicitly unvalidated if
+hardware/tools are unavailable. Do not infer those passes from focus tests.
+
 ## Identifying the Windows candidate
 
 Use the normal branch CI `Build, test and package` run for the checkpoint commit.

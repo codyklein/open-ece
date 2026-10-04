@@ -41,7 +41,8 @@ Draft changes, dirty bookkeeping and execution invalidation remain separate:
 - The document tracks those persisted edits for dirty state.
 - Domain execution-input handlers invalidate their own derived state.
 - Computation/result updates do not edit the project or mark it dirty.
-- Persisted navigation can mark a project dirty without invalidating execution.
+- Navigation choices are retained without data-edit notifications or execution
+  invalidation; checkpoint 4 supersedes the earlier navigation-dirty policy.
 - Restoration remains inert, with editing signals suppressed.
 
 A regression exercises successful calculations across all domains, verifies an
@@ -225,3 +226,13 @@ now also observes each spin box's text signal. The [physical record](physical-va
 contains the defective artifact hash, environment, reproduction, root cause and
 required retest. The fix changes result invalidation only; schema-1, exact pending
 text, engineering algorithms and document dirty-state semantics are unchanged.
+
+The follow-up physical pass reported focus visibility, navigation-only dirty state,
+BER live-layout flicker and Fedora Signals enlarged-text clipping. Issues #14–#17
+track these independently. Narrow corrections and automated checks are complete;
+physical retests on the replacement artifact remain pending. See the
+[targeted retest plan](physical-validation.md). The BER plots now retain curves/
+legend entries between updates; result columns stay user-resizable with stable
+initial widths. Signals forms use content sizing and wrapping. Navigation choices
+remain schema-1 content but navigation alone no longer triggers Save prompts.
+Checkpoint 4 remains open and checkpoint 5 has not begun.
