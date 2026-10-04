@@ -3,12 +3,37 @@
 #include "communications_view.hpp"
 #include "digital_workspace.hpp"
 #include "signals_dsp_view.hpp"
+#include <QApplication>
+#include <QFocusFrame>
 #include <QHBoxLayout>
 #include <QListWidget>
+#include <QPainter>
+#include <QPointer>
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QTimer>
 namespace openece::gui {
+namespace {
+// Native selection highlights can outlive focus. One contrasting outline tracks
+// actual focus; Qt's QFocusFrame owns positioning/scrolling and never takes input.
+class CurrentFocusFrame final : public QFocusFrame {
+  public:
+    explicit CurrentFocusFrame(QWidget* parent) : QFocusFrame(parent) {
+        setObjectName("keyboard_focus_indicator");
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+    }
+
+  protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        painter.setPen(Qt::black);
+        painter.drawRect(rect().adjusted(0, 0, -1, -1));
+        painter.setPen(Qt::white);
+        painter.drawRect(rect().adjusted(1, 1, -2, -2));
+    }
+};
+} // namespace
+
 ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert, QWidget* parent)
     : DraftView(parent), snapshot_(std::move(snapshot)) {
     project::validate_structure(snapshot_);
@@ -50,6 +75,11 @@ ProjectWorkspace::ProjectWorkspace(project::ProjectSnapshot snapshot, bool inert
         for (int i = 0; i < pages->count(); ++i)
             connect(static_cast<DraftView*>(pages->widget(i)), &DraftView::draftEdited, this,
                     &DraftView::draftEdited);
+        QPointer<QFocusFrame> focus = new CurrentFocusFrame(host_);
+        connect(qApp, &QApplication::focusChanged, this, [this, focus](QWidget*, QWidget* now) {
+            if (focus)
+                focus->setWidget(now && isAncestorOf(now) ? now : nullptr);
+        });
         navigation->setFocus(Qt::OtherFocusReason);
         restoring_ = false;
         if (inert && capture() != expected)

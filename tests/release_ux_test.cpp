@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QFocusFrame>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -220,6 +221,51 @@ class ReleaseUxTest : public QObject {
         QVERIFY(QApplication::focusWidget() != focused);
         QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
         QCOMPARE(QApplication::focusWidget(), focused);
+    }
+    void currentFocusIndicatorFollowsKeyboard() {
+        ProjectWorkspace w(openece::project::default_project());
+        w.resize(1100, 850);
+        w.show();
+        w.activateWindow();
+        QApplication::processEvents();
+        auto* nav = get<QListWidget>(w, "domain_navigation");
+        auto* indicator = get<QFocusFrame>(w, "keyboard_focus_indicator");
+        nav->setFocus(Qt::TabFocusReason);
+        QCOMPARE(indicator->widget(), QApplication::focusWidget());
+        QTest::keyClick(nav, Qt::Key_Tab);
+        QVERIFY(QApplication::focusWidget() != nav);
+        QCOMPARE(indicator->widget(), QApplication::focusWidget());
+        QVERIFY(indicator->isVisible());
+        QCOMPARE(nav->currentRow(), 0); // Selection stays, focus outline moves.
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Backtab);
+        QCOMPARE(QApplication::focusWidget(), nav);
+        QCOMPARE(indicator->widget(), nav);
+        for (int row : {0, 1}) {
+            nav->setCurrentRow(row);
+            nav->setFocus(Qt::TabFocusReason);
+            auto* target = row == 0 ? static_cast<QWidget*>(get<QPushButton>(w, "generate"))
+                                    : static_cast<QWidget*>(get<QTableWidget>(w, "digital_inputs"));
+            QVERIFY(reach(target));
+            QCOMPARE(indicator->widget(), QApplication::focusWidget());
+            QVERIFY(indicator->widget() != nav);
+            QVERIFY(indicator->isVisible());
+        }
+        QVERIFY(tab(get<QTabWidget>(w, "digital_tabs"), 1));
+        QVERIFY(reach(get<QPushButton>(w, "timing_step")));
+        QCOMPARE(indicator->widget(), QApplication::focusWidget());
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Space);
+        QVERIFY(get<QLabel>(w, "timing_status")->text().contains("Paused"));
+        QCOMPARE(indicator->widget(), QApplication::focusWidget());
+        if (auto dir = qEnvironmentVariable("OPENECE_UX_SCREENSHOTS"); !dir.isEmpty()) {
+            QDir().mkpath(dir);
+            w.grab().save(dir + "/current-focus.png");
+        }
+        QWidget outside;
+        outside.show();
+        outside.activateWindow();
+        outside.setFocus();
+        QApplication::processEvents();
+        QVERIFY(!indicator->widget());
     }
     void projectShortcutsAndPrompts() {
         QTemporaryDir dir;
