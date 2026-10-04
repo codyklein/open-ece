@@ -433,6 +433,22 @@ void CommunicationsView::ensure_experiment() {
     experiment_modulation_ = modulation();
     experiment_ = std::make_unique<communications::BerExperiment>(communications::BerRequest{
         experiment_modulation_, std::move(grid), budget, seed(bit_seed_), seed(noise_seed_)});
+    // Size once for the full range of bounded result text, then leave columns
+    // user-resizable. Live counts/status updates must not move adjacent columns.
+    auto* header = ber_table_->horizontalHeader();
+    header->setSectionResizeMode(QHeaderView::Interactive);
+    header->setStretchLastSection(false);
+    const QStringList width_samples{
+        "-1.2345678901234567e+100", "1000000",
+        "1000000 / 1000000",        "0 errors in 1000000 bits; 95% upper ≤ 1.23456789012e-12",
+        "1.23456789012e-100",       "Failed (partial results retained)"};
+    const auto metrics = ber_table_->fontMetrics();
+    for (int col = 0; col < ber_table_->columnCount(); ++col)
+        ber_table_->setColumnWidth(
+            col,
+            std::max(metrics.horizontalAdvance(width_samples[col]),
+                     metrics.horizontalAdvance(ber_table_->horizontalHeaderItem(col)->text())) +
+                24);
     render_ber();
     {
         QSignalBlocker b(tabs_);
