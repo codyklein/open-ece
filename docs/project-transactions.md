@@ -179,7 +179,8 @@ The title is `Untitled — OpenECE` or `filename.openece — OpenECE`, with `*` 
 following the name only when persisted draft edits are dirty. The window tooltip,
 window file path and status bar expose the absolute path. Generate/Solve/Run,
 progress, cancellation, results and automatic result navigation do not dirty a
-project. User changes to persisted domain/tab selections do; restoration does not.
+project. User domain/tab navigation also stays clean, while explicit Save retains
+those selections. Restoration does not mark the project dirty.
 
 Recent projects use **QSettings organization `OpenECE`, application `OpenECE`, key
 `projects/recentPaths`**, outside the project file. At most ten absolute paths are
