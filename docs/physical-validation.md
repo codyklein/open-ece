@@ -1,8 +1,10 @@
 # v1.0 checkpoint 4: physical validation
 
-Checkpoint 4 is **open**. This record does not claim physical Windows success or
-complete native keyboard/accessibility validation. Do not freeze or release v1.0
-on the strength of hosted/offscreen tests alone.
+Checkpoint 4 is **closed** following the final user-reported Fedora and physical
+Windows 11 retests recorded below. Earlier failures and pending requests remain
+as historical evidence and are superseded only by the identified final retests.
+This is not formal accessibility certification or a v1.0 release freeze.
+Checkpoint 5 has not begun; no v1.0 tag or release is authorized by this closure.
 
 ## Initial evidence (2026-09-28)
 
@@ -223,6 +225,74 @@ BER/navigation/save-reopen smoke is needed for the unchanged accepted behaviors.
 Record the new candidate hash; prior artifact results do not validate the revised
 binary. Checkpoint 4 remains open and checkpoint 5 has not begun.
 
+## Final physical retest and checkpoint-4 closure (2026-10-04)
+
+The tester confirms that physical retesting is complete and passes on Fedora
+and Windows 11 using the final candidate. Candidate identity:
+
+- Source commit: `a3814953002a4d9718debcf8ae22680a75c0f47f`.
+- [Branch-tip CI run](https://github.com/codyklein/open-ece/actions/runs/37257151404):
+  all eight required jobs passed.
+- [Windows artifact](https://github.com/codyklein/open-ece/actions/runs/37257151404/artifacts/11323756990),
+  inner ZIP: `OpenECE-v0.9.0-windows-x86_64.zip`.
+- Inner-ZIP SHA-256:
+  `66d8ec56a55377b63b0d75cab288924c1f0222f2a650a2571ea6f8f0f4bb246f`.
+- Automated package inspection: 68 files, 67 manifest entries; every manifest
+  hash and exact file coverage verified. Release Qt/Qwt/CRT runtime, plugins,
+  licenses/notices and all nine examples verified. Packaged startup, persistence
+  round trip and inert example round trips passed on the fresh Windows runner.
+
+The previously reported physical Windows installation is Windows 11 Pro 25H2,
+build 26200.9457, AMD64, 2560×1440, one active display. The final report confirms
+the Signals layout at **150%**. Fedora is a native user retest; the exact final
+Fedora OS/session, scale/enlarged-text setting and extraction paths were not
+restated. Account privileges and installed development tools were not supplied.
+Do not infer those details or extra display-scale coverage from the passes.
+
+| Final Fedora check | User-reported result |
+| --- | --- |
+| #14 focus visibility | **PASS**. |
+| #15 navigation-only dirty state | **PASS**. |
+| #16 BER legend/table stability | **PASS**. |
+| #17 enlarged-text Signals layout | **PASS**. |
+| Signals forward/reverse tab order | **PASS**. |
+
+| Final physical Windows 11 check | User-reported result |
+| --- | --- |
+| Focus visibility and tab order | **PASS**. |
+| Navigation-only dirty state | **PASS**. |
+| Actual edits still dirty-track | **PASS**. |
+| BER Step/Cancel/Resume legend and table stability | **PASS**. |
+| Signals layout at 150% | **PASS**. |
+| Domain smoke tests | **PASS**. |
+| Signals wheel/arrow stale-state regression | **PASS**. |
+| Unicode/space-path Save/reopen | **PASS**. |
+| Inert project loading | **PASS**. |
+| Clean exit | **PASS**. |
+
+These results resolve the Signals stale-result blocker, the tab-order regression
+and the physical acceptance criteria for issues #14–#17. They supersede the
+earlier failed focus/BER observations and pending affected-behavior retests;
+they do not retroactively validate older artifacts. Issues #14–#17 are closed
+with the corresponding final evidence. This closure changes documentation only;
+the tested executable and candidate hash above remain the physical reference.
+
+Automated evidence for that exact source commit is separate from physical
+evidence: Fedora GCC, Clang and Clang ASan/UBSan each passed **216/216 desktop**
+and **188/188 headless** tests; Windows MSVC Debug and Release each passed
+**216/216**. No compiler-warning or sanitizer findings were identified in the
+final CI log. All existing suites remained enabled.
+
+Remaining validation limitations are explicit: physical Windows 10 is
+unavailable and not claimed validated/supported for v1.0; MinGW, true mixed-DPI
+and native screen-reader behavior remain unvalidated. The final physical report
+does not establish Windows 100%, 125% or 200% coverage, full native chooser/
+protected-destination coverage, or a formal complete accessibility audit.
+Automated scale, file-failure and workflow tests do not substitute for those
+manual checks. These limitations must remain visible during checkpoint-5
+release-readiness review. No unresolved blocker was reported in the final
+affected-behavior retests. Checkpoint 4 is closed; checkpoint 5 awaits approval.
+
 ## Identifying the Windows candidate
 
 Use the normal branch CI `Build, test and package` run for the checkpoint commit.
@@ -335,9 +405,10 @@ Do not infer that passing offscreen tests resolve those observations.
 
 ## Completion boundary
 
-Remaining release gates include physical Windows 11, practical native keyboard/
-chooser/scaling checks, and review of the native probe failures. Mixed-DPI and
-screen-reader gaps must remain explicit if unavailable. Narrow, demonstrated
-fixes require new artifact identification and affected retests. Finish with the
-full Fedora/Windows/package matrix; only then seek checkpoint-4 review. Do not
-start checkpoint 5, tag or publish v1.0 while this checkpoint is open.
+The final identified physical retests and full Fedora/Windows/package matrix
+close checkpoint 4. Historical native probe failures are retained above rather
+than rewritten as automated passes; the human focus/traversal reports provide
+the corresponding practical evidence. Unreported manual checks and mixed-DPI/
+screen-reader gaps remain explicit limitations. Any later application change
+requires fresh candidate identification and affected retesting. Checkpoint 5
+has not begun, and v1.0 must not be tagged or published before its release review.
