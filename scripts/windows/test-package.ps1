@@ -38,6 +38,10 @@ foreach ($file in $files) {
     }
 }
 Write-Host "Verified package: $($files.Count) files, $($entries.Count) manifest hashes. ZIP SHA-256: $((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant())"
+foreach ($name in @('sine-fft-fir', 'half-adder', 'dff-timing', 'dc-divider', 'rc-lowpass', 'series-rlc', 'bpsk-link-ber', 'qpsk-link-ber', 'intentionally-incomplete')) {
+    if (!(Test-Path -LiteralPath "$root/examples/$name.openece")) { throw "Missing example $name" }
+}
+if (!(Test-Path -LiteralPath "$root/docs/first-session.md")) { throw 'Missing first-session guide.' }
 $probePath = $null
 if ($PersistenceProbe) { $probePath = (Resolve-Path $PersistenceProbe).Path }
 $variables = @('PATH', 'QT_PLUGIN_PATH', 'QT_QPA_PLATFORM_PLUGIN_PATH', 'QT_QPA_PLATFORM', 'QTDIR', 'QT_ROOT', 'QWT_ROOT', 'QML2_IMPORT_PATH', 'QML_IMPORT_PATH', 'QT_DEBUG_PLUGINS')

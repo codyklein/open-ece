@@ -40,8 +40,10 @@ QTableWidgetItem* cell(const QString& text, bool editable = false) {
 QTableWidget* table(QWidget* parent, const char* name, const QStringList& headers) {
     auto* widget = new QTableWidget(0, static_cast<int>(headers.size()), parent);
     widget->setObjectName(name);
+    widget->setAccessibleName(QString::fromUtf8(name).replace('_', ' '));
+    widget->setTabKeyNavigation(false);
     widget->setHorizontalHeaderLabels(headers);
-    widget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    widget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     widget->setSelectionBehavior(QAbstractItemView::SelectRows);
     widget->setSelectionMode(QAbstractItemView::SingleSelection);
     widget->setMinimumHeight(120);
@@ -50,6 +52,7 @@ QTableWidget* table(QWidget* parent, const char* name, const QStringList& header
 QPushButton* button(QHBoxLayout* row, const QString& text, const char* name) {
     auto* result = new QPushButton(text);
     result->setObjectName(name);
+    result->setAccessibleName(QString::fromUtf8(name).replace('_', ' '));
     row->addWidget(result);
     return result;
 }
@@ -68,9 +71,9 @@ DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft*
     auto* right = new QVBoxLayout;
     columns->addLayout(left, 3);
     columns->addLayout(right, 2);
-    left->addWidget(new QLabel("Primary inputs — double-click a name to edit; check = 1", content));
+    left->addWidget(new QLabel("Primary inputs — F2 to edit a name; check = 1", content));
     inputs_ = table(content, "digital_inputs", {"ID", "Name", "Value"});
-    inputs_->setFixedHeight(120);
+    inputs_->setMinimumHeight(fontMetrics().height() * 6);
     left->addWidget(inputs_);
     auto* input_buttons = new QHBoxLayout;
     auto* add_input = button(input_buttons, "Add input", "digital_add_input");
@@ -78,7 +81,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft*
     left->addLayout(input_buttons);
     left->addWidget(new QLabel("Gates — select a row to edit its type and connections", content));
     gates_ = table(content, "digital_gates", {"ID", "Type", "Source IDs (pin order)", "Value"});
-    gates_->setFixedHeight(120);
+    gates_->setMinimumHeight(fontMetrics().height() * 6);
     left->addWidget(gates_);
     auto* gate_buttons = new QHBoxLayout;
     auto* add_gate = button(gate_buttons, "Add gate", "digital_add_gate");
@@ -86,7 +89,7 @@ DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft*
     left->addLayout(gate_buttons);
     left->addWidget(new QLabel("Primary outputs — names and source nodes", content));
     outputs_ = table(content, "digital_outputs", {"Name", "Source", "Value"});
-    outputs_->setFixedHeight(120);
+    outputs_->setMinimumHeight(fontMetrics().height() * 6);
     left->addWidget(outputs_);
     auto* output_buttons = new QHBoxLayout;
     auto* add_output = button(output_buttons, "Add output", "digital_add_output");
@@ -137,7 +140,8 @@ DigitalLogicView::DigitalLogicView(QWidget* parent, project::CombinationalDraft*
         "<p>Desktop limits: 8 inputs, 64 gates, 16 outputs, 8 pins per gate. "
         "Core limits: 64 inputs, 4096 gates, 256 outputs, 16384 references; tables at most "
         "10 inputs / 1024 rows. Timing and storage live in the separate Timing / Sequential tab. "
-        "No saving, constants, buses, Unknown/High-Z or minimization.</p>");
+        "File → Save preserves the editable draft, including missing connections; results are not "
+        "saved. No constants, buses, Unknown/High-Z or minimization.</p>");
     right->addWidget(help, 1);
     for (auto* label : content->findChildren<QLabel*>())
         label->setWordWrap(true);
@@ -521,11 +525,11 @@ void DigitalLogicView::evaluate(bool table_requested) {
         }
         status_->setText(
             table_requested
-                ? "Valid circuit. Truth table generated; current input values preserved."
-                : "Valid circuit. Settled output values shown (no timing simulation).");
+                ? "Valid circuit — complete. Truth table generated; current input values preserved."
+                : "Valid circuit — complete. Settled output values shown (no timing simulation).");
     } catch (const std::exception& error) {
         invalidate();
-        status_->setText("Cannot evaluate draft: " + QString::fromUtf8(error.what()));
+        status_->setText("Failed — Cannot evaluate draft: " + QString::fromUtf8(error.what()));
     }
 }
 } // namespace openece::gui

@@ -20,6 +20,8 @@ namespace {
 QTableWidget* table(const char* name, const QStringList& columns, QWidget* parent) {
     auto* t = new QTableWidget(0, static_cast<int>(columns.size()), parent);
     t->setObjectName(name);
+    t->setAccessibleName(QString::fromUtf8(name).replace('_', ' '));
+    t->setTabKeyNavigation(false);
     t->setHorizontalHeaderLabels(columns);
     t->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     t->horizontalHeader()->setStretchLastSection(true);
@@ -93,13 +95,14 @@ CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
     auto* solve_button = new QPushButton("Solve DC", editor);
     solve_button->setObjectName("circuit_solve");
     actions->addWidget(solve_button);
-    auto* example = new QPushButton("Load voltage divider", editor);
+    auto* example = new QPushButton("Replace with divider…", editor);
     example->setObjectName("circuit_example");
     actions->addWidget(example);
     actions->addStretch();
     status_ = new QLabel(editor);
     status_->setObjectName("circuit_status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     body->addWidget(status_);
     auto* results = new QHBoxLayout;
@@ -150,7 +153,10 @@ CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
         }
     });
     connect(solve_button, &QPushButton::clicked, this, [this] { solve(); });
-    connect(example, &QPushButton::clicked, this, [this] { load_divider(); });
+    connect(example, &QPushButton::clicked, this, [this] {
+        if (confirm_replacement("DC circuit"))
+            load_divider();
+    });
     rows_ = std::make_unique<CircuitDraftRows<project::DcDraft>>(
         state_.get(), nodes_, components_, ground_, status_, this, [this](CircuitDraftChange) {
             edited();
@@ -262,19 +268,20 @@ void CircuitsView::solve() {
             currents_->setItem(row++, 1,
                                fixed_item(QString::number(source.current_amperes, 'g', 12)));
         }
-        status_->setText(QString("Solved DC. Scaled reciprocal condition: %1; backward error: %2. "
-                                 "Currents use + → −.")
-                             .arg(solution.quality.scaled_reciprocal_condition, 0, 'g', 3)
-                             .arg(solution.quality.backward_error, 0, 'g', 3));
+        status_->setText(
+            QString("Solved DC — complete. Scaled reciprocal condition: %1; backward error: %2. "
+                    "Currents use + → −.")
+                .arg(solution.quality.scaled_reciprocal_condition, 0, 'g', 3)
+                .arg(solution.quality.backward_error, 0, 'g', 3));
     } catch (const circuits::CircuitError& e) {
         QString message = QString::fromUtf8(e.what());
         for (auto id : e.nodes())
             message += " Node ID " + QString::number(id.value) + ".";
         for (auto id : e.components())
             message += " Component ID " + QString::number(id.value) + ".";
-        status_->setText(message);
+        status_->setText("Failed — " + message);
     } catch (const std::exception& e) {
-        status_->setText(QString::fromUtf8(e.what()));
+        status_->setText("Failed — " + QString::fromUtf8(e.what()));
     }
 }
 } // namespace openece::gui

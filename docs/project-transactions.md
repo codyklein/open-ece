@@ -110,8 +110,11 @@ identity/locking protocol. Per-directory case-sensitive Windows configurations a
 not claimed for prospective-path comparison; conservative re-staging does not depend
 on that comparison. Empty/embedded-NUL paths are invalid.
 
-Only `draftEdited` advances revisions and marks dirty. Derived results and automatic
-result navigation do not. Successful save records the captured revision; successful
+Only project-data `draftEdited` notifications advance revisions and mark dirty.
+Domain/tab selections update the authoritative snapshot without emitting that
+signal: explicit Save captures them, but navigation alone does not prompt to save.
+Units, configuration and raw pending input still emit data edits. Derived results
+and automatic result navigation do not. Successful save records the captured revision; successful
 Open/New installation starts new session bookkeeping. The counter saturates instead
 of wrapping; a separate dirty bit prevents saturation from implying cleanliness.
 
@@ -176,7 +179,8 @@ The title is `Untitled — OpenECE` or `filename.openece — OpenECE`, with `*` 
 following the name only when persisted draft edits are dirty. The window tooltip,
 window file path and status bar expose the absolute path. Generate/Solve/Run,
 progress, cancellation, results and automatic result navigation do not dirty a
-project. User changes to persisted domain/tab selections do; restoration does not.
+project. User domain/tab navigation also stays clean, while explicit Save retains
+those selections. Restoration does not mark the project dirty.
 
 Recent projects use **QSettings organization `OpenECE`, application `OpenECE`, key
 `projects/recentPaths`**, outside the project file. At most ten absolute paths are

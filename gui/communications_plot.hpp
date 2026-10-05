@@ -1,8 +1,10 @@
 #pragma once
+#include <array>
 #include <openece/communications/ber.hpp>
 #include <openece/communications/link.hpp>
 #include <qwt_plot.h>
 class QwtPlotRescaler;
+class QwtPlotCurve;
 namespace openece::gui {
 inline constexpr std::size_t communications_plot_points = 2048;
 class CommunicationsPlot final : public QwtPlot {
@@ -14,6 +16,7 @@ class CommunicationsPlot final : public QwtPlot {
     void ber(std::span<const communications::BerPoint>, communications::Modulation);
 
   private:
-    QwtPlotRescaler* rescaler_ = nullptr; // QObject child of the canvas.
+    std::array<QwtPlotCurve*, 4> ber_curves_{}; // Owned by Qwt; reset on clear().
+    QwtPlotRescaler* rescaler_ = nullptr;       // QObject child of the canvas.
 };
 } // namespace openece::gui

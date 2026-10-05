@@ -1,4 +1,4 @@
-# Linear DC Circuit Analysis (v0.6)
+# Linear DC Circuit Analysis
 
 ## Model, ownership and units
 
@@ -162,7 +162,7 @@ explains signs and failure behavior. Load voltage divider restores the example.
 
 ## Scope and remaining work
 
-v0.6 is linear DC only: no capacitors, inductors, AC, transients, dependent sources,
+The DC model is linear DC only: no capacitors, inductors, AC, transients, dependent sources,
 nonlinear devices, SPICE, graphical schematics, or cross-domain coupling. Raw named
 SI doubles avoid a general units framework. Dense bounded solves,
 no undo and no exhaustive multi-error report remain deliberate limits. v0.9 saves

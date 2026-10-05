@@ -1,9 +1,11 @@
 #include "communications_plot.hpp"
+#include <QPainter>
 #include <QVector>
 #include <algorithm>
 #include <cmath>
 #include <qwt_interval.h>
 #include <qwt_legend.h>
+#include <qwt_legend_label.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
 #include <qwt_plot_marker.h>
@@ -13,9 +15,9 @@
 #include <qwt_text.h>
 namespace openece::gui {
 namespace {
-void curve(QwtPlot* plot, const QString& title, const QVector<double>& x, const QVector<double>& y,
-           QColor color, QwtPlotCurve::CurveStyle style,
-           QwtSymbol::Style symbol = QwtSymbol::NoSymbol) {
+QwtPlotCurve* curve(QwtPlot* plot, const QString& title, const QVector<double>& x,
+                    const QVector<double>& y, QColor color, QwtPlotCurve::CurveStyle style,
+                    QwtSymbol::Style symbol = QwtSymbol::NoSymbol) {
     auto* item = new QwtPlotCurve(title);
     item->setSamples(x, y);
     item->setPen(color, 1.3);
@@ -25,6 +27,7 @@ void curve(QwtPlot* plot, const QString& title, const QVector<double>& x, const 
     if (symbol != QwtSymbol::NoSymbol)
         item->setSymbol(new QwtSymbol(symbol, QBrush(color), QPen(color), QSize(6, 6)));
     item->attach(plot);
+    return item;
 }
 } // namespace
 CommunicationsPlot::CommunicationsPlot(QWidget* parent) : QwtPlot(parent) {
@@ -38,6 +41,7 @@ CommunicationsPlot::CommunicationsPlot(QWidget* parent) : QwtPlot(parent) {
 void CommunicationsPlot::clear() {
     if (rescaler_)
         rescaler_->setEnabled(false);
+    ber_curves_.fill(nullptr);
     detachItems(QwtPlotItem::Rtti_PlotCurve, true);
     detachItems(QwtPlotItem::Rtti_PlotMarker, true);
     replot();
@@ -118,13 +122,22 @@ void CommunicationsPlot::constellation(const communications::LinkResult& result)
 }
 void CommunicationsPlot::ber(std::span<const communications::BerPoint> points,
                              communications::Modulation modulation) {
-    clear();
-    setTitle("BER: coherent BPSK / Gray QPSK");
-    setAxisTitle(xBottom, "Eb/N0 (dB)");
-    setAxisTitle(yLeft, "Bit error probability (log)");
-    setAxisScaleEngine(yLeft, new QwtLogScaleEngine);
-    setAxisAutoScale(xBottom);
-    setAxisAutoScale(yLeft);
+    if (!ber_curves_[0]) {
+        clear();
+        setTitle("BER: coherent BPSK / Gray QPSK");
+        setAxisTitle(xBottom, "Eb/N0 (dB)");
+        setAxisTitle(yLeft, "Bit error probability (log)");
+        setAxisScaleEngine(yLeft, new QwtLogScaleEngine);
+        setAxisAutoScale(xBottom);
+        setAxisAutoScale(yLeft);
+        ber_curves_[0] = curve(this, "Theory", {}, {}, QColor(20, 90, 170), QwtPlotCurve::Lines);
+        ber_curves_[1] = curve(this, "Measured (complete)", {}, {}, QColor(20, 140, 70),
+                               QwtPlotCurve::NoCurve, QwtSymbol::Ellipse);
+        ber_curves_[2] = curve(this, "Measured (partial)", {}, {}, QColor(150, 90, 170),
+                               QwtPlotCurve::NoCurve, QwtSymbol::Diamond);
+        ber_curves_[3] = curve(this, "0 errors: 95% fixed-N upper bound", {}, {},
+                               QColor(180, 110, 25), QwtPlotCurve::NoCurve, QwtSymbol::DTriangle);
+    }
     QVector<double> x, theory, mx, my, ux, uy, px, py;
     for (const auto& p : points) {
         x.push_back(p.eb_n0_db);
@@ -142,14 +155,38 @@ void CommunicationsPlot::ber(std::span<const communications::BerPoint> points,
             py.push_back(*communications::measured_ber(p));
         }
     }
-    curve(this, "Theory", x, theory, QColor(20, 90, 170), QwtPlotCurve::Lines,
-          x.size() == 1 ? QwtSymbol::XCross : QwtSymbol::NoSymbol);
-    curve(this, "Measured (complete)", mx, my, QColor(20, 140, 70), QwtPlotCurve::NoCurve,
-          QwtSymbol::Ellipse);
-    curve(this, "Measured (partial)", px, py, QColor(150, 90, 170), QwtPlotCurve::NoCurve,
-          QwtSymbol::Diamond);
-    curve(this, "0 errors: 95% fixed-N upper bound", ux, uy, QColor(180, 110, 25),
-          QwtPlotCurve::NoCurve, QwtSymbol::DTriangle);
+    ber_curves_[0]->setSamples(x, theory);
+    if ((x.size() == 1) != (ber_curves_[0]->symbol() != nullptr))
+        ber_curves_[0]->setSymbol(
+            x.size() == 1 ? new QwtSymbol(QwtSymbol::XCross, QBrush(QColor(20, 90, 170)),
+                                          QPen(QColor(20, 90, 170)), QSize(6, 6))
+                          : nullptr);
+    ber_curves_[1]->setSamples(mx, my);
+    ber_curves_[2]->setSamples(px, py);
+    ber_curves_[3]->setSamples(ux, uy);
+    // Paint fixed keys directly: Qwt's vector-to-pixmap legend conversion can
+    // produce transparent icons on the Fedora Qt runtime. Keep the existing
+    // legend labels and show the exact pen/symbol used by each series, including
+    // series without any samples. This does not change plotted samples.
+    auto* keys = static_cast<QwtLegend*>(legend());
+    for (auto* series : ber_curves_) {
+        series->setLegendIconSize(QSize(24, 14));
+        QPixmap icon(QSize(24, 14) * devicePixelRatioF());
+        icon.setDevicePixelRatio(devicePixelRatioF());
+        icon.fill(Qt::transparent);
+        {
+            QPainter painter(&icon);
+            if (series->style() != QwtPlotCurve::NoCurve) {
+                painter.setPen(series->pen());
+                painter.drawLine(QPointF(1, 7), QPointF(23, 7));
+            } else if (series->symbol()) {
+                series->symbol()->drawSymbol(&painter, QPointF(12, 7));
+            }
+        }
+        for (auto* widget : keys->legendWidgets(itemToInfo(series)))
+            if (auto* label = qobject_cast<QwtLegendLabel*>(widget))
+                label->setIcon(icon);
+    }
     replot();
 }
 } // namespace openece::gui

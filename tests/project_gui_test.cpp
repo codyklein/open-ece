@@ -339,7 +339,7 @@ class ProjectGuiTest : public QObject {
         const auto original = table->item(0, 2)->text();
         e->setText("1e-");
         click(w, "timing_step");
-        QVERIFY(control<QLabel>(w, "timing_status")->text().startsWith("Cannot simulate"));
+        QVERIFY(control<QLabel>(w, "timing_status")->text().startsWith("Failed — Cannot simulate"));
         QCOMPARE(table->item(0, 2)->text(), original);
         QCOMPARE(w.draft().digital.timing.inputs[0].initial_text, std::string("1e-"));
         empty_results(w);

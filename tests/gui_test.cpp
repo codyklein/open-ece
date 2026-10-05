@@ -232,7 +232,7 @@ class WorkbenchTest : public QObject {
              {QString("pi/"), QString("pi/0"), QString("pi+1"), QString("3*pi")}) {
             phase->setText(text);
             button->click();
-            QVERIFY(status->text().startsWith("Cannot generate"));
+            QVERIFY(status->text().startsWith("Failed — Cannot generate"));
             QCOMPARE(curve->dataSize(), 0U);
             QCOMPARE(phase->text(), text);
             units->setCurrentIndex(0);
@@ -397,7 +397,7 @@ class WorkbenchTest : public QObject {
                          20 * std::log10(std::abs(redesigned.values[256]))) < 1e-12);
         cutoff->setValue(256.);
         button->click();
-        QVERIFY(status->text().startsWith("Cannot generate"));
+        QVERIFY(status->text().startsWith("Failed — Cannot generate"));
         for (const char* name : {"time_plot", "spectrum_plot", "filter_response_plot"}) {
             for (auto* item :
                  window.findChild<QwtPlot*>(name)->itemList(QwtPlotItem::Rtti_PlotCurve))
@@ -482,7 +482,7 @@ class WorkbenchTest : public QObject {
         QVERIFY(status->text().contains("65,536"));
         duration->setValue(0.000001);
         button->click();
-        QVERIFY(status->text().startsWith("Cannot generate"));
+        QVERIFY(status->text().startsWith("Failed — Cannot generate"));
         duration->setValue(1.0);
         button->click();
         QVERIFY(status->text().startsWith("Ready"));

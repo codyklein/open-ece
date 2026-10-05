@@ -1,5 +1,7 @@
 #include "draft_view.hpp"
+#include <QAbstractButton>
 #include <QComboBox>
+#include <QMessageBox>
 #include <QPersistentModelIndex>
 #include <QPointer>
 #include <QStyledItemDelegate>
@@ -43,6 +45,26 @@ class TextDelegate final : public QStyledItemDelegate {
     }
 };
 } // namespace
+DraftView::~DraftView() {
+    // QWidget teardown can commit a focused table delegate. Derived members
+    // (including owned drafts/row adapters) have already been destroyed here.
+    // Disconnect editor/model callbacks before QWidget starts that teardown.
+    restoring_ = true;
+    for (auto* child : findChildren<QObject*>())
+        QObject::disconnect(child, nullptr, this, nullptr);
+}
+bool DraftView::confirm_replacement(const QString& target) {
+    synchronize_pending_text();
+    QMessageBox box(QMessageBox::Warning, "Replace " + target + "?",
+                    "This replaces the entire " + target + " draft. There is no undo.",
+                    QMessageBox::Yes | QMessageBox::Cancel, this);
+    box.setTextFormat(Qt::PlainText);
+    box.setInformativeText("To keep this work, Cancel and save the project first.");
+    box.button(QMessageBox::Yes)->setText("Replace draft");
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.setEscapeButton(QMessageBox::Cancel);
+    return box.exec() == QMessageBox::Yes;
+}
 void DraftView::bind_text(QLineEdit* widget, std::string& field) {
     widget->setText(qt_text(field));
     auto sync = [this, widget, &field] { edit(field, draft_text(widget->text())); };
@@ -79,8 +101,8 @@ void DraftView::bind_choice(QComboBox* box, std::string& field, const QStringLis
 void DraftView::bind_tabs(QTabWidget* tabs, std::string& field, const QStringList& tokens) {
     tabs->setCurrentIndex(static_cast<int>(tokens.indexOf(qt_text(field))));
     connect(tabs, &QTabWidget::currentChanged, this, [this, &field, tokens](int index) {
-        if (index >= 0 && index < tokens.size())
-            edit(field, draft_text(tokens[index]));
+        if (!restoring_ && index >= 0 && index < tokens.size())
+            field = draft_text(tokens[index]); // Navigation is saved without marking data dirty.
     });
 }
 void DraftView::bind_table(QTableWidget* table,

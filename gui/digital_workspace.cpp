@@ -19,10 +19,11 @@ DigitalWorkspace::DigitalWorkspace(QWidget* parent, project::DigitalDraft* draft
     tabs->addTab(timing, "Timing / Sequential");
     layout->addWidget(tabs);
     auto* row = new QHBoxLayout;
-    auto* copy = new QPushButton("Copy validated combinational circuit to timing", this);
+    auto* copy = new QPushButton("Replace Timing from logic…", this);
     copy->setObjectName("digital_copy_timing");
     auto* delay = new DraftInt(this);
     delay->setObjectName("digital_copy_delay");
+    delay->setAccessibleName("Copied gate delay in integer picoseconds");
     delay->setRange(1, 1'000'000'000);
     delay->setValue(1000);
     delay->setSuffix(" ps");
@@ -36,12 +37,15 @@ DigitalWorkspace::DigitalWorkspace(QWidget* parent, project::DigitalDraft* draft
     status->setTextFormat(Qt::PlainText);
     status->setWordWrap(true);
     layout->addWidget(status);
-    connect(copy, &QPushButton::clicked, this, [=] {
+    connect(copy, &QPushButton::clicked, this, [=, this] {
         try {
             combinational->synchronize_pending_text();
-            timing->load_combinational(combinational->validated_circuit(),
-                                       combinational->input_values(),
-                                       {static_cast<std::uint64_t>(draft_value(delay))});
+            const auto circuit = combinational->validated_circuit();
+            const auto values = combinational->input_values();
+            const auto ticks = static_cast<std::uint64_t>(draft_value(delay));
+            if (!confirm_replacement("Timing"))
+                return;
+            timing->load_combinational(circuit, values, {ticks});
             tabs->setCurrentIndex(1);
             status->setText(
                 "Copied independently. Timing edits do not change the combinational circuit.");

@@ -1,4 +1,4 @@
-# Digital Communications (v0.8)
+# Digital Communications
 
 The Qt-independent `OpenECE::communications` target owns its bit, constellation,
 baseband and result types in `openece::communications`. It does not depend on DSP,

@@ -38,12 +38,14 @@ class DraftView : public QWidget {
     Q_OBJECT
   public:
     explicit DraftView(QWidget* parent = nullptr) : QWidget(parent) {}
+    ~DraftView() override;
     virtual void synchronize_pending_text();
   Q_SIGNALS:
     void draftEdited();
 
   protected:
     bool restoring_ = true;
+    bool confirm_replacement(const QString& target);
     template <class T> void edit(T& field, T value) {
         if (!restoring_ && field != value) {
             field = std::move(value);

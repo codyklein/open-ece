@@ -106,6 +106,7 @@ template <class Draft> class CircuitDraftRows {
         parts_->setItem(row, 0, fixed(id));
         parts_->setItem(row, 1, new QTableWidgetItem(qt_text(initial.name)));
         auto* type = new QComboBox(parts_);
+        type->setAccessibleName(QString("Component %1 type").arg(id.value));
         type->addItems(ac ? QStringList{"Resistor", "Capacitor", "Inductor", "AC voltage source",
                                         "AC current source"}
                           : QStringList{"Resistor", "Voltage source", "Current source"});
@@ -113,6 +114,9 @@ template <class Draft> class CircuitDraftRows {
         parts_->setCellWidget(row, 2, type);
         for (int col : {3, 4}) {
             auto* selector = new QComboBox(parts_);
+            selector->setAccessibleName(QString("Component %1 %2 terminal")
+                                            .arg(id.value)
+                                            .arg(col == 3 ? "positive" : "negative"));
             parts_->setCellWidget(row, col, selector);
             fill_nodes(selector, col == 3 ? initial.positive : initial.negative);
             QObject::connect(selector, &QComboBox::currentIndexChanged, context_,
@@ -128,15 +132,18 @@ template <class Draft> class CircuitDraftRows {
                              });
         }
         auto* value = new QLineEdit(qt_text(initial.value.text), parts_);
+        value->setAccessibleName(QString("Component %1 value in selected unit").arg(id.value));
         value->setMaxLength(128);
         value->setMinimumWidth(85);
         parts_->setCellWidget(row, 5, value);
         auto* unit = new QComboBox(parts_);
+        unit->setAccessibleName(QString("Component %1 unit").arg(id.value));
         fill_units(unit, initial.kind, initial.value.unit);
         parts_->setCellWidget(row, 6, unit);
         QLineEdit* phase = nullptr;
         if constexpr (ac) {
             phase = new QLineEdit(qt_text(initial.phase.text), parts_);
+            phase->setAccessibleName(QString("Component %1 phase in degrees").arg(id.value));
             phase->setMaxLength(128);
             phase->setMaximumWidth(90);
             phase->setEnabled(type->currentIndex() >= 3);

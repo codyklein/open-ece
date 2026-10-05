@@ -1,4 +1,4 @@
-# AC circuit analysis (v0.7)
+# AC circuit analysis
 
 ## Model and phasors
 

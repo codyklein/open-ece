@@ -56,7 +56,7 @@ ctest --preset dev
 
 Additional presets are available for headless and sanitizer builds.
 
-See the project documentation for detailed Linux and Windows setup instructions.
+See [building](docs/building.md) and [Windows setup](docs/windows.md) for dependencies and commands.
 
 ## Testing
 
@@ -98,10 +98,14 @@ Keep engineering logic independent of the GUI whenever practical.
 The project currently separates major domains into independent libraries, including:
 
 - Signals / DSP
-- Digital Logic
-- Circuit Analysis
+- Combinational Digital Logic and Timing/Sequential Logic
+- DC and AC Circuit Analysis
+- Digital Communications
+- Project Persistence (editable state and a private JSON codec)
 
 Do not force unrelated domains into a shared data model merely to reduce the number of types.
+
+ProjectSnapshot owns persisted drafts; views borrow subdrafts. Exact pending editor text is synchronized without parsing before capture. Derived results and runtime objects are never serialized. Restoration must stay inert and loading/saving transactional. Preserve [schema-1 compatibility](tests/fixtures/v0.9/README.md), IDs, units and dangling references. Add semantic round-trip and expected-result tests for [examples](examples/README.md).
 
 Qt-specific behavior belongs in the GUI layer unless there is a clear architectural reason otherwise.
 
@@ -123,7 +127,7 @@ Changes affecting:
 
 should be validated carefully across supported platforms.
 
-GitHub Actions performs the primary cross-platform validation.
+GitHub Actions runs Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan desktop/headless, Windows MSVC 2022 / Qt 6.8.3 Debug/Release, and fresh packaged startup/persistence. Preserve all tests and numerical tolerances. Hosted/offscreen testing does not replace physical platform, keyboard, screen-reader and mixed-DPI review.
 
 ## Formatting and Code Style
 

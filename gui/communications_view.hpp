@@ -47,7 +47,7 @@ class CommunicationsView final : public DraftView {
     std::optional<communications::LinkResult> link_;
     std::unique_ptr<communications::BerExperiment> experiment_;
     communications::Modulation experiment_modulation_ = communications::Modulation::bpsk;
-    bool loading_ = true, cancelled_ = false;
+    bool loading_ = true, cancelled_ = false, failed_ = false;
     int previous_unit_ = 1;
 };
 } // namespace openece::gui

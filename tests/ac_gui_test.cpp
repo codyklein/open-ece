@@ -1,6 +1,7 @@
 #include "ac_response_plot.hpp"
 #include "ac_view.hpp"
 #include "main_window.hpp"
+#include "replacement_test.hpp"
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -96,6 +97,7 @@ class AcGuiTest : public QObject {
         QCOMPARE(v.findChild<QLineEdit*>("ac_frequency")->text(), QString("1e-"));
         click(v, "ac_solve");
         QVERIFY(status(v).contains("Invalid numeric"));
+        accept_replacement(v);
         click(v, "ac_example_rc");
         QVERIFY(status(v).startsWith("Solved AC"));
         text(v, "ac_frequency", "0");
@@ -151,6 +153,7 @@ class AcGuiTest : public QObject {
         value(v, 0)->setText("0");
         click(v, "ac_run_sweep");
         QVERIFY(status(v).contains("nonzero"));
+        accept_replacement(v);
         click(v, "ac_example_rc");
         select(v, 1, 2)->setCurrentIndex(3);
         value(v, 1)->setText(".1");
@@ -319,6 +322,7 @@ class AcGuiTest : public QObject {
         QCOMPARE(table(window, "circuit_voltages")->item(2, 1)->text().toDouble(), 6.);
         tabs->setCurrentIndex(1);
         QCOMPARE(value(window, 0)->text(), QString("3"));
+        accept_replacement(window);
         click(window, "ac_example_rlc");
         QVERIFY(status(window).startsWith("Solved AC"));
         QVERIFY(std::abs(table(window, "ac_voltages")->item(3, 3)->text().toDouble() - 1) < 1e-10);
@@ -342,6 +346,7 @@ class AcGuiTest : public QObject {
             click(v, "ac_add_component");
         QCOMPARE(parts(v)->rowCount(), ac_gui_limits::components);
         QVERIFY(status(v).contains("limit"));
+        accept_replacement(v);
         click(v, "ac_example_rc");
         struct Restore {
             QLocale value;

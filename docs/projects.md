@@ -1,6 +1,6 @@
 # Saving and reopening OpenECE projects
 
-OpenECE v0.9 saves editable experiments from all four domains in one `.openece`
+OpenECE saves editable experiments from all four domains in one `.openece`
 file. It is a UTF-8 JSON document with a versioned schema, not a snapshot of plots
 or a cache of numerical results. You can share it with another schema-1-compatible
 OpenECE installation on Fedora or Windows. No Qt installation is needed when using
@@ -25,9 +25,10 @@ destination requires confirmation against this final filename.
 
 The title is `Untitled — OpenECE` or `lab.openece — OpenECE`. An asterisk immediately
 after the name means persisted editable content has changed. The status bar and
-window tooltip show the full current path. Changing saved domain/tab selections
-also marks the project modified. Computing results, progress, cancellation and
-automatic navigation to result tabs do not mark it modified by themselves.
+window tooltip show the full current path. Domain/tab navigation alone does not mark the project modified or prompt to save.
+An explicit Save still captures those selections. Physical inputs, units and
+configuration changes do mark it modified. Computing results, progress,
+cancellation and automatic navigation to result tabs do not mark it modified.
 
 Before dirty New/Open/Close, choose:
 
@@ -85,7 +86,7 @@ restoring a file or using New.
 
 ## Compatibility, errors and file safety
 
-v0.9 supports exactly schema version **1**, identified by
+OpenECE supports exactly schema version **1**, identified by
 `format: "org.openece.project"` and integer `schema_version: 1`. Application version
 and schema version are different. Other schema versions are rejected clearly;
 there is no migration framework. Unknown optional fields within schema 1 are
@@ -124,5 +125,20 @@ Incidental UI state such as geometry, selection highlights and runtime progress
 remains in memory; recent-project history is the explicit QSettings exception.
 There is no cross-process conflict detection, file watching or moved-file search.
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
-Server 2022. Physical Windows 10/11, high-DPI/accessibility and MinGW remain
-unvalidated; the portable ZIP is unsigned and has no installer/updater.
+Server 2022. Checkpoint-4 physical Fedora and Windows 11 retests passed, including
+Windows Signals layout at 150%. True mixed-DPI and native screen-reader behavior
+remain unvalidated; the final 1.0.0 ZIP awaits the bounded RC smoke test.
+Windows 10 and MinGW may work but are not validated or claimed
+supported for v1.0. The portable ZIP is unsigned and has no installer/updater.
+See the [physical validation record](physical-validation.md).
+
+## v1.0 compatibility promise
+
+OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 and preserves their supported editable project state.
+
+This does not promise a stable C++ ABI, plugin ABI, arbitrary future-schema
+compatibility, automatic migration of unsupported schemas, preservation of unknown
+optional fields on re-save, or persisted numerical results. Unknown-field warnings
+remain meaningful. [Release-pinned fixtures](../tests/fixtures/v0.9/README.md)
+verify complete and incomplete v0.9 drafts; [examples](../examples/README.md) are
+editable teaching projects. Version 1.0 is still a candidate until its release gates pass.

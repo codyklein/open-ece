@@ -2,6 +2,7 @@
 #include <QAction>
 #include <QFileInfo>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QStatusBar>
 namespace openece::gui {
 MainWindow::MainWindow(QWidget* parent)
@@ -44,6 +45,25 @@ MainWindow::MainWindow(std::unique_ptr<ProjectDocument> document,
     file->addSeparator();
     action("project_close", "&Close", QKeySequence::Close, [this] { close(); });
     action("project_exit", "E&xit", QKeySequence::Quit, [this] { close(); });
+    auto* help = menuBar()->addMenu("&Help");
+    auto* about = help->addAction("&About OpenECE");
+    about->setObjectName("about_openece");
+    connect(about, &QAction::triggered, this, [this] {
+        QMessageBox box(this);
+        box.setWindowTitle("About OpenECE");
+        box.setTextFormat(Qt::PlainText);
+        box.setText(
+            QString("OpenECE %1\n\nElectrical and computer engineering workbench.\n"
+                    "OpenECE is licensed under the MIT license.\n"
+                    "Repository: https://github.com/codyklein/open-ece\n\n"
+                    "Portable package: LICENSE, THIRD-PARTY-NOTICES.txt and licenses/.\n"
+                    "Source checkout: LICENSE and packaging/THIRD-PARTY-NOTICES.txt.\n"
+                    "Dependencies retain their own licenses.\n\n"
+                    "File → Save stores editable projects; results are recomputed after Open.")
+                .arg(OPENECE_VERSION));
+        box.setStandardButtons(QMessageBox::Ok);
+        box.exec();
+    });
     update_presentation();
 }
 MainWindow::~MainWindow() {

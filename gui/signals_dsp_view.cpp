@@ -48,9 +48,9 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     auto* layout = new QHBoxLayout(central);
 
     auto* controls = new QGroupBox("Signal and filter", central);
-    controls->setMaximumWidth(400);
     auto* left = new QVBoxLayout(controls);
     auto* form = new QFormLayout;
+    form->setRowWrapPolicy(QFormLayout::WrapLongRows);
     amplitude_ = field(controls, "amplitude", 0.0, 1e6, 1.0, 4);
     frequency_ = field(controls, "frequency", 0.0, 5e8, 8.0, 4, " Hz");
     phase_ = new QLineEdit("0", controls);
@@ -61,10 +61,11 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     pi_button_->setObjectName("insert_pi");
     pi_button_->setAccessibleName("Insert pi");
     pi_button_->setToolTip("Insert π at the cursor, replacing selected text (Radians only).");
-    pi_button_->setFixedWidth(28);
+    pi_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     pi_button_->setEnabled(false);
     phase_unit_ = new QComboBox(controls);
     phase_unit_->setObjectName("phase_unit");
+    phase_unit_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
     phase_unit_->setAccessibleName("Phase unit");
     phase_unit_->addItems({"Degrees", "Radians"});
     phase_unit_->setToolTip(
@@ -115,10 +116,12 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     status_ = new QLabel(controls);
     status_->setObjectName("status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     left->addWidget(status_);
     summary_ = new QLabel(controls);
     summary_->setObjectName("summary");
     summary_->setWordWrap(true);
+    summary_->setTextFormat(Qt::PlainText);
     summary_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     left->addWidget(summary_);
     left->addStretch();
@@ -133,7 +136,7 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     control_scroll->setWidgetResizable(true);
     control_scroll->setFrameShape(QFrame::NoFrame);
     control_scroll->setMinimumWidth(310);
-    control_scroll->setMaximumWidth(400);
+    control_scroll->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     control_scroll->setWidget(controls);
     layout->addWidget(control_scroll);
 
@@ -208,6 +211,7 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
         "Filter off. Select FIR low-pass and Generate to inspect its response.", response_page);
     response_summary_->setObjectName("response_summary");
     response_summary_->setWordWrap(true);
+    response_summary_->setTextFormat(Qt::PlainText);
     response_layout->addWidget(response_summary_);
     response_plot_ = new PlotWidget("FIR magnitude response", "Frequency (Hz)", "Gain (dB)", false,
                                     response_page);
@@ -216,14 +220,26 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     tabs->addTab(response_page, "Filter response");
     layout->addWidget(tabs, 1);
 
+    // These form rows differ from widget construction order. Keep keyboard
+    // traversal in visual order, retaining Qt's reverse/disabled-field handling.
+    QWidget::setTabOrder(phase_unit_, sample_rate_);
+    QWidget::setTabOrder(sample_rate_, duration_);
+    QWidget::setTabOrder(duration_, window_);
+    QWidget::setTabOrder(window_, filter_);
+
     connect(button, &QPushButton::clicked, this, [this] { generate(); });
+    const auto mark_stale = [this] {
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
+    };
     for (auto* spin : {amplitude_, frequency_, sample_rate_, duration_, cutoff_}) {
-        connect(spin, &QDoubleSpinBox::valueChanged, this, [this] {
-            status_->setText("Parameters changed. Generate to update the displayed result.");
-        });
+        connect(static_cast<DraftDouble*>(spin)->editor(), &QLineEdit::textChanged, this,
+                mark_stale);
+        // Accepted steps (arrows/wheel) update Qt's editor with its signals blocked.
+        // Observe the spin box too; raw/invalid edits still use the editor signal.
+        connect(spin, &QDoubleSpinBox::textChanged, this, mark_stale);
     }
     connect(phase_, &QLineEdit::textChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
     connect(phase_, &QLineEdit::returnPressed, this, [this] { generate(); });
     connect(pi_button_, &QPushButton::clicked, this, [this] {
@@ -231,16 +247,16 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
         phase_->setFocus();
     });
     connect(window_, &QComboBox::currentIndexChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
     connect(filter_, &QComboBox::currentIndexChanged, this, [this] {
         cutoff_->setEnabled(filter_->currentIndex() != 0);
         tap_count_->setEnabled(filter_->currentIndex() != 0);
-        status_->setText("Parameters changed. Generate to update the displayed result.");
+        status_->setText("Parameters changed. Displayed results are stale; Generate to update.");
     });
-    connect(tap_count_, &QSpinBox::valueChanged, this, [this] {
-        status_->setText("Parameters changed. Generate to update the displayed result.");
-    });
+    connect(static_cast<DraftInt*>(tap_count_)->editor(), &QLineEdit::textChanged, this,
+            mark_stale);
+    connect(tap_count_, &QSpinBox::textChanged, this, mark_stale);
     connect(phase_unit_, &QComboBox::currentIndexChanged, this, [this] { change_phase_unit(); });
     auto& d = state_.get();
     bind_spin(amplitude_, d.amplitude.text);
@@ -277,8 +293,8 @@ void SignalsDspView::change_phase_unit() {
         phase_->setText(converted);
         pi_button_->setEnabled(new_unit);
         edit(state_.get().phase.text, draft_text(converted));
-        status_->setText(
-            "Parameters changed. Phase converted to selected units; Generate to update.");
+        status_->setText("Parameters changed. Phase converted; displayed results are stale. "
+                         "Generate to update.");
     } catch (const std::exception& error) {
         const QSignalBlocker blocker(phase_unit_);
         phase_unit_->setCurrentIndex(phase_in_radians_ ? 1 : 0);
@@ -410,10 +426,11 @@ void SignalsDspView::generate() {
             response_summary_->setText(
                 "Filter off. Select FIR low-pass and Generate to inspect its response.");
         }
-        status_->setText("Ready — plots match the current parameters.");
+        status_->setText("Ready — complete; plots match the current parameters.");
     } catch (const std::exception& error) {
         clear_results();
-        status_->setText(QString("Cannot generate: %1").arg(QString::fromUtf8(error.what())));
+        status_->setText(
+            QString("Failed — Cannot generate: %1").arg(QString::fromUtf8(error.what())));
     }
 }
 

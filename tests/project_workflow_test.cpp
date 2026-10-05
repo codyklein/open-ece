@@ -1,11 +1,13 @@
 #include "main_window.hpp"
 #include <QAction>
+#include <QComboBox>
 #include <QFile>
 #include <QListWidget>
 #include <QMenu>
 #include <QPointer>
 #include <QPushButton>
 #include <QStatusBar>
+#include <QTabWidget>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -479,23 +481,56 @@ class ProjectWorkflowTest final : public QObject {
     }
     void resultNavigationAndUserEdits() {
         Fixture f;
-        f.document.workspace().findChild<QPushButton*>("generate")->click();
-        QVERIFY(!f.document.dirty());
-        auto* nav = f.document.workspace().findChild<QListWidget*>("domain_navigation");
-        nav->setCurrentRow(2);
-        QVERIFY(f.document.dirty());
         f.dialogs->save_path = f.file();
         QVERIFY(f.workflow.save());
-        auto* tabs = f.document.workspace().findChild<QTabWidget*>("circuits_analysis_tabs");
-        QVERIFY(tabs);
-        tabs->setCurrentIndex(1);
-        QVERIFY(f.document.dirty());
-        QVERIFY(f.workflow.save());
-        f.document.workspace().findChild<QPushButton*>("ac_solve")->click();
-        QVERIFY(!f.document.dirty());
+        auto& w = f.document.workspace();
+        const auto revision = f.document.revision();
+        QSignalSpy edits(&w, &DraftView::draftEdited);
+        auto* nav = w.findChild<QListWidget*>("domain_navigation");
+        for (int row = 0; row < nav->count(); ++row) {
+            nav->setCurrentRow(row);
+            QVERIFY(!f.document.dirty());
+        }
+        for (auto name : {"signals_tabs", "digital_tabs", "timing_editor_tabs",
+                          "circuits_analysis_tabs", "dc_view_tabs", "ac_view_tabs", "comm_tabs"}) {
+            auto* tabs = w.findChild<QTabWidget*>(name);
+            QVERIFY(tabs);
+            tabs->setCurrentIndex(tabs->count() - 1);
+            QVERIFY(!f.document.dirty());
+        }
+        QCOMPARE(edits.count(), 0);
+        QCOMPARE(f.document.revision(), revision);
+        const auto navigated = w.capture();
+        QCOMPARE(navigated.selected_domain, std::string("communications"));
+        QCOMPARE(navigated.signals.selected_tab, std::string("response"));
+        QCOMPARE(navigated.digital.selected_tab, std::string("timing"));
+        QCOMPARE(navigated.digital.timing.selected_tab, std::string("stimuli"));
+        QCOMPARE(navigated.circuits.selected_tab, std::string("ac"));
+        QCOMPARE(navigated.circuits.dc.selected_tab, std::string("help"));
+        QCOMPARE(navigated.circuits.ac.selected_tab, std::string("help"));
+        QCOMPARE(navigated.communications.selected_tab, std::string("help"));
+        QVERIFY(f.workflow.request_close());
+        QCOMPARE(f.dialogs->prompts, 0);
+        QVERIFY(f.workflow.save()); // Explicit save retains navigation choices.
+        QCOMPARE(loaded(f.file()), navigated);
         QVERIFY(f.workflow.open_path(f.file()));
+        QCOMPARE(f.document.workspace().capture(), navigated);
         QVERIFY(!f.document.dirty());
         inert(f.document.workspace());
+        auto* units = f.document.workspace().findChild<QComboBox*>("phase_unit");
+        units->setCurrentIndex(1);
+        QVERIFY(f.document.dirty()); // Units are a physical input edit.
+        QVERIFY(f.workflow.save());
+        f.document.workspace().findChild<QLineEdit*>("phase")->setText("1e-");
+        QVERIFY(f.document.dirty()); // Invalid pending data is still an edit.
+        QVERIFY(f.workflow.save());
+        f.document.workspace().findChild<QComboBox*>("filter_type")->setCurrentIndex(1);
+        QVERIFY(f.document.dirty()); // Configuration is an input edit.
+        QVERIFY(f.workflow.save());
+        const auto before_solve = f.document.workspace().capture();
+        f.document.workspace().findChild<QPushButton*>("ac_solve")->click();
+        QVERIFY(!f.document.dirty());
+        QCOMPARE(f.document.workspace().capture(), before_solve);
     }
     void newAndCloseStopExecution() {
         Fixture f;

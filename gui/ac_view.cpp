@@ -24,6 +24,8 @@ QTableWidget* table(const char* name, const QStringList& columns, QWidget* paren
                     bool editable = true) {
     auto* t = new QTableWidget(0, static_cast<int>(columns.size()), parent);
     t->setObjectName(name);
+    t->setAccessibleName(QString::fromUtf8(name).replace('_', ' '));
+    t->setTabKeyNavigation(false);
     t->setHorizontalHeaderLabels(columns);
     t->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     t->horizontalHeader()->setStretchLastSection(true);
@@ -131,8 +133,14 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
             invalidate();
         }
     });
-    button("ac_example_rc", "RC low-pass", part_actions, [this] { load_example(false); });
-    button("ac_example_rlc", "Series RLC", part_actions, [this] { load_example(true); });
+    button("ac_example_rc", "Replace with RC…", part_actions, [this] {
+        if (confirm_replacement("AC circuit"))
+            load_example(false);
+    });
+    button("ac_example_rlc", "Replace with RLC…", part_actions, [this] {
+        if (confirm_replacement("AC circuit"))
+            load_example(true);
+    });
     auto* single = new QWidget(tabs_);
     tabs_->addTab(single, "Single-frequency results");
     auto* single_layout = new QVBoxLayout(single);
@@ -154,11 +162,13 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
         row->addWidget(new QLabel(label, this));
         value = new QLineEdit("1", this);
         value->setObjectName(name);
+        value->setAccessibleName(label + " frequency");
         value->setMaxLength(128);
         value->setMaximumWidth(150);
         row->addWidget(value);
         unit = new QComboBox(this);
         unit->setObjectName(unit_name);
+        unit->setAccessibleName(label + " frequency unit");
         unit->addItem("Hz", 1.);
         unit->addItem("kHz", 1e3);
         unit->addItem("MHz", 1e6);
@@ -174,10 +184,12 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
     frequency_controls("ac_stop", "ac_stop_unit", "Stop", stop_, stop_unit_, sweep_controls);
     spacing_ = new QComboBox(this);
     spacing_->setObjectName("ac_spacing");
+    spacing_->setAccessibleName("Frequency grid spacing");
     spacing_->addItems({"Logarithmic", "Linear"});
     sweep_controls->addWidget(spacing_);
     count_ = new DraftInt(this);
     count_->setObjectName("ac_point_count");
+    count_->setAccessibleName("Sweep point count");
     count_->setRange(2, ac_gui_limits::sweep_points);
     count_->setValue(201);
     count_->setSuffix(" points");
@@ -188,6 +200,7 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
         outputs->addWidget(new QLabel(label, this));
         auto* c = new QComboBox(this);
         c->setObjectName(name);
+        c->setAccessibleName(label);
         outputs->addWidget(c);
         connect(c, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
         return c;
@@ -218,7 +231,7 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
                    this, false);
     sweep_layout->addWidget(sweep_, 1);
     auto* help = new QTextBrowser(this);
-    tabs_->addTab(help, "Conventions");
+    tabs_->addTab(help, "Conventions and help");
     help->setHtml(QString::fromUtf8(
         "<h2>AC phasors</h2><p>RMS cosine reference: x(t) = √2 Re{X exp(j2πft)}. "
         "Sources share one positive analysis frequency. There is no DC bias or transient model.</p>"
@@ -255,13 +268,15 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
     status_ = new QLabel(this);
     status_->setObjectName("ac_status");
     status_->setWordWrap(true);
+    status_->setTextFormat(Qt::PlainText);
     status_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(status_);
     timer_ = new QTimer(this);
     timer_->setInterval(0);
     connect(timer_, &QTimer::timeout, this, [this] { advance_sweep(); });
     connect(spacing_, &QComboBox::currentIndexChanged, this, [this] { invalidate(); });
-    connect(count_, &QSpinBox::valueChanged, this, [this] { invalidate(); });
+    connect(static_cast<DraftInt*>(count_)->editor(), &QLineEdit::textChanged, this,
+            [this] { invalidate(); });
     rows_ = std::make_unique<CircuitDraftRows<project::AcDraft>>(
         state_.get(), nodes_, components_, ground_, status_, this,
         [this](CircuitDraftChange change) {
@@ -506,19 +521,20 @@ void AcView::solve() {
             phasor_cells(currents_, row++, name + " [" + QString::number(source.source.value) + "]",
                          source.current_amperes_rms);
         }
-        status_->setText(QString("Solved AC at %1 Hz. RMS cosine reference; source currents + → −. "
-                                 "Scaled reciprocal condition: %2; backward error: %3.")
-                             .arg(number(solution.frequency_hz))
-                             .arg(number(solution.quality.scaled_reciprocal_condition))
-                             .arg(number(solution.quality.backward_error)));
+        status_->setText(
+            QString("Solved AC at %1 Hz — complete. RMS cosine reference; source currents + → −. "
+                    "Scaled reciprocal condition: %2; backward error: %3.")
+                .arg(number(solution.frequency_hz))
+                .arg(number(solution.quality.scaled_reciprocal_condition))
+                .arg(number(solution.quality.backward_error)));
         {
             QSignalBlocker b(tabs_);
             tabs_->setCurrentIndex(1);
         }
     } catch (const circuits::CircuitError& e) {
-        status_->setText(diagnostic(e));
+        status_->setText("Failed — " + diagnostic(e));
     } catch (const std::exception& e) {
-        status_->setText(QString::fromUtf8(e.what()));
+        status_->setText("Failed — " + QString::fromUtf8(e.what()));
     }
 }
 void AcView::start_sweep() {
@@ -574,10 +590,10 @@ void AcView::start_sweep() {
         timer_->start();
     } catch (const circuits::CircuitError& e) {
         invalidate();
-        status_->setText(diagnostic(e));
+        status_->setText("Failed — " + diagnostic(e));
     } catch (const std::exception& e) {
         invalidate();
-        status_->setText(QString::fromUtf8(e.what()));
+        status_->setText("Failed — " + QString::fromUtf8(e.what()));
     }
 }
 void AcView::advance_sweep() {
@@ -629,7 +645,7 @@ void AcView::advance_sweep() {
         }
     } catch (const std::exception& e) {
         cancel_sweep();
-        status_->setText("Sweep interrupted: " + QString::fromUtf8(e.what()));
+        status_->setText("Sweep failed (partial results retained): " + QString::fromUtf8(e.what()));
     }
 }
 void AcView::cancel_sweep() {
@@ -640,10 +656,10 @@ void AcView::cancel_sweep() {
     for (std::size_t i = points_.size(); i < frequencies_.size(); ++i)
         sweep_->item(static_cast<int>(i), 5)->setText("Not evaluated (cancelled)");
     update_plots();
-    status_->setText(
-        QString("Sweep cancelled: %1/%2 evaluated; remaining frequencies were not solved.")
-            .arg(points_.size())
-            .arg(frequencies_.size()));
+    status_->setText(QString("Sweep cancelled: partial results, %1/%2 evaluated; remaining "
+                             "frequencies were not solved.")
+                         .arg(points_.size())
+                         .arg(frequencies_.size()));
 }
 void AcView::update_plots() {
     magnitude_plot_->set_response(frequencies_, magnitudes_, logarithmic_,
