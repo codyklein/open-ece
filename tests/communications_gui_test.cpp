@@ -16,6 +16,7 @@
 #include <QtTest>
 #include <cmath>
 #include <qwt_legend.h>
+#include <qwt_legend_label.h>
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
@@ -187,9 +188,13 @@ class CommunicationsGuiTest : public QObject {
         CommunicationsView v;
         v.show();
         QApplication::processEvents();
+        v.resize(2400, 900); // Wide windows should not leave a blank table tail.
         ber(v, 1, 12000);
         click(v, "comm_step");
         auto* table = results(v);
+        QApplication::processEvents();
+        QVERIFY(table->horizontalHeader()->stretchLastSection());
+        QVERIFY(table->horizontalHeader()->length() >= table->viewport()->width());
         QList<int> widths;
         for (int col = 0; col < table->columnCount(); ++col) {
             QCOMPARE(table->horizontalHeader()->sectionResizeMode(col), QHeaderView::Interactive);
@@ -215,10 +220,23 @@ class CommunicationsGuiTest : public QObject {
         auto* legend = qobject_cast<QwtLegend*>(plot.legend());
         QVERIFY(legend);
         QList<QPointer<QWidget>> entries;
+        auto verify_key = [&](QwtPlotCurve* series, QWidget* widget) {
+            auto* label = qobject_cast<QwtLegendLabel*>(widget);
+            QVERIFY(label);
+            QVERIFY(!label->icon().isNull());
+            QVERIFY(series->legendIconSize().width() >= 24);
+            const auto icon = label->icon().toImage();
+            bool has_series_color = false;
+            for (int y = 0; y < icon.height(); ++y)
+                for (int x = 0; x < icon.width(); ++x)
+                    has_series_color |= icon.pixelColor(x, y) == series->pen().color();
+            QVERIFY(has_series_color); // Actual rendered keys, including empty series.
+        };
         for (auto* curve : curves) {
             auto widgets = legend->legendWidgets(plot.itemToInfo(curve));
             QCOMPARE(widgets.size(), 1);
             entries.append(widgets[0]);
+            verify_key(static_cast<QwtPlotCurve*>(curve), widgets[0]);
         }
         for (auto point : {openece::communications::BerPoint{0, 4., 0, 4000, 12000},
                            openece::communications::BerPoint{0, 4., 2, 8000, 12000},
@@ -229,6 +247,7 @@ class CommunicationsGuiTest : public QObject {
             for (int i = 0; i < curves.size(); ++i) {
                 QVERIFY(entries[i]);
                 QCOMPARE(legend->legendWidgets(plot.itemToInfo(curves[i]))[0], entries[i].data());
+                verify_key(static_cast<QwtPlotCurve*>(curves[i]), entries[i].data());
             }
         }
         plot.clear();

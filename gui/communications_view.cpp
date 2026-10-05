@@ -437,7 +437,9 @@ void CommunicationsView::ensure_experiment() {
     // user-resizable. Live counts/status updates must not move adjacent columns.
     auto* header = ber_table_->horizontalHeader();
     header->setSectionResizeMode(QHeaderView::Interactive);
-    header->setStretchLastSection(false);
+    // Fill wider viewports without changing the count/probability columns on
+    // every live update. Users may still resize the preceding columns.
+    header->setStretchLastSection(true);
     const QStringList width_samples{
         "-1.2345678901234567e+100", "1000000",
         "1000000 / 1000000",        "0 errors in 1000000 bits; 95% upper ≤ 1.23456789012e-12",

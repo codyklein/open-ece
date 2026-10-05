@@ -1,9 +1,11 @@
 #include "communications_plot.hpp"
+#include <QPainter>
 #include <QVector>
 #include <algorithm>
 #include <cmath>
 #include <qwt_interval.h>
 #include <qwt_legend.h>
+#include <qwt_legend_label.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
 #include <qwt_plot_marker.h>
@@ -154,13 +156,37 @@ void CommunicationsPlot::ber(std::span<const communications::BerPoint> points,
         }
     }
     ber_curves_[0]->setSamples(x, theory);
-    ber_curves_[0]->setSymbol(x.size() == 1
-                                  ? new QwtSymbol(QwtSymbol::XCross, QBrush(QColor(20, 90, 170)),
-                                                  QPen(QColor(20, 90, 170)), QSize(6, 6))
-                                  : nullptr);
+    if ((x.size() == 1) != (ber_curves_[0]->symbol() != nullptr))
+        ber_curves_[0]->setSymbol(
+            x.size() == 1 ? new QwtSymbol(QwtSymbol::XCross, QBrush(QColor(20, 90, 170)),
+                                          QPen(QColor(20, 90, 170)), QSize(6, 6))
+                          : nullptr);
     ber_curves_[1]->setSamples(mx, my);
     ber_curves_[2]->setSamples(px, py);
     ber_curves_[3]->setSamples(ux, uy);
+    // Paint fixed keys directly: Qwt's vector-to-pixmap legend conversion can
+    // produce transparent icons on the Fedora Qt runtime. Keep the existing
+    // legend labels and show the exact pen/symbol used by each series, including
+    // series without any samples. This does not change plotted samples.
+    auto* keys = static_cast<QwtLegend*>(legend());
+    for (auto* series : ber_curves_) {
+        series->setLegendIconSize(QSize(24, 14));
+        QPixmap icon(QSize(24, 14) * devicePixelRatioF());
+        icon.setDevicePixelRatio(devicePixelRatioF());
+        icon.fill(Qt::transparent);
+        {
+            QPainter painter(&icon);
+            if (series->style() != QwtPlotCurve::NoCurve) {
+                painter.setPen(series->pen());
+                painter.drawLine(QPointF(1, 7), QPointF(23, 7));
+            } else if (series->symbol()) {
+                series->symbol()->drawSymbol(&painter, QPointF(12, 7));
+            }
+        }
+        for (auto* widget : keys->legendWidgets(itemToInfo(series)))
+            if (auto* label = qobject_cast<QwtLegendLabel*>(widget))
+                label->setIcon(icon);
+    }
     replot();
 }
 } // namespace openece::gui
