@@ -1,2 +1,5 @@
+# Approved source/export hashes define exact bytes, including line endings.
+# Do not let Windows core.autocrlf rewrite SVG, JSON, license or source files.
+* -text
 # Preserve the approved, verbatim upstream license, including its trailing space.
 notices/Noto-Sans-OFL.txt whitespace=-blank-at-eol

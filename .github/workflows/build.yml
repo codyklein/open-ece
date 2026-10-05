@@ -46,6 +46,7 @@ jobs:
             build/ci/results.xml
             build/ci/example-*.log
             build/ci/compatibility-*.log
+            build/ci/branding-*.log
             build/ci/CMakeFiles/CMakeConfigureLog.yaml
   windows:
     name: Windows MSVC 2022 / Qt 6.8.3 / Debug and Release
@@ -139,6 +140,7 @@ jobs:
             build/windows/*results.xml
             build/windows/example-*.log
             build/windows/compatibility-*.log
+            build/windows/branding-*.log
             build/windows/communications-benchmark.log
             build/windows/CMakeFiles/CMakeConfigureLog.yaml
   packaged-startup:

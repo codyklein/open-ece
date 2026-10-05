@@ -163,7 +163,9 @@ shared light/dark coverage, exact ICO decoding, SVG structure and social-preview
 dimensions/size. `SHA256SUMS.json` covers every delivered file except itself.
 
 The imported artwork is checked against `IMPORTED-ASSET-SHA256SUMS.json` by the
-GUI branding test. `APPROVED-SOURCE-SHA256SUMS.json` records the complete external
+GUI branding test. A scoped `.gitattributes` disables line-ending conversion in
+this directory so Windows checkouts preserve the same approved bytes.
+`APPROVED-SOURCE-SHA256SUMS.json` records the complete external
 approved source package, including its original README and review image; those
 review-only files are not part of this repository's asset inventory. Repository
 usage documentation is maintained separately from frozen artwork.
