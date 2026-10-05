@@ -236,3 +236,11 @@ legend entries between updates; result columns stay user-resizable with stable
 initial widths. Signals forms use content sizing and wrapping. Navigation choices
 remain schema-1 content but navigation alone no longer triggers Save prompts.
 Checkpoint 4 remains open and checkpoint 5 has not begun.
+
+The Fedora targeted retest passed navigation (#15) and enlarged-text layout
+(#17), but rejected the focus treatment (#14) and found missing BER legend keys
+and unused table width (#16). Only those two fixes are revised: a wider current
+focus ring with inactive numeric-selection clearing, and explicit stable BER
+line/marker keys with a stretching last result column. The [physical record](physical-validation.md)
+retains the failed observations and specifies the bounded new-candidate retest.
+Fedora/Windows physical acceptance of the revised #14/#16 remains open.

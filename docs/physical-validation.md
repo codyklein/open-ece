@@ -141,6 +141,53 @@ workspace scrolling is expected with large text; this is not a responsive redesi
 True mixed-DPI and screen-reader validation remain explicitly unvalidated if
 hardware/tools are unavailable. Do not infer those passes from focus tests.
 
+## Fedora targeted retest received 2026-10-04
+
+The tester reports the following targeted results. The tested hash, Fedora
+version/session and exact enlarged-text setting were not restated in this report;
+do not infer those details or Windows results from these observations.
+
+- **#14 FAIL:** Tab/Shift+Tab and keyboard actions work without traps, but
+  previously visited numeric fields retain selection highlights and the thin
+  focus frame is not sufficiently distinct. This remains a release blocker.
+- **#15 PASS:** switching top-level sections leaves the saved project clean,
+  without a modified marker or unnecessary exit prompt. No new change requested.
+- **#16 FAIL (minor regression):** live flicker improved, but legend keys do not
+  visibly identify series and table columns leave a large unused tail.
+- **#17 PASS:** maximized and smaller-window Signals layouts no longer clip
+  labels; hidden content remains reachable through scrolling. No new change requested.
+
+### Narrow revisions and required retest
+
+Only #14 and #16 are revised. The current-focus frame uses a wider blue ring with
+white contrast, above native borders and without the native thin-frame mask.
+Inactive numeric editor selection is cleared on focus departure, without changing,
+parsing or committing text. Keyboard regressions check the actual frame target,
+visible ring, inactive selection and exact valid/empty/incomplete/whitespace draft
+preservation without edit notifications, at four scaling factors.
+
+The four BER legend widgets remain stable. Their keys are painted directly from
+the series pens/symbols because a local rendering test found fully transparent
+Qwt vector legend pixmaps even when icon dimensions were nonzero. Keys identify
+blue theory, green complete circles, purple partial diamonds and orange
+zero-error upper-bound triangles, including empty series. Tests verify rendered
+colors across pending/partial/complete states, entry identity, cancel/resume,
+manual column widths and use of wide table viewports. The last table column fills
+spare space; count/probability columns do not resize on live value updates.
+No numerical, schema, dirty-state or enlarged-text layout change is introduced.
+
+Repeat **#14 and #16 on the newly identified candidate** on Fedora and Windows 11:
+Tab/Shift+Tab through several numeric controls and the Digital/Timing editors,
+confirm only the current control has the blue/white ring and old numeric
+selections no longer masquerade as focus; check mouse activation, editor exit,
+scrolling and focus return from a native dialog. During BPSK/QPSK BER execution,
+check all four colored line/marker keys remain visible and stationary through
+Step/Run/Cancel/Resume and completion, and that wide/narrow tables use available
+space while manual widths remain stable. Retain #15/#17 Fedora passes; only a
+short navigation/save/reopen/enlarged-text regression smoke is needed if affected.
+Previous artifact hashes are not evidence for these revised binaries.
+Checkpoint 4 remains open; checkpoint 5 is not authorized.
+
 ## Identifying the Windows candidate
 
 Use the normal branch CI `Build, test and package` run for the checkpoint commit.
