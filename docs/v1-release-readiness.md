@@ -69,13 +69,14 @@ The original timing test reproduced the ASan failure locally before this fix.
 
 ## Remaining release gates
 
-Checkpoints 1–3 are approved. Checkpoint 4 remains open for physical Windows 11
-and practical native desktop evidence; hosted CI and offscreen tests do not
-substitute for these checks. Windows 10 cannot currently be physically validated
-and is no longer claimed supported for v1.0. Checkpoint 5 must review dependencies/
-notices and validate the exact final candidate package. No v1.0 release claim is
-made until the remaining gates are resolved. See [checkpoint-4 evidence and the
-manual checklist](physical-validation.md).
+Checkpoints 1–4 are approved and committed. Checkpoint 4 closed at
+`443088d5e99ee488e1355b94635ceea804601571` following final physical Fedora and
+Windows 11 acceptance. Hosted/offscreen tests remain separate evidence. Windows
+10 is not physically validated or claimed supported for v1.0; mixed-DPI and
+screen-reader gaps remain explicit. Checkpoint 5 prepares the 1.0.0 candidate,
+reviews dependencies/notices and validates its exact ZIP. Final physical RC smoke
+and approval remain release gates; no tag or publication is authorized yet.
+See [physical evidence](physical-validation.md) and [RC steps](release-candidate.md).
 
 ## Checkpoint 2: UX, focus and scaling
 
@@ -207,7 +208,7 @@ process exceeded 120 seconds. Fixture-only LF attributes now preserve release
 bytes. Each example runs in its own bounded CTest entry, with explicit Qt Test
 logs uploaded on both platforms. No example, sweep point or assertion was removed.
 
-## Checkpoint 4 — validation in progress
+## Checkpoint 4 — historical validation and closure
 
 Physical Windows 11 testing has started and found a Signals stale-result blocker;
 its narrow fix awaits physical retest, so this checkpoint is not complete. The [evidence record](physical-validation.md) distinguishes native
@@ -244,3 +245,30 @@ focus ring with inactive numeric-selection clearing, and explicit stable BER
 line/marker keys with a stretching last result column. The [physical record](physical-validation.md)
 retains the failed observations and specifies the bounded new-candidate retest.
 Fedora/Windows physical acceptance of the revised #14/#16 remains open.
+
+
+The final retests passed on Fedora and Windows 11 using the candidate from
+`a3814953002a4d9718debcf8ae22680a75c0f47f`, inner-ZIP SHA-256
+`66d8ec56a55377b63b0d75cab288924c1f0222f2a650a2571ea6f8f0f4bb246f`.
+Issues #14–#17 are closed; the documentation-only closure commit is
+`443088d5e99ee488e1355b94635ceea804601571`. This supersedes the historical
+pending/failure statements above without erasing them.
+
+## Checkpoint 5 — 1.0.0 candidate freeze
+
+CMake, CI artifact paths, runtime notes and current guides identify 1.0.0. About
+and application version already derive from CMake; the existing About test checks
+that configured version. This checkpoint changes release metadata/documentation
+only. Algorithms, APIs, solver tolerances, schema-1 tokens, shipped example bytes
+and immutable v0.9 fixtures remain unchanged.
+
+[Release notes](release-notes-v1.0.md) summarize the shipped capabilities and
+bounded stabilization. [Dependency/license review](release-dependencies.md)
+records retained pins, notices and the limited advisory review. CI must pass all
+eight jobs and the final ZIP must pass complete manifest and packaged-runtime
+verification. Exact commit, CI URL, counts and inner-ZIP hash are recorded in the
+candidate report after validation; the hash is not embedded back into the ZIP.
+
+The [physical RC smoke](release-candidate.md) is still pending on that new ZIP.
+Passing checkpoint-4 binaries do not establish acceptance of the new artifact.
+No tag, merge or GitHub release is created by candidate preparation.

@@ -1,4 +1,4 @@
-OpenECE v0.9.0 - Windows x86_64
+OpenECE v1.0.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -6,7 +6,9 @@ No Qt installation, environment configuration or administrator access is needed.
 The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
-v1.0 desktop validation target: Windows 11 x86_64 (physical testing pending).
+Physically validated desktop platform: Windows 11 x86_64. Native Fedora also
+passed checkpoint-4 validation. The final 1.0.0 candidate requires its bounded
+physical RC smoke check before publication; see docs/release-candidate.md.
 Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
@@ -99,6 +101,7 @@ examples/README.md for actions, analytical expectations and unit conventions.
 Help > About OpenECE identifies the actual built version, MIT license and notices.
 Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
-The v1.0 stabilization branch still uses 0.9.0 package metadata until RC freeze;
-physical Windows 11 and mixed-monitor validation are not yet established.
+This is the OpenECE 1.0.0 release candidate. Checkpoint-4 physical Windows 11
+and Fedora retests passed; true mixed-monitor DPI and screen-reader behavior
+remain unvalidated. No installer, updater or automatic migration is included.
 See docs/physical-validation.md for the checklist and evidence boundaries.

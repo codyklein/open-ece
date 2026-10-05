@@ -4,7 +4,8 @@ Checkpoint 4 is **closed** following the final user-reported Fedora and physical
 Windows 11 retests recorded below. Earlier failures and pending requests remain
 as historical evidence and are superseded only by the identified final retests.
 This is not formal accessibility certification or a v1.0 release freeze.
-Checkpoint 5 has not begun; no v1.0 tag or release is authorized by this closure.
+Checkpoint 5 is now authorized for release-candidate preparation only; no v1.0
+tag or release is authorized by this closure.
 
 ## Initial evidence (2026-09-28)
 
@@ -291,14 +292,17 @@ protected-destination coverage, or a formal complete accessibility audit.
 Automated scale, file-failure and workflow tests do not substitute for those
 manual checks. These limitations must remain visible during checkpoint-5
 release-readiness review. No unresolved blocker was reported in the final
-affected-behavior retests. Checkpoint 4 is closed; checkpoint 5 awaits approval.
+affected-behavior retests. Checkpoint 4 is closed. Checkpoint 5 now prepares a
+new 1.0.0 ZIP for the [bounded RC smoke](release-candidate.md); the checkpoint-4
+hash above remains historical evidence for that tested application.
 
-## Identifying the Windows candidate
+## Identifying the historical checkpoint-4 Windows candidate
 
 Use the normal branch CI `Build, test and package` run for the checkpoint commit.
 Download the artifact named `OpenECE-v0.9.0-windows-x86_64`; the **inner ZIP** is
-`OpenECE-v0.9.0-windows-x86_64.zip`. Metadata remains 0.9.0 during stabilization;
-this is not a v1.0 release. The checkpoint report supplies the source commit, CI
+`OpenECE-v0.9.0-windows-x86_64.zip`. Checkpoint-4 metadata was 0.9.0; the
+checkpoint-5 candidate is now 1.0.0 and uses [separate RC steps](release-candidate.md).
+The checkpoint report supplies the source commit, CI
 URL, exact inner-ZIP SHA-256, file count and manifest verification. Retain that
 receipt alongside the test record below. Do not reuse checkpoint-3 hashes for a
 build containing the warning corrections.
@@ -411,4 +415,5 @@ than rewritten as automated passes; the human focus/traversal reports provide
 the corresponding practical evidence. Unreported manual checks and mixed-DPI/
 screen-reader gaps remain explicit limitations. Any later application change
 requires fresh candidate identification and affected retesting. Checkpoint 5
-has not begun, and v1.0 must not be tagged or published before its release review.
+is authorized for metadata/documentation and exact RC validation; v1.0 must not
+be tagged or published before physical RC smoke and release approval.

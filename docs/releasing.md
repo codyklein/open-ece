@@ -9,7 +9,7 @@ or publishing. Track open physical-platform gates in [release readiness](v1-rele
    compatibility fixtures to conceal a breaking change.
 2. At final candidate freeze, align the CMake project version, GitHub Actions
    artifact names/paths, Windows guide/runtime notes and candidate records. Current
-   checkpoint-3 metadata is deliberately still **0.9.0**, not a released 1.0.
+   final-candidate metadata is **1.0.0**, not yet a tagged or published release.
    About uses the actual CMake version; no independent UI version string is maintained.
 3. Run all six Fedora configurations and Windows MSVC Debug/Release. Use the
    [Windows package script](windows.md) to deploy Release Qt/Qwt/CRT and plugins,
@@ -19,7 +19,8 @@ or publishing. Track open physical-platform gates in [release readiness](v1-rele
    artifacts. Test the **same ZIP** on the fresh packaged-runtime runner, including
    startup, persistence and inert example round trips. Record its SHA-256, file and
    manifest counts. Do not rebuild or recompress after validation.
-5. Complete exact-artifact physical Windows and native Fedora checklists. Record
+5. Checkpoint-4 physical Fedora/Windows 11 retests are recorded. Complete the
+   [bounded final RC smoke](release-candidate.md) on the new 1.0.0 artifact. Record
    OS/build/scaling, user context, hash and failures honestly. A hosted Server run
    is not physical Windows 10/11 evidence; leave an unverified platform criterion
    open or explicitly narrow support before release.

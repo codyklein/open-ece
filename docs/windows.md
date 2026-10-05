@@ -1,10 +1,11 @@
 # Windows build and portable ZIP
 
-The v1.0 Windows desktop validation target is Windows 11 x86_64,
+The physically validated v1.0 Windows desktop platform is Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a physical Windows 11
-hardware test. Physical Windows 11 validation is pending. Windows 10 and MinGW
+hardware test. Checkpoint-4 physical Windows 11 retests passed; the final 1.0.0
+artifact awaits the [RC smoke test](release-candidate.md). Windows 10 and MinGW
 may work but are not validated or claimed supported for v1.0. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
 
 ## Prerequisites
@@ -108,7 +109,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v0.9.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.0.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -123,7 +124,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v0.9.0-windows-x86_64/
+OpenECE-v1.0.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -159,7 +160,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v0.9.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v1.0.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
@@ -211,5 +212,6 @@ round-trips all nine packaged files, in addition to its existing persistence tes
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 0.9.0 filenames above match current CMake/CI metadata during stabilization;
-[release freeze](releasing.md) updates them together. They do not assert v1.0 is released.
+Version 1.0.0 filenames above match the final CMake/CI candidate metadata.
+This is a release candidate, not a published release; follow the
+[exact-artifact smoke test](release-candidate.md) before release approval.

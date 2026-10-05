@@ -16,10 +16,11 @@ libraries with editable experiments, plots and automated numerical tests.
   domains, including incomplete drafts. Results are recomputed explicitly after
   opening; project files do not contain plot or solver caches.
 
-This branch is a **v1.0 release-readiness candidate**, building on v0.9.0. It is
-not a released or fully physically validated v1.0. Binary/package version metadata
-remains 0.9.0 until the final candidate checkpoint. No new engineering subsystem
-is part of this stabilization milestone.
+This branch is the **OpenECE 1.0.0 release candidate**, building on v0.9.0.
+Checkpoint-4 physical retests passed on native Fedora and Windows 11. The final
+1.0.0 package still requires the [bounded RC smoke test](docs/release-candidate.md)
+and approval before tagging or publishing. No new engineering subsystem is part
+of this stabilization milestone.
 
 ## Try it
 
@@ -44,9 +45,9 @@ configuration is offline. [Windows instructions](docs/windows.md) use Visual
 Studio 2022 x64 and explicitly acquired Qt 6.8.3, with checksum-pinned dependencies.
 
 CI covers Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan, Windows MSVC
-Debug/Release, and a fresh Windows packaged-runtime test. The Windows desktop
-validation target for v1.0 is Windows 11 x86_64; physical validation is still
-pending. Windows 10 and MinGW may work but are not validated or claimed supported
+Debug/Release, and a fresh Windows packaged-runtime test. Physically validated
+platforms are Fedora 44 and Windows 11 x86_64; see the recorded physical scope
+below. Windows 10 and MinGW may work but are not validated or claimed supported
 for v1.0. Hosted Windows Server tests do not establish desktop, mixed-DPI or
 screen-reader validation. See the [physical validation record and checklist](docs/physical-validation.md).
 
@@ -60,7 +61,8 @@ screen-reader validation. See the [physical validation record and checklist](doc
   [Timing](docs/digital-timing.md), [DC](docs/circuit-analysis.md),
   [AC](docs/ac-analysis.md), [Communications](docs/communications.md)
 - [Architecture](docs/architecture.md), [development](docs/development.md),
-  [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md)
+  [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md),
+  [1.0 release notes](docs/release-notes-v1.0.md)
 
 The source tree separates `core/`, `signals/`, `dsp/`, `digital/`, `circuits/`,
 `communications/` and `project/`. `gui/` composes the domain views and project
