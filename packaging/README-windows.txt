@@ -1,4 +1,4 @@
-OpenECE v1.0.0 - Windows x86_64
+OpenECE v1.0.1 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -7,8 +7,8 @@ The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
 Physically validated desktop platform: Windows 11 x86_64. Native Fedora also
-passed checkpoint-4 validation. The final 1.0.0 candidate requires its bounded
-physical RC smoke check before publication; see docs/release-candidate.md.
+passed v1.0 validation, including the exact 1.0.0 RC. This 1.0.1 branding
+candidate requires bounded physical checks; see docs/branding.md.
 Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
@@ -93,7 +93,7 @@ autosave, crash recovery, cloud sync, collaboration or migration is included.
 User guide: https://github.com/codyklein/open-ece/blob/main/docs/projects.md
 Schema: https://github.com/codyklein/open-ece/blob/main/docs/project-format.md
 
-Candidate onboarding and examples
+Onboarding and examples
 --------------------------------
 Open examples/*.openece through File > Open. They are ordinary editable projects,
 not automatically running demos. Start with docs/first-session.md and
@@ -101,7 +101,15 @@ examples/README.md for actions, analytical expectations and unit conventions.
 Help > About OpenECE identifies the actual built version, MIT license and notices.
 Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
-This is the OpenECE 1.0.0 release candidate. Checkpoint-4 physical Windows 11
-and Fedora retests passed; true mixed-monitor DPI and screen-reader behavior
+This is the OpenECE 1.0.1 branding candidate. Physical Windows 11 and Fedora
+validation passed for the released v1.0 baseline; true mixed-monitor DPI and screen-reader behavior
 remain unvalidated. No installer, updater or automatic migration is included.
 See docs/physical-validation.md for the checklist and evidence boundaries.
+
+Branding
+--------
+The approved cobalt Waveform O appears as the application/window icon and the
+multi-resolution executable icon. About retains version/license information.
+Useful exports are in branding/. The wordmark is outlined from Noto Sans SemiBold;
+no font installation is required. See branding/README.txt and the Noto Sans OFL
+notice in licenses/. Published v1.0.0 files are unchanged.

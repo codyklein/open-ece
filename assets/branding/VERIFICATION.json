@@ -1,0 +1,52 @@
+{
+  "icon_geometry": "8 approved source SVG hashes verified; recoloring only",
+  "png_icon_files": 48,
+  "png_sizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    96,
+    128,
+    256,
+    512,
+    1024
+  ],
+  "color_variants": [
+    "primary",
+    "dark",
+    "monochrome",
+    "white"
+  ],
+  "optical_sizes": [
+    16,
+    20,
+    24
+  ],
+  "ico_files": 4,
+  "frames_per_ico": 10,
+  "ico_sizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    96,
+    128,
+    256
+  ],
+  "ico_verification": "All 40 frames exactly match RGBA PNG pixels, including optical variants",
+  "svg_validation": "All logo SVGs self-contained; no fonts, external references or scripts",
+  "social_dimensions": [
+    1280,
+    640
+  ],
+  "social_bytes": 67186,
+  "runtime_validation": "Qt/Windows Explorer integration deferred; not a packaged-app build",
+  "portable_rebuild": "Passed on Fedora in a separate Unicode/space path, with no prior design folders and font paths unavailable; --assets-only."
+}

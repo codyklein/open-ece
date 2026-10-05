@@ -1,7 +1,7 @@
-# OpenECE 1.0.0 — release candidate notes
+# OpenECE 1.0.0 — release notes
 
-Publication and tagging await approval of the exact final candidate. This
-stabilization release brings the existing engineering workspaces together; it
+[OpenECE 1.0.0 is published](https://github.com/codyklein/open-ece/releases/tag/v1.0.0)
+at commit `3e688548d3d71a12fdceee173ee780047f23f854`. This stabilization release brings the existing engineering workspaces together; it
 does not introduce another engineering domain.
 
 ## Shipped capabilities
@@ -53,8 +53,8 @@ users explicitly recompute them after opening.
 Physical checkpoint-4 retests passed on native Fedora and Windows 11 x64,
 including Windows Signals at 150% scaling. CI covers Fedora 44 GCC/Clang desktop/
 headless, Clang ASan/UBSan, MSVC 2022 Debug/Release with Qt 6.8.3, and the fresh
-Windows packaged runtime. The new 1.0.0 artifact still requires its
-[bounded physical RC smoke](release-candidate.md).
+Windows packaged runtime. The exact 1.0.0 ZIP passed its bounded physical Windows 11 RC smoke before
+publication; [the historical checklist](release-candidate.md) records its scope.
 
 Windows 10, MinGW, true mixed-monitor DPI and native screen-reader behavior are
 not validated. This is an unsigned portable ZIP, with no installer/updater.

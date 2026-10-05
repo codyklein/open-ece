@@ -50,3 +50,11 @@ Private build-time headers; no JSON runtime DLL or public OpenECE JSON types.
 Licenses: licenses/nlohmann-json/LICENSE.MIT and the embedded notice in
 licenses/nlohmann-json/hedley.hpp. Corresponding source:
 https://github.com/nlohmann/json/tree/v3.12.0
+
+Noto Sans SemiBold 2.015: Copyright 2022 The Noto Project Authors.
+Used to create the approved outlined OpenECE wordmark; no font binary is shipped
+or loaded at runtime. Font software is licensed under SIL Open Font License 1.1.
+Attribution/license: licenses/Noto-Sans/Noto-Sans-OFL.txt in the portable package,
+or assets/branding/notices/Noto-Sans-OFL.txt in source.
+https://github.com/google/fonts/blob/main/ofl/notosans/OFL.txt
+OpenECE original brand artwork/export sources retain the project's MIT license.

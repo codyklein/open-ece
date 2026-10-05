@@ -1,7 +1,8 @@
-# Candidate UI screenshots
+# Workbench screenshots
 
-These are actual checkpoint-3 workbench renders on Fedora 44, Qt 6.11.2, at 100%
-scaling, 1440×1200, using Qt's offscreen platform. They are not mockups or evidence
+These are actual 1.0.1 workbench renders on Fedora 44, Qt 6.11.2, at 100%
+scaling, 1440×1320, using Qt's offscreen platform. They include the final v1 focus, Signals layout and BER legend/table fixes.
+They are not mockups or evidence
 of physical Windows/mixed-DPI validation. The test loads each example snapshot
 into an unnamed workspace, explicitly computes, then captures the window. Ordinary
 File → Open additionally displays the filename/path. No analysis runs on restore.

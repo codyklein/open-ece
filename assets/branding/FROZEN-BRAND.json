@@ -1,0 +1,41 @@
+{
+  "status": "approved/frozen",
+  "approval_date": "2026-10-05",
+  "name": "OpenECE / Refined Waveform O A / Technical cobalt",
+  "geometry_source_sha256": {
+    "openece-icon.svg": "018673c5140a1d8d24e45b8f26e646a5a9c1a434c6693c93c120097c4be6d206",
+    "openece-icon-white.svg": "0c4390757aac7f10bfc03213e382c1b8c9a40d2f8f7998f10bc3165f72a9f760",
+    "optical/openece-icon-16-white.svg": "ae364ca37054f2a9177a55f63fac44aed1bd4e3bc42121f7fdfeaf58c2aa57b7",
+    "optical/openece-icon-16.svg": "289c9d2cc629c260970b164e61c9a43eadf4d5fab12d743aa1a913484c972c37",
+    "optical/openece-icon-20-white.svg": "2db8d0a9e39ca3f7b1b14322166e8442c48bee2a2453647c0ad3d9c034cc0611",
+    "optical/openece-icon-20.svg": "f5999b4b466a93303866f76733473cb7bd5d620d22e10a97697f54dfba5a937b",
+    "optical/openece-icon-24-white.svg": "14a6895ec6221feb0e6ab61a59123be7c696a58a3cb5a4f97f69a27e5bcb950d",
+    "optical/openece-icon-24.svg": "01beccb339e1d8521dfaf4a1dcccf1130b3ff434e4985da72a4d25011f0f73df"
+  },
+  "wordmark": {
+    "family": "Noto Sans",
+    "weight": 600,
+    "style": "SemiBold",
+    "case": "OpenECE",
+    "outline_sha256": "cfdb15e4d0da6496c78448d95bea72841a2f8d49da7f42d98477a3814c0bdd80",
+    "font_version": "2.015",
+    "font_sha256": "a4e91fd530ac2b4ef5367240144ff37d7d65d66cf76f2e9a2187b93c676f92d0"
+  },
+  "colors": {
+    "primary": "#2854C5",
+    "dark": "#96AEF2",
+    "monochrome": "#000000",
+    "white": "#FFFFFF",
+    "light_wordmark": "#1A2738",
+    "dark_wordmark": "#FFFFFF",
+    "review_dark_background": "#121B2A"
+  },
+  "lockup": {
+    "icon_canvas": 96,
+    "wordmark_height": 60,
+    "wordmark_origin": [
+      108,
+      18
+    ]
+  }
+}

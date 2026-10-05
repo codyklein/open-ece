@@ -4,8 +4,8 @@ The physically validated v1.0 Windows desktop platform is Windows 11 x86_64,
 Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a physical Windows 11
-hardware test. Checkpoint-4 physical Windows 11 retests passed; the final 1.0.0
-artifact awaits the [RC smoke test](release-candidate.md). Windows 10 and MinGW
+hardware test. The 1.0.0 physical Windows 11 retests and final RC smoke passed.
+The 1.0.1 branding candidate requires its own [bounded checks](branding.md). Windows 10 and MinGW
 may work but are not validated or claimed supported for v1.0. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
 
 ## Prerequisites
@@ -109,7 +109,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.0.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.0.1-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -124,7 +124,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v1.0.0-windows-x86_64/
+OpenECE-v1.0.1-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -136,10 +136,15 @@ OpenECE-v1.0.0-windows-x86_64/
     LICENSE
     THIRD-PARTY-NOTICES.txt
     licenses/
+    branding/
+    examples/
+    docs/
     SHA256SUMS.txt
 ```
 
-Runtime notes and original Qwt/GoogleTest/Eigen/nlohmann-json license texts are included. Qt's license
+Runtime notes and original Qwt/GoogleTest/Eigen/nlohmann-json license texts are included.
+Approved icon exports and the Noto Sans OFL notice accompany the outlined wordmark;
+no font files or new runtime DLLs are required. Qt's license
 texts and third-party attribution are retained in the checked-in
 `packaging/Qt-6.8.3-NOTICES.txt`, with source-relative headings and the upstream
 archive checksum. Packaging copies this notice file without network access or
@@ -160,7 +165,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v1.0.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v1.0.1-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
@@ -203,15 +208,17 @@ correctness on a Windows 11 desktop. Physical checks remain a release gate;
 see the [candidate checklist and evidence](physical-validation.md). App-local runtime updates require a new package. Qt 6.8.3 is pinned for
 this milestone, not promised to be the newest security-maintained Qt release.
 
-## Candidate documentation and examples
+## Documentation, examples and branding
 
-Current candidate packages include `examples/` and offline `docs/`, including
+Packages include `examples/` and offline `docs/`, including
 [first-session guidance](first-session.md). Open examples through the normal File
 menu; restoration is inert. The fresh Windows package probe stages, restores and
 round-trips all nine packaged files, in addition to its existing persistence test.
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 1.0.0 filenames above match the final CMake/CI candidate metadata.
-This is a release candidate, not a published release; follow the
-[exact-artifact smoke test](release-candidate.md) before release approval.
+Version 1.0.1 filenames above match the current CMake/CI candidate metadata.
+OpenECE 1.0.0 remains the published release. The fresh package probe additionally
+checks application/About branding and compares all ten executable-icon frames
+(16–256 px) with the approved ICO. The script checks PE file/product versions.
+Complete the [1.0.1 physical checks](branding.md) before release approval.

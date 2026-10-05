@@ -127,7 +127,8 @@ There is no cross-process conflict detection, file watching or moved-file search
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
 Server 2022. Checkpoint-4 physical Fedora and Windows 11 retests passed, including
 Windows Signals layout at 150%. True mixed-DPI and native screen-reader behavior
-remain unvalidated; the final 1.0.0 ZIP awaits the bounded RC smoke test.
+remain unvalidated. The exact 1.0.0 ZIP passed its final Windows 11 RC smoke
+and is published; the branding patch requires its own bounded candidate checks.
 Windows 10 and MinGW may work but are not validated or claimed
 supported for v1.0. The portable ZIP is unsigned and has no installer/updater.
 See the [physical validation record](physical-validation.md).
@@ -141,4 +142,5 @@ compatibility, automatic migration of unsupported schemas, preservation of unkno
 optional fields on re-save, or persisted numerical results. Unknown-field warnings
 remain meaningful. [Release-pinned fixtures](../tests/fixtures/v0.9/README.md)
 verify complete and incomplete v0.9 drafts; [examples](../examples/README.md) are
-editable teaching projects. Version 1.0 is still a candidate until its release gates pass.
+editable teaching projects. The 1.0 release is published; this compatibility
+promise and schema semantics also apply to the 1.0.1 branding patch.

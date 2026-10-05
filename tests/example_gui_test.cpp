@@ -62,7 +62,8 @@ class ExampleGuiTest : public QObject {
         auto doc = std::make_unique<ProjectDocument>(std::make_unique<ProjectWorkspace>(p));
         auto* document = doc.get();
         MainWindow window(std::move(doc), {}, std::make_shared<SettingsProjectPreferences>());
-        window.resize(1440, 1200);
+        window.resize(1440,
+                      qEnvironmentVariableIsEmpty("OPENECE_EXAMPLE_SCREENSHOTS") ? 1200 : 1320);
         window.show();
         QCoreApplication::processEvents();
         auto& w = document->workspace();

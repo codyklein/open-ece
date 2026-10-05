@@ -1,9 +1,11 @@
-# OpenECE 1.0.0 — bounded final RC smoke
+# OpenECE 1.0.0 — historical final RC smoke
 
-Checkpoint 4 is closed. This final check validates the **new 1.0.0 artifact** after
-version/documentation changes. It is not a repeat of the complete checkpoint-4
-physical pass. Do not tag or publish until the candidate report and these results
-are reviewed and approved.
+This checklist is the historical 1.0.0 acceptance procedure. The exact RC passed
+physical Windows 11 acceptance and was released unchanged at
+`3e688548d3d71a12fdceee173ee780047f23f854`. Published ZIP SHA-256:
+`7883bef22db15027bc2992d64b227175cb34561beaed42f663eaab0c16a30431`.
+The released artifact must not be replaced. For the current branding candidate,
+use the [1.0.1 checks](branding.md) instead.
 
 ## Identify the exact artifact
 

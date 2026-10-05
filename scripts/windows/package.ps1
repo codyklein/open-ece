@@ -57,8 +57,20 @@ Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
 # Ordinary schema-1 projects and offline user documentation; no runtime loader feature.
 Copy-Item "$PSScriptRoot/../../examples" $destination -Recurse
 Copy-Item "$PSScriptRoot/../../docs" $destination -Recurse
+# Useful approved branding exports only; no fonts, export scripts or development inputs.
+$brandSource = "$PSScriptRoot/../../assets/branding"
+$brandDestination = "$destination/branding"
+New-Item -ItemType Directory -Force "$brandDestination/png" | Out-Null
+foreach ($asset in @('openece.ico', 'openece-icon.svg', 'openece-icon-dark.svg', 'openece-icon-monochrome.svg', 'openece-icon-white.svg', 'openece-wordmark.svg', 'openece-lockup-light.svg', 'openece-lockup-dark.svg')) {
+    Copy-Item "$brandSource/$asset" $brandDestination
+}
+foreach ($size in @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024)) {
+    Copy-Item "$brandSource/png/openece-$size.png" "$brandDestination/png/"
+}
+Copy-Item "$PSScriptRoot/../../packaging/README-branding.txt" "$brandDestination/README.txt"
 $notices = "$destination/licenses"
-New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt", "$notices/Eigen", "$notices/nlohmann-json" | Out-Null
+New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt", "$notices/Eigen", "$notices/nlohmann-json", "$notices/Noto-Sans" | Out-Null
+Copy-Item "$brandSource/notices/Noto-Sans-OFL.txt" "$notices/Noto-Sans/"
 Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/COPYING" "$notices/Qwt/"
 Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/GoogleTest/"
 Copy-Item "$DependenciesRoot/sources/eigen-5.0.0/COPYING.MPL2" "$notices/Eigen/"

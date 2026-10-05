@@ -1,4 +1,5 @@
 // Release-only CI also runs this test beside the extracted runtime. It is not shipped.
+#include "branding.hpp"
 #include "main_window.hpp"
 #include <QAction>
 #include <QApplication>
@@ -15,6 +16,7 @@
 #include <qwt_plot_curve.h>
 using namespace openece;
 using namespace openece::gui;
+void verify_packaged_branding();
 namespace {
 void require(bool ok, const char* message) {
     if (!ok)
@@ -89,6 +91,7 @@ void packaged_examples() {
     std::cout << "PASS: all nine packaged examples restored inertly and round-tripped.\n";
 }
 void run() {
+    verify_packaged_branding();
     packaged_examples();
     QTemporaryDir temp(QDir::currentPath() + "/OpenECE persistence π 名 XXXXXX");
     require(temp.isValid(), "Cannot create Unicode test workspace");
@@ -173,6 +176,7 @@ void run() {
 } // namespace
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
+    configure_application_branding();
     app.setQuitOnLastWindowClosed(false);
     int result = 1;
     QTimer::singleShot(0, &app, [&] {

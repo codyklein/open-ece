@@ -28,6 +28,12 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_branding_tests branding_test.cpp)
+    set_target_properties(openece_branding_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_branding_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    target_compile_definitions(openece_branding_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}" OPENECE_TEST_VERSION="${PROJECT_VERSION}")
+    add_test(NAME branding_workflow COMMAND openece_branding_tests)
+    set_tests_properties(branding_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     add_executable(openece_example_gui_tests example_gui_test.cpp)
     set_target_properties(openece_example_gui_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_example_gui_tests PRIVATE openece_workbench OpenECE::dsp Qt6::Test openece_options)
@@ -57,7 +63,8 @@ if(OPENECE_BUILD_GUI)
     set_tests_properties(release_correctness_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
     # Same workbench as openece.exe, with scripted decisions and no QtTest dependency.
     # CI runs the Release probe using only the extracted package's runtime DLLs.
-    add_executable(openece_packaged_persistence packaged_persistence.cpp)
+    add_executable(openece_packaged_persistence packaged_persistence.cpp packaged_branding.cpp)
+    target_compile_definitions(openece_packaged_persistence PRIVATE OPENECE_TEST_VERSION="${PROJECT_VERSION}")
     target_link_libraries(openece_packaged_persistence PRIVATE openece_workbench openece_options)
     add_test(NAME packaged_persistence_workflow COMMAND openece_packaged_persistence)
     set_tests_properties(packaged_persistence_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
@@ -126,7 +133,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 
