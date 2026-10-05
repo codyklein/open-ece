@@ -138,19 +138,30 @@ Editable experiment state only: no results, execution progress, external assets,
 undo/redo, autosave, recovery, migrations or cloud features. Existing engineering
 APIs remain unchanged. See docs/projects.md and docs/project-format.md.
 
-## v1.0 — Release readiness (in progress)
+## v1.0 — Release readiness (released)
 
 Stabilize existing domains, rather than adding another engineering subsystem.
 
 - [x] Correct raw-edit execution invalidation and plain-text diagnostics.
 - [x] Clarify result states, keyboard access, replacement actions and scrolling layouts.
 - [x] Complete current onboarding, tested examples and pinned v0.9 schema-1 compatibility evidence.
-- [ ] Validate the exact candidate on native Fedora and physical Windows, including scaling and non-development users.
-- [ ] Complete final CI/package, dependency/license and release-scope review.
+- [x] Record native Fedora and physical Windows 11 workflows/scaling, and exact final Windows RC acceptance.
+- [x] Complete final CI/package, dependency/license and release-scope review.
 
-No release/tag until the [release gates](docs/v1-release-readiness.md) are satisfied.
+The [release gates](docs/v1-release-readiness.md) completed; v1.0.0 is published.
+Windows 10, true mixed-monitor DPI and native screen-reader checks remain unvalidated.
 No transient analysis, schematic capture, higher-order communications, undo/redo,
 autosave, cloud features or general migrations in this milestone.
+
+## v1.0.1 — Approved branding integration (candidate)
+
+- [x] Integrate the frozen Waveform O icon, outlined wordmark and light/dark lockups.
+- [x] Embed Qt PNG resources and the multi-resolution Windows executable icon.
+- [x] Refresh presentation/screenshots and retain MIT/Noto Sans OFL notices.
+- [ ] Complete final CI/package checks and bounded candidate physical review.
+
+No engineering feature, dependency change, UI redesign or schema change is included.
+Keep v1.0.0 immutable. See [branding scope and checks](docs/branding.md).
 
 ## Later — Expand only through useful connections
 

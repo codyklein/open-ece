@@ -1,6 +1,8 @@
-# 1.0 candidate dependency and license review
+# 1.0 release baseline — dependency and license review
 
-Reviewed during checkpoint 5 (2026-10-04). No dependency version, acquisition
+Reviewed during checkpoint 5 (2026-10-04). This is the historical v1.0 baseline;
+1.0.1 retains the same runtime/build pins and adds only the Noto Sans outline
+attribution documented in [branding](branding.md). No dependency version, acquisition
 checksum, API or algorithm changes are part of this freeze. Fedora uses system
 packages; these are Windows bootstrap pins, not universal Fedora versions.
 
