@@ -236,6 +236,9 @@ class ReleaseUxTest : public QObject {
         QVERIFY(QApplication::focusWidget() != nav);
         QCOMPARE(indicator->widget(), QApplication::focusWidget());
         QVERIFY(indicator->isVisible());
+        QVERIFY(indicator->style()->pixelMetric(QStyle::PM_FocusFrameHMargin) >= 5);
+        QVERIFY(indicator->style()->styleHint(QStyle::SH_FocusFrame_AboveWidget));
+        QVERIFY(!indicator->style()->styleHint(QStyle::SH_FocusFrame_Mask));
         QCOMPARE(nav->currentRow(), 0); // Selection stays, focus outline moves.
         QTest::keyClick(QApplication::focusWidget(), Qt::Key_Backtab);
         QCOMPARE(QApplication::focusWidget(), nav);
@@ -266,6 +269,60 @@ class ReleaseUxTest : public QObject {
         outside.setFocus();
         QApplication::processEvents();
         QVERIFY(!indicator->widget());
+    }
+    void inactiveNumericSelectionCannotMasqueradeAsFocus_data() {
+        QTest::addColumn<QString>("frequency");
+        QTest::newRow("valid") << QString("20");
+        QTest::newRow("incomplete") << QString("1e-");
+        QTest::newRow("empty") << QString("");
+        QTest::newRow("whitespace") << QString(" 25 ");
+    }
+    void inactiveNumericSelectionCannotMasqueradeAsFocus() {
+        QFETCH(QString, frequency);
+        auto project = openece::project::default_project();
+        project.signals.frequency.text = frequency.toUtf8().toStdString();
+        ProjectWorkspace w(std::move(project), true);
+        w.resize(1100, 850);
+        w.show();
+        w.activateWindow();
+        QApplication::processEvents();
+        auto* nav = get<QListWidget>(w, "domain_navigation");
+        nav->setFocus(Qt::TabFocusReason);
+        auto* indicator = get<QFocusFrame>(w, "keyboard_focus_indicator");
+        const auto initial = w.capture().signals;
+        QSignalSpy edits(&w, &DraftView::draftEdited);
+        QList<QLineEdit*> visited;
+        for (const auto* name : {"amplitude", "frequency", "sample_rate", "duration"}) {
+            auto* spin = get<QDoubleSpinBox>(w, name);
+            QVERIFY(reach(spin));
+            auto* editor = spin->findChild<QLineEdit*>();
+            QVERIFY(editor);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_A, Qt::ControlModifier);
+            // Spin-box Select All excludes its unit suffix. An empty numerical
+            // buffer therefore has nothing to select even when "Hz" is visible.
+            QCOMPARE(editor->hasSelectedText(),
+                     QString::fromLatin1(name) != "frequency" || !frequency.isEmpty());
+            QCOMPARE(indicator->widget(), QApplication::focusWidget());
+            for (auto* previous : visited)
+                QVERIFY(!previous->hasSelectedText());
+            visited.append(editor);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QVERIFY(!editor->hasSelectedText());
+            QCOMPARE(indicator->widget(), QApplication::focusWidget());
+            QApplication::processEvents();
+            const auto image = indicator->grab().toImage();
+            bool visible_blue_ring = false;
+            for (int y = 0; y < image.height(); ++y)
+                for (int x = 0; x < image.width(); ++x)
+                    visible_blue_ring |= image.pixelColor(x, y) == QColor(0, 85, 210);
+            QVERIFY(visible_blue_ring);
+        }
+        if (auto dir = qEnvironmentVariable("OPENECE_UX_SCREENSHOTS"); !dir.isEmpty()) {
+            QDir().mkpath(dir);
+            w.grab().save(dir + "/numeric-focus.png");
+        }
+        QCOMPARE(w.capture().signals, initial); // Selection/focus never edits the draft.
+        QCOMPARE(edits.count(), 0);
     }
     void projectShortcutsAndPrompts() {
         QTemporaryDir dir;
