@@ -220,6 +220,13 @@ SignalsDspView::SignalsDspView(QWidget* parent, project::SignalsDraft* draft, bo
     tabs->addTab(response_page, "Filter response");
     layout->addWidget(tabs, 1);
 
+    // These form rows differ from widget construction order. Keep keyboard
+    // traversal in visual order, retaining Qt's reverse/disabled-field handling.
+    QWidget::setTabOrder(phase_unit_, sample_rate_);
+    QWidget::setTabOrder(sample_rate_, duration_);
+    QWidget::setTabOrder(duration_, window_);
+    QWidget::setTabOrder(window_, filter_);
+
     connect(button, &QPushButton::clicked, this, [this] { generate(); });
     const auto mark_stale = [this] {
         status_->setText("Parameters changed. Displayed results are stale; Generate to update.");

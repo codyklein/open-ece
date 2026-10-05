@@ -89,6 +89,63 @@ class ReleaseUxTest : public QObject {
     }
 
   private Q_SLOTS:
+    void signalsTabOrderMatchesForm_data() {
+        QTest::addColumn<bool>("fir");
+        QTest::addColumn<bool>("radians");
+        QTest::newRow("degrees-filter-off") << false << false;
+        QTest::newRow("degrees-fir") << true << false;
+        QTest::newRow("radians-filter-off") << false << true;
+        QTest::newRow("radians-fir") << true << true;
+    }
+    void signalsTabOrderMatchesForm() {
+        QFETCH(bool, fir);
+        QFETCH(bool, radians);
+        auto snapshot = openece::project::default_project();
+        snapshot.signals.filter = fir ? "fir_lowpass" : "off";
+        snapshot.signals.phase.unit = radians ? "rad" : "deg";
+        ProjectWorkspace w(snapshot, true);
+        w.resize(1100, 850);
+        w.show();
+        w.activateWindow();
+        QApplication::processEvents();
+        QList<QWidget*> expected{get<QDoubleSpinBox>(w, "amplitude"),
+                                 get<QDoubleSpinBox>(w, "frequency"), get<QLineEdit>(w, "phase")};
+        if (radians)
+            expected.append(get<QPushButton>(w, "insert_pi"));
+        expected.append({get<QComboBox>(w, "phase_unit"), get<QDoubleSpinBox>(w, "sample_rate"),
+                         get<QDoubleSpinBox>(w, "duration"), get<QComboBox>(w, "spectral_window"),
+                         get<QComboBox>(w, "filter_type")});
+        if (fir)
+            expected.append(
+                {get<QDoubleSpinBox>(w, "filter_cutoff"), get<QWidget>(w, "filter_taps")});
+        expected.append(get<QPushButton>(w, "generate"));
+        get<QListWidget>(w, "domain_navigation")->setFocus(Qt::TabFocusReason);
+        QVERIFY(reach(expected.first()));
+        QSignalSpy edits(&w, &DraftView::draftEdited);
+        auto current_control = [&] {
+            auto* focused = QApplication::focusWidget();
+            while (focused && !expected.contains(focused))
+                focused = focused->parentWidget();
+            return focused ? focused->objectName() : QString("unexpected focus target");
+        };
+        const auto count = static_cast<int>(expected.size());
+        for (int i = 0; i < count; ++i) {
+            QCOMPARE(current_control(), expected[i]->objectName());
+            if (i + 1 < count)
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        }
+        // Exercise both Qt's Backtab key and the literal Shift+Tab chord.
+        for (int i = count - 2; i >= 0; --i) {
+            if (i % 2)
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Backtab);
+            else
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+            QCOMPARE(current_control(), expected[i]->objectName());
+        }
+        QCOMPARE(w.capture().signals, snapshot.signals);
+        QCOMPARE(edits.count(), 0);
+        QVERIFY(get<QLabel>(w, "status")->text().isEmpty()); // Traversal never executes.
+    }
     void keyboardDomainWorkflows() {
         ProjectWorkspace w(openece::project::default_project());
         w.resize(900, 650);

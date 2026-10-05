@@ -188,6 +188,41 @@ short navigation/save/reopen/enlarged-text regression smoke is needed if affecte
 Previous artifact hashes are not evidence for these revised binaries.
 Checkpoint 4 remains open; checkpoint 5 is not authorized.
 
+## Fedora acceptance and traversal follow-up (2026-10-04)
+
+The tester reports that the revised **#14 focus-visibility acceptance passes**:
+focus is clearly identifiable, Tab/Shift+Tab work and no trap was observed.
+**#16 also passes**: colored/marker keys are visible and remain stable during
+Run/Cancel/Resume; columns are stable and use available width appropriately.
+These passes supersede the earlier Fedora failures for those acceptance criteria.
+The tester did not repeat the artifact hash or OS/scaling details in this update;
+Windows acceptance and true mixed-DPI are not inferred from this Fedora report.
+
+A separate Signals keyboard-order defect was reported: Spectral window is visited
+before Sample rate and Duration despite appearing below them. Actual Qt keyboard
+tests reproduce this for Degrees/Radians and FIR off/on. Widget creation order,
+which Qt uses by default, differs from form-row order. Four explicit Qt tab links
+now order Phase unit → Sample rate → Duration → Spectral window → Filter.
+The accepted focus treatment and BER implementation are unchanged.
+
+Regression tests verify every forward step from Amplitude through Generate and
+every reverse step using both Backtab and literal Shift+Tab, in all four mode
+combinations and all four automated scale configurations. Disabled Cutoff/Taps
+are skipped; with FIR enabled they follow Filter, then Generate. In Radians the
+existing enabled π insertion button remains between Phase value and Phase unit;
+it is skipped in Degrees. Traversal preserves the exact draft, emits no edit
+notification and starts no analysis.
+
+**Targeted new-candidate physical retest:** on Fedora and Windows 11, traverse
+Amplitude → Frequency → Phase value → Phase unit → Sample rate → Duration →
+Spectral window → Filter, then Generate with filtering off, or Cutoff → Taps →
+Generate with FIR enabled. Check the exact reverse using Shift+Tab. In Radians
+also check the enabled π button at its normal visual position. Confirm the
+accepted current-focus ring remains clear and there is no trap. Only a short
+BER/navigation/save-reopen smoke is needed for the unchanged accepted behaviors.
+Record the new candidate hash; prior artifact results do not validate the revised
+binary. Checkpoint 4 remains open and checkpoint 5 has not begun.
+
 ## Identifying the Windows candidate
 
 Use the normal branch CI `Build, test and package` run for the checkpoint commit.
