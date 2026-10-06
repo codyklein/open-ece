@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory)][string]$Archive,
     [string]$Destination = (Join-Path $env:TEMP ('OpenECE fresh π path ' + [guid]::NewGuid())),
-    [string]$PersistenceProbe
+    [string]$PersistenceProbe,
+    [switch]$RequireSigned
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -12,6 +13,12 @@ $executables = @(Get-ChildItem $Destination -Recurse -Filter openece.exe)
 if ($executables.Count -ne 1) { throw 'Expected one packaged application.' }
 $exe = $executables[0].FullName
 $root = $executables[0].DirectoryName
+if ($RequireSigned) {
+    # Before adding the separate test probe, verify all distributed binaries.
+    $qwt = @(Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Name -match '^qwt.*\.dll$' })
+    if ($qwt.Count -ne 1) { throw 'Expected one packaged Release Qwt runtime.' }
+    & "$PSScriptRoot/verify-signatures.ps1" -PackageDirectory $root -QwtRuntime $qwt[0].Name -ReportPath "$Destination/signatures.json"
+}
 $sourceCMake = Get-Content "$PSScriptRoot/../../CMakeLists.txt" -Raw
 $expectedVersion = [regex]::Match($sourceCMake, 'project\(OpenECE VERSION ([0-9]+\.[0-9]+\.[0-9]+)').Groups[1].Value
 if (!$expectedVersion) { throw 'Cannot determine expected package version.' }

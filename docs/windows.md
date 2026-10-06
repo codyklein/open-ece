@@ -202,7 +202,11 @@ independent algorithms rather than assuming extra precision. MSVC warnings and
 UTF-8 encoding are target-local. ASan/UBSan validation remains on Linux Clang;
 the combined sanitizer option rejects MSVC/clang-cl explicitly.
 
-The ZIP is unsigned, has no installer or updater, and targets x86_64 only.
+Ordinary developer/PR ZIPs are unsigned. Distribution candidates use the
+reviewer-protected [Artifact Signing workflow](windows-signing.md), which verifies
+vendor signatures, signs the staged executable and Qwt DLL, and verifies every
+EXE/DLL before generating the manifest and ZIP. No installer or updater is
+included, and the package targets x86_64 only.
 Hosted Windows validation does not establish DPI, GPU, accessibility or visual
 correctness on a Windows 11 desktop. Physical checks remain a release gate;
 see the [candidate checklist and evidence](physical-validation.md). App-local runtime updates require a new package. Qt 6.8.3 is pinned for

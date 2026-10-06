@@ -12,8 +12,13 @@ candidate requires bounded physical checks; see docs/branding.md.
 Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
-This is an unsigned portable application, not an installer. Windows may show
-an unrecognized-publisher/download warning. Obtain builds from the project.
+This is a portable application, not an installer. Signed distribution candidates
+use the verified publisher Cody Klein for openece.exe and the Release Qwt DLL;
+Qt and Microsoft runtime files retain their vendor signatures. Ordinary local/PR
+builds are unsigned developer packages. Verify signatures before distribution;
+see docs/windows-signing.md. Obtain builds from the project. Signing does not
+override Windows malware/security policy, and Smart App Control stays enabled
+during physical release validation.
 
 Usage, source and build instructions:
 https://github.com/codyklein/open-ece

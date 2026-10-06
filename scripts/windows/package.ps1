@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string]$QtRoot,
     [string]$BuildDir = "$PSScriptRoot/../../build/windows",
     [string]$DependenciesRoot = "$PSScriptRoot/../../build/windows-deps",
-    [string]$OutputDir = "$PSScriptRoot/../../build/packages"
+    [string]$OutputDir = "$PSScriptRoot/../../build/packages",
+    [switch]$StageOnly
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -79,11 +80,17 @@ Copy-Item "$DependenciesRoot/sources/json-3.12.0/include/nlohmann/thirdparty/hed
 # Notices are generated from the checksum-pinned upstream archive by the
 # maintainer utility; packaging does not download or process Qt sources.
 Copy-Item "$PSScriptRoot/../../packaging/Qt-6.8.3-NOTICES.txt" "$notices/Qt/"
-Get-ChildItem $destination -Recurse -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
-    "$((Get-FileHash $_.FullName).Hash.ToLowerInvariant())  $([IO.Path]::GetRelativePath($destination, $_.FullName).Replace('\', '/'))"
-} | Set-Content "$destination/SHA256SUMS.txt"
-$zip = Join-Path $OutputDir "$name.zip"
-Write-Host "Compressing $name..."
-Compress-Archive -Path $destination -DestinationPath $zip -Force
-Write-Host "Created $zip"
-Get-ChildItem $destination -Recurse -File | Select-Object FullName, Length
+# Sidecar metadata is never included in the distributable. The Qwt name comes
+# from the installed Release target, not a guessed DLL basename.
+@{
+    packageName = $name
+    qwtRuntime = [IO.Path]::GetFileName($qwtRuntime)
+    sourceCommit = $env:GITHUB_SHA
+} | ConvertTo-Json | Set-Content -LiteralPath "$staging/stage-inputs.json" -Encoding utf8NoBOM
+Set-Content -LiteralPath "$OutputDir/stage-location.txt" -Value $staging -Encoding utf8NoBOM
+if ($StageOnly) {
+    Write-Host "Staged final contents in $destination; no manifest or ZIP created."
+} else {
+    # Local and ordinary PR builds remain explicit unsigned developer packages.
+    & "$PSScriptRoot/finalize-package.ps1" -PackageDirectory $destination -OutputDir $OutputDir
+}

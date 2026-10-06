@@ -4,6 +4,11 @@ on:
     branches: [main, feature/windows-support, feature/digital-logic, feature/sequential-logic, feature/circuit-analysis, feature/ac-analysis, feature/communications, feature/project-persistence, feature/v1-release-readiness, feature/v1.0.1-branding]
   pull_request:
   workflow_dispatch:
+    inputs:
+      signed_candidate:
+        description: 'Produce a signed candidate after windows-signing reviewer approval'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -57,6 +62,9 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
         with:
           arch: x64
+      - name: Test release signing policy
+        shell: pwsh
+        run: ./scripts/windows/test-signing.ps1
       - name: Acquire exact Qt SDK
         shell: pwsh
         run: |
@@ -124,9 +132,22 @@ jobs:
           path: build/windows/tests/Release/openece_packaged_persistence.exe
           if-no-files-found: error
       - name: Package Release
+        id: package
         shell: pwsh
-        run: ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
+        env:
+          SIGNED_CANDIDATE: ${{ inputs.signed_candidate || false }}
+        run: |
+          ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT -StageOnly:($env:SIGNED_CANDIDATE -eq 'true')
+          $stagePath = (Get-Content build/packages/stage-location.txt -Raw).Trim()
+          "stage-path=$stagePath" >> $env:GITHUB_OUTPUT
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: inputs.signed_candidate
+        with:
+          name: windows-release-stage
+          path: ${{ steps.package.outputs.stage-path }}
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !inputs.signed_candidate }}
         with:
           name: OpenECE-v1.0.1-windows-x86_64
           path: build/packages/OpenECE-v1.0.1-windows-x86_64.zip
@@ -143,9 +164,95 @@ jobs:
             build/windows/branding-*.log
             build/windows/communications-benchmark.log
             build/windows/CMakeFiles/CMakeConfigureLog.yaml
+  sign-windows:
+    name: Sign and verify Windows release candidate
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_candidate
+    needs: [fedora, windows]
+    runs-on: windows-2022
+    timeout-minutes: 25
+    environment: windows-signing
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-release-stage
+          path: build/signing-stage
+      - name: Verify staged inputs and existing vendor signatures
+        id: stage
+        shell: pwsh
+        env:
+          SIGNING_ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          SIGNING_PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+        run: |
+          if ($env:SIGNING_ACCOUNT -cne 'openece-signing-cody' -or $env:SIGNING_PROFILE -cne 'openece-public' -or
+              $env:SIGNING_ENDPOINT -notmatch '^https://[a-z]+\.codesigning\.azure\.net/?$') { throw 'Unexpected signing configuration.' }
+          $stage = Get-Content build/signing-stage/stage-inputs.json -Raw | ConvertFrom-Json
+          if ($stage.sourceCommit -cne $env:GITHUB_SHA -or $stage.packageName -cne 'OpenECE-v1.0.1-windows-x86_64') { throw 'Stage does not match approved workflow commit/version.' }
+          $root = (Resolve-Path "build/signing-stage/$($stage.packageName)").Path
+          if (Test-Path "$root/SHA256SUMS.txt") { throw 'Signing stage already has a manifest.' }
+          New-Item -ItemType Directory -Force build/signing-reports | Out-Null
+          ./scripts/windows/test-signing.ps1
+          ./scripts/windows/verify-signatures.ps1 -PackageDirectory $root -QwtRuntime $stage.qwtRuntime -Phase BeforeSigning -BaselinePath build/signing-reports/baseline.json -ReportPath build/signing-reports/before.json
+          "package-root=$root" >> $env:GITHUB_OUTPUT
+          "qwt-runtime=$($stage.qwtRuntime)" >> $env:GITHUB_OUTPUT
+      - name: Azure OIDC login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign only OpenECE and the Release Qwt runtime
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2; reviewed pinned inputs/dependencies
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: |
+            ${{ steps.stage.outputs.package-root }}\openece.exe
+            ${{ steps.stage.outputs.package-root }}\${{ steps.stage.outputs.qwt-runtime }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          append-signature: false
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+          cache-dependencies: false
+      - name: Verify signatures and vendor preservation, then manifest and ZIP
+        shell: pwsh
+        env:
+          PACKAGE_ROOT: ${{ steps.stage.outputs.package-root }}
+          QWT_RUNTIME: ${{ steps.stage.outputs.qwt-runtime }}
+        run: |
+          ./scripts/windows/verify-signatures.ps1 -PackageDirectory $env:PACKAGE_ROOT -QwtRuntime $env:QWT_RUNTIME -Phase AfterSigning -BaselinePath build/signing-reports/baseline.json -ReportPath build/signing-reports/after.json
+          ./scripts/windows/finalize-package.ps1 -PackageDirectory $env:PACKAGE_ROOT -QwtRuntime $env:QWT_RUNTIME -RequireSigned
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: OpenECE-v1.0.1-windows-x86_64
+          path: |
+            build/packages/OpenECE-v1.0.1-windows-x86_64.zip
+            build/packages/OpenECE-v1.0.1-windows-x86_64.zip.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: windows-signature-verification
+          path: build/signing-reports/
   packaged-startup:
     name: Packaged app / fresh Windows runner without Qt SDK
-    needs: windows
+    needs: [windows, sign-windows]
+    if: ${{ always() && needs.windows.result == 'success' && (!inputs.signed_candidate || needs.sign-windows.result == 'success') }}
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
@@ -160,9 +267,13 @@ jobs:
           path: build/persistence-probe
       - name: Extract, launch and test persistence with sanitized environment
         shell: pwsh
-        run: ./scripts/windows/test-package.ps1 -Archive build/artifact/OpenECE-v1.0.1-windows-x86_64.zip -Destination "$env:RUNNER_TEMP/OpenECE fresh π path" -PersistenceProbe build/persistence-probe/openece_packaged_persistence.exe
+        env:
+          SIGNED_CANDIDATE: ${{ inputs.signed_candidate || false }}
+        run: ./scripts/windows/test-package.ps1 -Archive build/artifact/OpenECE-v1.0.1-windows-x86_64.zip -Destination "$env:RUNNER_TEMP/OpenECE fresh π path" -PersistenceProbe build/persistence-probe/openece_packaged_persistence.exe -RequireSigned:($env:SIGNED_CANDIDATE -eq 'true')
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: windows-package-startup-logs
-          path: ${{ runner.temp }}/OpenECE fresh π path/*.log
+          path: |
+            ${{ runner.temp }}/OpenECE fresh π path/*.log
+            ${{ runner.temp }}/OpenECE fresh π path/signatures.json
