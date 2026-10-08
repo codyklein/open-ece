@@ -748,9 +748,10 @@ void TransientView::start_execution(bool single) {
         return;
     }
     reset_results();
+    // Freeze the attempted raw configuration even if validation rejects it.
+    run_draft_ = transient_active_draft(state_.get());
     try {
         auto execution = transient_execution(state_.get());
-        run_draft_ = transient_active_draft(state_.get());
         labels_ = execution.probes;
         time_unit_ = execution.time_unit;
         time_scale_ = execution.time_scale;
@@ -830,8 +831,9 @@ void TransientView::update_execution_ui() {
         status = "Ready — no simulation results.";
         break;
     case ExecutionState::running:
-        status = pending_ ? "Running — command pending; retaining accepted prefix."
-                          : "Running — partial accepted trace.";
+        status = !result_   ? "Running — initializing; no accepted trace yet."
+                 : pending_ ? "Running — command pending; retaining accepted prefix."
+                            : "Running — partial accepted trace.";
         break;
     case ExecutionState::paused:
         status = pending_ ? "Paused — one interval pending."
@@ -848,7 +850,9 @@ void TransientView::update_execution_ui() {
                          : "Failed — no accepted simulation result.";
         break;
     case ExecutionState::stale:
-        status = "Stale — retained trace belongs to previous inputs; cannot resume.";
+        status = result_
+                     ? "Stale — retained trace belongs to previous inputs; cannot resume."
+                     : "Stale — previous diagnostic belongs to earlier inputs; no accepted trace.";
         break;
     }
     if (result_)

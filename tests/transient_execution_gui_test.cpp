@@ -300,6 +300,27 @@ class TransientExecutionTests final : public QObject {
                 QVERIFY(r->voltages[1][i] != r->voltages[1][i + 1]);
         }
     }
+    void rejectedDraftBaselineAndEmptyTraceStates() {
+        auto d = rc();
+        d.initialization = "operating_point";
+        d.stop.text = "1e-";
+        TransientView w(nullptr, &d);
+        click(w, "transient_run");
+        QVERIFY(state(w, "Failed"));
+        QVERIFY(!w.result());
+        // An inactive edit must not compare against some older successful run.
+        control<QTableWidget>(w, "transient_initial_conditions")
+            ->item(0, 2)
+            ->setText("disabled invalid");
+        QVERIFY(state(w, "Failed"));
+        control<QLineEdit>(w, "transient_stop")->setText("5");
+        QVERIFY(state(w, "Stale"));
+        QVERIFY(control<QLabel>(w, "transient_status")->text().contains("no accepted trace"));
+        click(w, "transient_run");
+        QVERIFY(state(w, "Running"));
+        QVERIFY(control<QLabel>(w, "transient_status")->text().contains("initializing"));
+        QTRY_VERIFY_WITH_TIMEOUT(state(w, "Complete"), 5000);
+    }
     void initializationAndIntegrationFailure() {
         auto d = rc();
         d.nodes.push_back({{5}, "Floating <b>π</b>"});
