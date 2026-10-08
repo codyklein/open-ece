@@ -95,6 +95,12 @@ OpenECE owns all indexing/stamps and physical checks; private Eigen FullPivLU
 performs the dense solve. Four matrix-only equilibration passes and the existing
 rank/rcond/backward-error policies are reused, without changing DC/AC acceptance.
 Independently check branch equations and KCL, including omitted ground KCL.
+Voltage constraints (sources, initialized/held capacitor voltages, and inductor
+step equations) use 1e-12 V absolute plus 1e-10 times the sum of actual/expected
+branch-voltage magnitudes. Do not use large common-mode node voltages to hide a
+lost differential storage value. KCL uses 1e-15 A absolute plus 1e-10 times the
+sum of incident current magnitudes. These are numerical acceptance policies,
+not physical tolerances or an integration-accuracy estimate.
 
 Backward Euler is first order and introduces numerical damping. A successful
 linear solve does not establish integration accuracy. Verify step refinement and
@@ -189,3 +195,5 @@ current is -10 mA; the positive-to-negative capacitor current is +10 mA. The
 backward-Euler samples approximate this response with first-order step error.
 With default operating-point initialization the same circuit instead starts at
 10 V with zero charging current. There is no implicit zero-energy start.
+
+Moved-from Simulation instances may only be destroyed or reassigned.

@@ -45,6 +45,13 @@ struct System {
     throw Error(ErrorCode::numerical_failure,
                 "Transient solution failed finite-value, branch or residual checks.");
 }
+void check_constraint(double actual, double expected, NumericalQuality& quality) {
+    const double error = std::abs(actual - expected), scale = std::abs(actual) + std::abs(expected);
+    quality.max_constraint_error_volts = std::max(quality.max_constraint_error_volts, error);
+    if (!std::isfinite(error) || !std::isfinite(scale) ||
+        error > policy::constraint_absolute_volts + policy::physical_relative * scale)
+        numerical();
+}
 std::vector<double> solve(const System& s, NumericalQuality& quality) {
     if (!s.count)
         return {};
@@ -375,16 +382,8 @@ struct Simulation::Impl {
             balance[p.n] -= current;
             magnitude[p.p] += std::abs(current);
             magnitude[p.n] += std::abs(current);
-            if (p.kind == Kind::voltage) {
-                double expected = source_value(*p.source, t, left),
-                       error = std::abs(v[p.p] - v[p.n] - expected);
-                out.quality.max_constraint_error_volts =
-                    std::max(out.quality.max_constraint_error_volts, error);
-                if (error > policy::constraint_absolute_volts +
-                                policy::physical_relative *
-                                    (std::abs(v[p.p]) + std::abs(v[p.n]) + std::abs(expected)))
-                    numerical();
-            }
+            if (p.kind == Kind::voltage)
+                check_constraint(v[p.p] - v[p.n], source_value(*p.source, t, left), out.quality);
         }
         for (std::size_t i = 0; i < v.size(); ++i) {
             double error = std::abs(balance[i]);
@@ -515,6 +514,11 @@ struct Simulation::Impl {
             if (p.kind == Kind::voltage)
                 currents[i] = dx[source_slot[i]];
         }
+        for (auto i : order) {
+            const auto& p = parts[i];
+            if (p.kind == Kind::capacitor)
+                check_constraint(v[p.p] - v[p.n], history[i], quality);
+        }
         return state(v, currents, quality, t, false);
     }
     State integrate(double t, double h, bool left, const std::vector<double>& history) const {
@@ -538,14 +542,8 @@ struct Simulation::Impl {
                 break;
             case Kind::inductor: {
                 currents[i] = x[p.slot];
-                double expected = (p.value / h) * (currents[i] - history[i]),
-                       error = std::abs(branch - expected);
-                quality.max_constraint_error_volts =
-                    std::max(quality.max_constraint_error_volts, error);
-                if (error > policy::constraint_absolute_volts +
-                                policy::physical_relative *
-                                    (std::abs(v[p.p]) + std::abs(v[p.n]) + std::abs(expected)))
-                    numerical();
+                const double expected = (p.value / h) * (currents[i] - history[i]);
+                check_constraint(branch, expected, quality);
                 break;
             }
             case Kind::voltage:

@@ -738,3 +738,17 @@ TEST(Transient, ReversedStorageTerminalsAndInitialCurrents) {
     req.initial.inductor_currents = {{{999}, 0}};
     error([&] { tr::Simulation s(tr::Circuit(d), req); }, tr::ErrorCode::invalid_request);
 }
+TEST(Transient, InitializationRejectsUnrepresentableStorageVoltage) {
+    tr::CircuitDefinition d{
+        {{{0}, "g"}, {{1}, "supply"}, {{2}, "a"}, {{3}, "b"}},
+        NodeId{0},
+        {tr::VoltageSource{{1}, "V", {1}, {0}, {1e9, {}}}, Resistor{{2}, "R1", {1}, {2}, 1000},
+         Resistor{{3}, "R2", {1}, {3}, 1000}, tr::Capacitor{{4}, "C", {2}, {3}, 1e-6}}};
+    auto req = specified(.001, .0001, {{{4}, 1e-8}});
+    // At this common-mode voltage, the requested differential cannot be represented.
+    // Do not expose a ready state that silently loses the supplied stored energy.
+    error([&] { tr::Simulation s(tr::Circuit(d), req); }, tr::ErrorCode::numerical_failure);
+    d.components.back() = tr::VoltageSource{{4}, "tiny differential", {2}, {3}, {1e-8, {}}};
+    req.initial.capacitor_voltages.clear();
+    error([&] { tr::Simulation s(tr::Circuit(d), req); }, tr::ErrorCode::numerical_failure);
+}
