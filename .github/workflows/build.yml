@@ -52,6 +52,8 @@ jobs:
             build/ci/example-*.log
             build/ci/compatibility-*.log
             build/ci/branding-*.log
+            build/ci/tests/transient-execution-*.log
+            build/ci/tests/transient-editor-*.log
             build/ci/CMakeFiles/CMakeConfigureLog.yaml
   windows:
     name: Windows MSVC 2022 / Qt 6.8.3 / Debug and Release
@@ -119,6 +121,21 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ctest --preset windows-release --output-junit release-results.xml
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Benchmark transient initialization, stepping, copying and rendering
+        shell: pwsh
+        run: |
+          $oldPath = $env:PATH
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          try {
+            foreach ($config in @('Debug', 'Release')) {
+              cmake --build build/windows --config $config --target openece_transient_benchmark --parallel 4
+              if ($LASTEXITCODE) { exit $LASTEXITCODE }
+              $qwt = (Get-Content "build/windows/qwt-runtime-$config.txt" -Raw).Trim()
+              $env:PATH = "$env:QT_ROOT/bin;$(Split-Path $qwt);$oldPath"
+              & "./build/windows/tests/$config/openece_transient_benchmark.exe" | Tee-Object "build/windows/transient-benchmark-$config.log"
+              if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            }
+          } finally { $env:PATH = $oldPath }
       - name: Benchmark communications resource limits
         shell: pwsh
         run: |
@@ -163,6 +180,9 @@ jobs:
             build/windows/compatibility-*.log
             build/windows/branding-*.log
             build/windows/communications-benchmark.log
+            build/windows/transient-benchmark-*.log
+            build/windows/tests/transient-execution-*.log
+            build/windows/tests/transient-editor-*.log
             build/windows/CMakeFiles/CMakeConfigureLog.yaml
   sign-windows:
     name: Sign and verify Windows release candidate

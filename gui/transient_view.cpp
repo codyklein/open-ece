@@ -299,7 +299,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     auto* storage = page("Initial conditions");
     auto* explain = new QLabel(
         "Operating point retains but ignores these rows. Specified storage requires exactly one "
-        "voltage per capacitor and current per inductor when execution is added.",
+        "voltage per capacitor and current per inductor.",
         this);
     explain->setWordWrap(true);
     explain->setTextFormat(Qt::PlainText);
@@ -444,6 +444,8 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     };
     plot_page("Voltages (V)", "transient_voltage_trace", voltage_select_, voltage_plot_);
     plot_page("Currents (A)", "transient_current_trace", current_select_, current_plot_);
+    voltage_plot_->setObjectName("transient_voltage_plot");
+    current_plot_->setObjectName("transient_current_plot");
     auto* trace = new QTableView(results);
     trace->setObjectName("transient_trace");
     trace->setAccessibleName("Accepted numerical trace, mixed probe declaration order");
@@ -764,6 +766,9 @@ void TransientView::start_execution(bool single) {
     } catch (const transient_core::Error& e) {
         execution_state_ = ExecutionState::failed;
         diagnostic_->setText("Configuration rejected: " + QString::fromUtf8(e.what()));
+    } catch (const std::exception&) {
+        execution_state_ = ExecutionState::failed;
+        diagnostic_->setText("Unable to prepare the experiment or start the numerical worker.");
     }
     update_execution_ui();
 }
@@ -818,7 +823,7 @@ void TransientView::update_execution_ui() {
     pause_->setEnabled(resumable && !pending_ && (running || paused));
     pause_->setText(paused ? "Resume" : "Pause");
     step_->setEnabled(!running && !pending_);
-    cancel_->setEnabled(resumable && !pending_);
+    cancel_->setEnabled(resumable && (running || paused));
     QString status;
     switch (execution_state_) {
     case ExecutionState::ready:

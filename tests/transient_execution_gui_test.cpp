@@ -1,6 +1,7 @@
 #include "project_document.hpp"
 #include "transient_results.hpp"
 #include "transient_view.hpp"
+#include <QComboBox>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QLabel>
@@ -14,6 +15,7 @@
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
+#include <qwt_plot_curve.h>
 using namespace openece;
 using namespace openece::gui;
 namespace tr = circuits::transient;
@@ -263,6 +265,17 @@ class TransientExecutionTests final : public QObject {
         QTRY_VERIFY_WITH_TIMEOUT(state(w, "Complete"), 5000);
         auto r = w.result();
         const auto indices = transient_plot_indices(*r, r->voltages[1]);
+        control<QComboBox>(w, "transient_voltage_trace")->setCurrentIndex(1);
+        auto* plot = control<QwtPlot>(w, "transient_voltage_plot");
+        const auto items = plot->itemList(QwtPlotItem::Rtti_PlotCurve);
+        QCOMPARE(items.size(), 1);
+        auto* curve = static_cast<QwtPlotCurve*>(items.front());
+        QCOMPARE(curve->dataSize(), indices.size());
+        for (std::size_t j = 0; j < indices.size(); ++j) {
+            QCOMPARE(curve->sample(static_cast<int>(j)).x(), r->times[indices[j]].seconds / .001);
+            QCOMPARE(curve->sample(static_cast<int>(j)).y(), r->voltages[1][indices[j]]);
+        }
+
         for (auto t : {.001, .002}) {
             auto it = std::find_if(r->times.begin(), r->times.end(),
                                    [&](auto p) { return p.seconds == t; });
@@ -335,8 +348,7 @@ class TransientExecutionTests final : public QObject {
         QVERIFY(state(*view, "Ready"));
         QCOMPARE(doc.workspace().capture(), p);
         click(*view, "transient_run");
-        click(*view, "transient_pause");
-        QTRY_VERIFY_WITH_TIMEOUT(state(*view, "Paused"), 5000);
+        QVERIFY(state(*view, "Running"));
         auto fresh = doc.prepare_new(project::default_project(), DocumentState::clean);
         QVERIFY(std::holds_alternative<PreparedProject>(fresh));
         QVERIFY(std::holds_alternative<std::monostate>(
@@ -351,13 +363,18 @@ class TransientExecutionTests final : public QObject {
         ProjectWorkspace w(project_for(d), true);
         auto* view = control<TransientView>(w, "transient_view");
         click(*view, "transient_run");
-        click(*view, "transient_pause");
-        QTRY_VERIFY_WITH_TIMEOUT(state(*view, "Paused"), 5000);
+        QVERIFY(state(*view, "Running"));
         w.stop_execution();
         QVERIFY(state(*view, "Cancelled"));
         QVERIFY(view->result());
     }
+    void boundedWorkloadRemainsResponsive_data() {
+        QTest::addColumn<bool>("dense");
+        QTest::newRow("32-node-dense-work") << true;
+        QTest::newRow("1.6-million-probe-values") << false;
+    }
     void boundedWorkloadRemainsResponsive() {
+        QFETCH(bool, dense);
         auto d = rc();
         d.nodes.clear();
         d.components.clear();
@@ -392,6 +409,15 @@ class TransientExecutionTests final : public QObject {
                 {"V" + std::to_string(i), "voltage", project::Id{1}, project::Id{0}, {}});
         d.stop = {"1", "s"};
         d.maximum_step = {"1", "ms"};
+        if (!dense) {
+            d = rc();
+            d.stop = {"0.1", "s"};
+            d.maximum_step = {"4", "us"};
+            d.probes.clear();
+            for (int i = 0; i < 64; ++i)
+                d.probes.push_back(
+                    {"V" + std::to_string(i), "voltage", project::Id{2}, project::Id{0}, {}});
+        }
         TransientView w(nullptr, &d);
         w.show();
         QElapsedTimer clock;
@@ -411,8 +437,8 @@ class TransientExecutionTests final : public QObject {
         heartbeat.stop();
         QVERIFY(ticks > 3);
         QVERIFY2(gap < 1000, "GUI event loop blocked for a second");
-        QVERIFY(w.result()->times.size() >= 1001);
-        qInfo() << "Transient 32 nodes / 64 probes: elapsed_ms=" << clock.elapsed()
+        QVERIFY(w.result()->times.size() >= (dense ? 1001U : 25001U));
+        qInfo() << "Transient dense=" << dense << " / 64 probes: elapsed_ms=" << clock.elapsed()
                 << " heartbeat_max_gap_ms=" << gap << " rows=" << w.result()->times.size();
     }
     void fullTraceAndDecimationBudgets() {

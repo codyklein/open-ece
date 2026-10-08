@@ -217,7 +217,9 @@ this milestone, not promised to be the newest security-maintained Qt release.
 Packages include `examples/` and offline `docs/`, including
 [first-session guidance](first-session.md). Open examples through the normal File
 menu; restoration is inert. The fresh Windows package probe stages, restores and
-round-trips all nine packaged files, in addition to its existing persistence test.
+round-trips all packaged examples, in addition to its existing persistence test.
+The released 1.0.1 package has nine examples; v1.1 development adds four schema-2
+transient examples and explicitly executes them after checking inert restoration.
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 

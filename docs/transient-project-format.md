@@ -1,8 +1,9 @@
 # Transient project configuration — schema 2
 
-This milestone adds editable configuration only. The Transient editor never
-constructs a Simulation, solves, runs a timer, or displays numerical results.
-The numerical API remains separate from persistence.
+Schema 2 adds editable transient configuration. File loading/restoration never
+constructs a Simulation or runs numerical analysis. Explicit GUI execution is
+described in [the execution workflow](transient-execution.md); runtime results
+remain separate from persistence.
 
 ## Envelope and compatibility
 
@@ -107,7 +108,7 @@ references are retained independently and have no implicit numeric dimension.
 
 Restoration is inert and notification-suppressed. Widgets edit borrowed draft
 state; exact pending table/line text is synchronized before capture. Navigation
-is retained without dirtying; persisted data edits dirty normally. No transient
-execution feature is introduced by schema support.
+is retained without dirtying; persisted data edits dirty normally. Transient execution controls and result tabs are separate transient UI state,
+not additional schema fields.
 
 A complete cross-domain schema-2 fixture is [project-v2.openece](../tests/fixtures/project-v2.openece). It deliberately includes incomplete text and inactive/dangling references.

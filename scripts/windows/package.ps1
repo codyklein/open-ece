@@ -55,7 +55,7 @@ Plugins=.
 Copy-Item "$PSScriptRoot/../../LICENSE" "$destination/LICENSE"
 Copy-Item "$PSScriptRoot/../../packaging/README-windows.txt" "$destination/README.txt"
 Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
-# Ordinary schema-1 projects and offline user documentation; no runtime loader feature.
+# Ordinary schema-1/schema-2 projects and offline user documentation; no runtime loader feature.
 Copy-Item "$PSScriptRoot/../../examples" $destination -Recurse
 Copy-Item "$PSScriptRoot/../../docs" $destination -Recurse
 # Useful approved branding exports only; no fonts, export scripts or development inputs.

@@ -1,9 +1,9 @@
 # Linear transient analysis — v1.1 core contract
 
-This is the transient core implementation contract. The subsequent configuration
-checkpoint adds an inert editor and schema-2 persistence, described in
-[transient-project-format.md](transient-project-format.md). GUI simulation controls
-and plots are not implemented yet.
+This is the transient numerical implementation contract. Configuration uses
+[schema-2 persistence](transient-project-format.md). The development GUI now provides
+[owned worker execution and numerical inspection](transient-execution.md). Loading
+a project remains inert. Stable release metadata remains 1.0.1 until release preparation.
 
 ## Model and conventions
 
@@ -162,9 +162,9 @@ KCL/KVL, invalid/floating/singular constraints, ordering, ownership, bounds and
 incremental/Run equivalence precede GUI use. Retain the complete existing matrix.
 
 Schema 2 now stores transient draft text/units/IDs/probes without changing
-schema-1 meanings or release-pinned v0.9 fixture bytes. The inert editor never
-executes this core. GUI execution, nonlinear devices, adaptive stepping, SPICE
-integration and schematic editing remain outside this checkpoint.
+schema-1 meanings or release-pinned v0.9 fixture bytes. Restoration never
+executes this core; execution requires an explicit Run/Step action. Nonlinear devices,
+adaptive stepping, SPICE integration and schematic editing remain out of scope.
 
 ## Public entry points and a minimal RC run
 

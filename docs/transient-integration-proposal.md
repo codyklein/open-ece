@@ -1,4 +1,4 @@
-> Persistence/editor corrections are finalized in [transient-project-format.md](transient-project-format.md). Its allocator, schema-1 import, provenance, conversion and storage rules supersede this initial proposal. Execution/plots remain a future review.
+> Persistence/editor corrections are finalized in [transient-project-format.md](transient-project-format.md). Its allocator, schema-1 import, provenance, conversion and storage rules supersede this initial proposal. The implemented execution decision is recorded in [transient-execution.md](transient-execution.md); this file remains the historical integration proposal.
 
 # Transient GUI and schema 2 — proposal for review
 

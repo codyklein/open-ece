@@ -44,4 +44,24 @@ INSTANTIATE_TEST_SUITE_P(
                     "/examples/intentionally-incomplete.openece",
                     "/tests/fixtures/v0.9/complete.openece",
                     "/tests/fixtures/v0.9/incomplete.openece"));
+class TransientExampleCodec : public testing::TestWithParam<const char*> {};
+TEST_P(TransientExampleCodec, SchemaTwoAndSemanticRoundTrip) {
+    const auto decoded = decode_project(read(std::string(OPENECE_SOURCE_DIR) + GetParam()));
+    EXPECT_EQ(decoded.source_schema_version, 2);
+    EXPECT_TRUE(decoded.ignored_fields.empty());
+    EXPECT_EQ(decode_project(encode_project(decoded.snapshot)).snapshot, decoded.snapshot);
+    const auto& d = decoded.snapshot.circuits.transient;
+    EXPECT_EQ(decoded.snapshot.circuits.selected_tab, "transient");
+    EXPECT_EQ(d.components.front().id, Id{10});
+    EXPECT_EQ(d.components.front().positive, Reference{Id{1}});
+    EXPECT_EQ(d.ground, Reference{Id{0}});
+    EXPECT_EQ(d.probes[0].component, Reference{Id{10}});
+    EXPECT_EQ(d.probes[1].kind, "voltage");
+    EXPECT_EQ(d.initialization, "specified_storage");
+}
+INSTANTIATE_TEST_SUITE_P(ShippedTransientFiles, TransientExampleCodec,
+                         testing::Values("/examples/transient-rc-step.openece",
+                                         "/examples/transient-rl-response.openece",
+                                         "/examples/transient-rlc-damping.openece",
+                                         "/examples/transient-source-breakpoints.openece"));
 } // namespace

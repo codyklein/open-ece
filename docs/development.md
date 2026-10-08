@@ -60,6 +60,6 @@ See [building](building.md) for all local configurations and [Windows](windows.m
 
 ## Examples and compatibility
 
-Every file in [examples](../examples/README.md) is an ordinary schema-1 project. Tests load the files, exercise expected results, check inert restoration and semantic round trips. Add an example to the explicit test list when extending the collection. Screenshots are documentation, not pixel tests.
+Every file in [examples](../examples/README.md) is an ordinary project: existing examples use schema 1, transient examples use schema 2. Tests load the files, exercise expected results, check inert restoration and semantic round trips. Add an example to the explicit test list when extending the collection. Screenshots are documentation, not pixel tests.
 
 [Release-pinned v0.9 fixtures](../tests/fixtures/v0.9/README.md) must not be regenerated from current defaults. A compatibility change requires an explicit schema decision, not updating the expected fixture to make a test pass. Keep project drafts authoritative, synchronize pending raw editor text without parsing, and derive numerical/runtime objects only on explicit execution. See [ownership and transactions](project-transactions.md).

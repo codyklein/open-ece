@@ -1,6 +1,6 @@
 # Example projects
 
-Open these ordinary schema-1 `.openece` files with **File → Open**. They contain
+Open these ordinary schema-1/schema-2 `.openece` files with **File → Open**. They contain
 all workspaces, with the relevant domain selected. **Every example opens inertly**:
 results appear only after an explicit action. Save As to your own path to keep
 changes. Units and raw draft text are project content; calculated results are not.
@@ -39,3 +39,27 @@ completed counts; cross-platform math-library rounding may differ.
 Automated tests load every file, verify semantic round trips and inert restoration,
 then explicitly execute the documented operations. Compatibility fixtures are
 [separate immutable files](../tests/fixtures/v0.9/README.md), not user examples.
+
+## Transient examples (schema 2)
+
+Choose **Circuits → Transient**, then **Run**. **Step** initializes when needed,
+accepts exactly one interval (both sides at a breakpoint), and stays paused unless
+that interval completes/fails. **Pause/Resume** retains the experiment; **Cancel**
+retains its accepted prefix and cannot resume. **Reset results** clears only results.
+Current probes are positive from the component's positive terminal to its negative.
+These are instantaneous volts/amperes, not RMS phasors. Time display is milliseconds;
+the numerical core always uses seconds. Every file opens inertly and saves only drafts.
+
+| File | Configuration and expected result |
+|---|---|
+| [transient-rc-step](transient-rc-step.openece) | 10 V, 1 kΩ, 1 µF, explicit V_C(0)=0. Time constant 1 ms; V_C(t)=10(1−exp(−t/1 ms)). At 1 ms ~6.32 V and 5 ms ~9.93 V. Maximum step 10 µs; BE gives a close, slightly damped approximation. Supply current initially −10 mA. Switch to Operating point and Run: starts at 10 V, not zero. |
+| [transient-rl-response](transient-rl-response.openece) | 1 V, 100 Ω, 10 mH, explicit I_L(0)=0. Time constant 100 µs; I_L(t)=10 mA(1−exp(−t/100 µs)). At 500 µs ~9.93 mA, source current ~−9.93 mA, inductor voltage ~6.74 mV. Maximum step 1 µs. |
+| [transient-rlc-damping](transient-rlc-damping.openece) | Series R=20 Ω, L=10 mH, C=1 µF, 1 V source, zero initial storage. Capacitor voltage oscillates around 1 V; first peak ~1.729 V at ~315.74 µs. Step 0.1 µs resolves this with small BE damping. Change R to 200 Ω for critical damping, or 400 Ω for overdamping; rerun. The initial source current is zero; current later follows the LC storage evolution. |
+| [transient-source-breakpoints](transient-source-breakpoints.openece) | Same RC with initial source 0 V, hold points 10 V at 1 ms and 0 V at 3 ms. Source voltage jumps, capacitor voltage stays continuous. Numerical trace includes ordered **before/after** rows at each exact timestamp; plots preserve them. Change mode to linear: source ramps from (0,0) to (1 ms,10 V) to (3 ms,0 V), then holds. No row sorting/repair or silent breakpoint merging occurs. |
+
+Use the numerical trace to inspect exact values and breakpoint sides. Plot envelopes
+are decimated for responsiveness; the table retains every accepted sample. Editing
+active input makes old results **Stale** and removes resumability. Invalid inactive
+fields are preserved without affecting execution. Failed simulations retain the
+accepted prefix and show attempted failure time separately from last accepted time.
+See [workflow and limits](../docs/transient-execution.md) and [numerics](../docs/transient-analysis.md).

@@ -404,7 +404,7 @@ or test executable inside the release package.
 
 `MainWindow` wires File/Help actions, title/path and a document-owned
 `ProjectWorkspace`. That workspace contains scrollable persistent SignalsDspView,
-DigitalWorkspace (combinational/timing), CircuitsWorkspace (DC/AC/inert Transient editor) and
+DigitalWorkspace (combinational/timing), CircuitsWorkspace (DC/AC/Transient) and
 CommunicationsView. The `project/` library owns editable ProjectSnapshot DTOs and
 strict serialization; `communications/` owns normalized baseband/BER types.
 Neither reuses unrelated signal, digital or circuit representations. About reports
@@ -422,10 +422,17 @@ It reuses circuit identities, passive ranges, private structural validation and
 numerical acceptance policies without changing DC/AC APIs. OpenECE owns the
 backward-Euler stamps, storage/source initialization, source-breakpoint batches,
 physical residual checks and explicit-time traces; Eigen remains private.
-The next checkpoint adds an inert TransientView borrowing authoritative
-TransientDraft state, with schema-2 encoding and strict schema-1 import. No
-Simulation, timers or transient results are constructed by this editor. Document
+TransientView borrows authoritative TransientDraft state, with schema-2 encoding
+and strict schema-1 import. Restoration never constructs a Simulation or starts
+execution. Explicit Run/Step converts only active fields into an owned numerical
+request. TransientRunner holds it on one worker; coalesced immutable results feed
+GUI-thread Qwt views and a table model. Frozen metadata maps separate core voltage/
+current arrays back into mixed draft order. All execution objects are stopped
+before workspace destruction. Document
 provenance remains outside editable state; in-place schema upgrades are explained
 before saving. See [transient-project-format.md](transient-project-format.md).
 Execution controls and plots remain a separate review. Release-pinned fixtures
 are unchanged.
+
+See [transient execution](transient-execution.md) for measured scheduling, trace
+publication/decimation, resource budgets and lifecycle contracts.

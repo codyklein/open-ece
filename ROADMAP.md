@@ -169,7 +169,9 @@ Keep v1.0.0 immutable. See [branding scope and checks](docs/branding.md).
 - Separate Qt-independent transient R/C/L model and backward-Euler MNA engine.
 - Constant/piecewise independent sources, explicit initial conditions and breakpoints.
 - Bounded incremental execution, explicit timestamps and voltage/current probes.
-- Core/reference tests first; GUI and schema-2 integration require a further review.
+- Schema-2 draft preservation with inert schema-1/2 loading.
+- Owned worker Run/Pause/Resume/Step/Cancel, voltage/current plots and complete trace table.
+- Analytical/reference, workflow, compatibility and packaged-runtime validation.
 
 See [the numerical contract](docs/transient-analysis.md). No nonlinear devices,
 adaptive integration, schematic capture or unrelated domain expansion.

@@ -56,7 +56,7 @@ if(OPENECE_BUILD_GUI)
     # Separate examples keep MSVC Debug's complete workspace/plot tests bounded.
     # Qt's Windows logger may not reach CTest stdout; always retain explicit logs.
     set(example_tests)
-    foreach(example IN ITEMS sine-fft-fir half-adder dff-timing dc-divider rc-lowpass series-rlc bpsk-link-ber qpsk-link-ber intentionally-incomplete)
+    foreach(example IN ITEMS sine-fft-fir half-adder dff-timing dc-divider rc-lowpass series-rlc bpsk-link-ber qpsk-link-ber intentionally-incomplete transient-rc-step transient-rl-response transient-rlc-damping transient-source-breakpoints)
         list(APPEND example_tests example_${example})
         add_test(NAME example_${example} COMMAND openece_example_gui_tests "examples:${example}"
             -o "${CMAKE_BINARY_DIR}/example-${example}-$<CONFIG>.log,txt")

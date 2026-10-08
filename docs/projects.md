@@ -57,7 +57,7 @@ failure does not undo a successful project save.
 | Timing / sequential | Ordered inputs, clock definitions, elements/pins/delays/initial Q, outputs, stimuli, observed-node text, horizon, display unit, allocator and editor tab. |
 | DC circuits | Ordered nodes/components, stable IDs, names, terminals, ground, values/units, allocators and selected tab. |
 | AC circuits | DC-style editable records plus R/C/L/source phases, frequency, probe/reference selections, transfer/absolute mode, sweep range/count/grid and selected tab. |
-| Transient configuration | Nodes/components, retained source points, initialization, ordered probes, units, exact text, references and counters; editor only. |
+| Transient configuration | Nodes/components, retained source points, initialization, ordered probes, units, exact text, references and counters; accepted traces/progress/runtime are excluded. |
 | Communications | Modulation, bit source, manual bits (even when disabled), counts, samples/symbol, rate/unit, noise setting, seeds, Eb/N0, BER configuration and selected tab. |
 | Workspace navigation | Top-level domain and the meaningful Digital/Circuits and per-domain tab selections. |
 

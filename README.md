@@ -24,7 +24,8 @@ libraries with editable experiments, plots and automated numerical tests.
 [OpenECE 1.0.1 is released](https://github.com/codyklein/open-ece/releases/tag/v1.0.1),
 including approved branding and a signed Windows portable package. Development
 on `feature/v1.1.0` introduces linear transient circuit analysis; see the
-[transient contract](docs/transient-analysis.md). The released application has
+[transient contract](docs/transient-analysis.md) and [execution workflow](docs/transient-execution.md),
+with owned worker execution, voltage/current plots and schema-2 projects. The released application has
 no transient GUI yet; stable version metadata remains 1.0.1 during development.
 
 ## Try it
@@ -60,7 +61,7 @@ screen-reader validation. See the [physical validation record and checklist](doc
 
 - [First session](docs/first-session.md), [examples and expected results](examples/README.md),
   [current screenshots](docs/screenshots.md)
-- [Saving projects](docs/projects.md), [schema 1](docs/project-format.md), [schema 2 / inert transient editor](docs/transient-project-format.md),
+- [Saving projects](docs/projects.md), [schema 1](docs/project-format.md), [schema 2 / transient drafts](docs/transient-project-format.md),
   [ownership and transactions](docs/project-transactions.md)
 - [Signals/DSP conventions](docs/numerics.md), [Digital Logic](docs/digital-logic.md),
   [Timing](docs/digital-timing.md), [DC](docs/circuit-analysis.md),
@@ -79,7 +80,7 @@ OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 a
 
 This promises neither a stable C++/plugin ABI nor future-schema compatibility.
 See [compatibility limits](docs/projects.md). There is no undo/redo, autosave,
-transient circuit solver, schematic editor, RF synchronization or SDR integration.
+a transient circuit solver in the stable 1.0.1 release, schematic editor, RF synchronization or SDR integration.
 
 ## License
 
