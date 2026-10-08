@@ -503,11 +503,11 @@ void TransientView::render() {
     };
     for (int r = 0; r < static_cast<int>(d.nodes.size()); ++r) {
         nodes_->insertRow(r);
-        item(nodes_, r, 0, std::to_string(d.nodes[r].id.value), false);
-        item(nodes_, r, 1, d.nodes[r].name);
+        item(nodes_, r, 0, std::to_string(d.nodes[static_cast<std::size_t>(r)].id.value), false);
+        item(nodes_, r, 1, d.nodes[static_cast<std::size_t>(r)].name);
     }
     for (int r = 0; r < static_cast<int>(d.components.size()); ++r) {
-        auto& c = d.components[r];
+        auto& c = d.components[static_cast<std::size_t>(r)];
         components_->insertRow(r);
         item(components_, r, 0, std::to_string(c.id.value), false);
         item(components_, r, 1, c.name);
@@ -535,7 +535,7 @@ void TransientView::render() {
                 [this, r, unit] { change_component_unit(r, unit); });
     }
     for (int r = 0; r < static_cast<int>(d.initial_conditions.size()); ++r) {
-        auto& i = d.initial_conditions[r];
+        auto& i = d.initial_conditions[static_cast<std::size_t>(r)];
         initial_->insertRow(r);
         ref(initial_, r, 0, [this, r](auto v) {
             edit(state_.get().initial_conditions.at(static_cast<std::size_t>(r)).component, v);
@@ -567,7 +567,7 @@ void TransientView::render() {
         });
     }
     for (int r = 0; r < static_cast<int>(d.probes.size()); ++r) {
-        auto& p = d.probes[r];
+        auto& p = d.probes[static_cast<std::size_t>(r)];
         probes_->insertRow(r);
         item(probes_, r, 0, p.name);
         auto* kind = choice(probes_, r, 1, {"voltage", "current"}, p.kind);
@@ -609,7 +609,7 @@ void TransientView::render_points() {
     points_->horizontalHeaderItem(2)->setText("Amplitude [" + qt_text(selected.value.unit) + "]");
     source_mode_->setCurrentText(qt_text(source.mode));
     for (int r = 0; r < static_cast<int>(source.points.size()); ++r) {
-        auto& p = source.points[r];
+        auto& p = source.points[static_cast<std::size_t>(r)];
         points_->insertRow(r);
         item(points_, r, 0, p.time.text);
         item(points_, r, 2, p.value_text);
