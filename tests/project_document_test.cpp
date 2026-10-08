@@ -300,13 +300,13 @@ class ProjectDocumentTest : public QObject {
         QTest::newRow("duplicate") << QByteArray("{\"x\":0,\"x\":1}") << int(Code::duplicate_key);
         auto valid = QByteArray::fromStdString(project::encode_project(project::default_project()));
         auto version = valid;
-        version.replace("\"schema_version\": 1", "\"schema_version\": 999");
+        version.replace("\"schema_version\": 2", "\"schema_version\": 999");
         QTest::newRow("version") << version << int(Code::unsupported_version);
         auto format = valid;
         format.replace("org.openece.project", "some.other.format");
         QTest::newRow("format") << format << int(Code::wrong_format);
         auto type = valid;
-        type.replace("\"schema_version\": 1", "\"schema_version\": true");
+        type.replace("\"schema_version\": 2", "\"schema_version\": true");
         QTest::newRow("type") << type << int(Code::wrong_type);
         auto structure = valid;
         structure.replace("\"signals\":", "\"not-a-domain\":");

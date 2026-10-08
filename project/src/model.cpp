@@ -79,6 +79,24 @@ std::vector<Id> reserved_ids(const TimingDraft& d) {
     text_ids(v, d.observed_text);
     return v;
 }
+std::vector<Id> reserved_node_ids(const TransientDraft& d) {
+    auto v = node_ids(d);
+    for (const auto& p : d.probes) {
+        add(v, p.positive);
+        add(v, p.negative);
+    }
+    return v;
+}
+std::vector<Id> reserved_component_ids(const TransientDraft& d) {
+    std::vector<Id> v;
+    for (const auto& c : d.components)
+        v.push_back(c.id);
+    for (const auto& p : d.probes)
+        add(v, p.component);
+    for (const auto& i : d.initial_conditions)
+        add(v, i.component);
+    return v;
+}
 std::vector<Id> reserved_node_ids(const DcDraft& d) { return node_ids(d); }
 std::vector<Id> reserved_node_ids(const AcDraft& d) {
     auto v = node_ids(d);

@@ -16,6 +16,8 @@ inline constexpr std::size_t file_bytes = 8 * 1024 * 1024, depth = 32, values = 
 inline constexpr std::size_t digital_inputs = 8, digital_elements = 64, digital_outputs = 16,
                              digital_pins = 8, timing_stimuli = 10000, circuit_nodes = 32,
                              circuit_components = 128;
+inline constexpr std::size_t transient_probes = 64, transient_initial_conditions = 128,
+                             transient_source_points = 1024, transient_total_source_points = 4096;
 inline constexpr std::uint64_t exhausted_id = std::uint64_t{1} << 32;
 } // namespace limits
 enum class ErrorCode {
@@ -179,9 +181,51 @@ struct AcDraft {
     Reference probe_positive, probe_negative, reference_source;
     bool operator==(const AcDraft&) const = default;
 };
+struct TransientSourcePoint {
+    Quantity time{"", "s"};
+    std::string value_text;
+    bool operator==(const TransientSourcePoint&) const = default;
+};
+struct TransientSource {
+    std::string mode = "constant";
+    std::vector<TransientSourcePoint> points;
+    bool operator==(const TransientSource&) const = default;
+};
+struct TransientComponent {
+    Id id;
+    std::string name, kind = "resistor";
+    Reference positive, negative;
+    Quantity value{"", "ohm"};
+    TransientSource source;
+    bool operator==(const TransientComponent&) const = default;
+};
+struct TransientInitialCondition {
+    Reference component;
+    std::string kind = "capacitor_voltage";
+    Quantity value{"", "V"};
+    bool operator==(const TransientInitialCondition&) const = default;
+};
+struct TransientProbe {
+    std::string name, kind = "voltage";
+    Reference positive, negative, component;
+    bool operator==(const TransientProbe&) const = default;
+};
+struct TransientDraft {
+    NextId next_node{0}, next_component{0};
+    std::vector<Node> nodes;
+    std::vector<TransientComponent> components;
+    Reference ground;
+    Quantity stop{"", "s"}, maximum_step{"", "s"};
+    std::string initialization = "operating_point", display_time_unit = "s",
+                selected_tab = "editor";
+    std::vector<TransientInitialCondition> initial_conditions;
+    std::vector<TransientProbe> probes;
+    bool operator==(const TransientDraft&) const = default;
+};
 struct CircuitsDraft {
     DcDraft dc;
     AcDraft ac;
+    TransientDraft transient;
     std::string selected_tab = "dc";
     bool operator==(const CircuitsDraft&) const = default;
 };
@@ -206,6 +250,7 @@ struct DecodedProject {
     ProjectSnapshot snapshot;
     // JSON Pointer paths. Unknown optional fields are accepted, not retained on encode.
     std::vector<std::string> ignored_fields;
+    int source_schema_version = 2; // provenance, never part of editable state
 };
 ProjectSnapshot default_project();
 void validate_structure(const ProjectSnapshot&);
@@ -216,6 +261,8 @@ std::string encode_project(const ProjectSnapshot&);
 Id allocate_id(NextId& next, std::span<const Id> reserved);
 std::vector<Id> reserved_ids(const CombinationalDraft&);
 std::vector<Id> reserved_ids(const TimingDraft&);
+std::vector<Id> reserved_node_ids(const TransientDraft&);
+std::vector<Id> reserved_component_ids(const TransientDraft&);
 std::vector<Id> reserved_node_ids(const DcDraft&);
 std::vector<Id> reserved_node_ids(const AcDraft&);
 std::vector<Id> reserved_component_ids(const DcDraft&);

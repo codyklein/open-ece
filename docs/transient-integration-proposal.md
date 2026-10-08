@@ -1,3 +1,5 @@
+> Persistence/editor corrections are finalized in [transient-project-format.md](transient-project-format.md). Its allocator, schema-1 import, provenance, conversion and storage rules supersede this initial proposal. Execution/plots remain a future review.
+
 # Transient GUI and schema 2 — proposal for review
 
 This document proposes the next v1.1 milestone. It does not implement a GUI,
@@ -115,7 +117,7 @@ an ordinary ID, and ground can be null or dangling.
 
 Allocator invariants include every declared and retained dangling ID in terminals,
 ground, probes and initial-state rows. Next counters must exceed all reserved IDs,
-or hold the existing exhausted sentinel. Keep deletion monotonic; a new component
+or hold the existing exhausted sentinel. (Superseded allocator wording: see the finalized contract below.) Keep deletion monotonic; a new component
 must not reconnect a retained dangling initialization/probe reference.
 
 Storage proposals: 32 nodes, 128 components, 64 probes, 128 initialization rows,

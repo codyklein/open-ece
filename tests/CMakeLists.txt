@@ -1,7 +1,7 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
 find_package(nlohmann_json 3.12 REQUIRED CONFIG)
-add_executable(openece_project_tests project_test.cpp example_codec_test.cpp)
+add_executable(openece_project_tests project_test.cpp transient_project_test.cpp example_codec_test.cpp)
 target_compile_definitions(openece_project_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 target_link_libraries(openece_project_tests PRIVATE OpenECE::project nlohmann_json::nlohmann_json GTest::gtest_main openece_options)
 target_compile_definitions(openece_project_tests PRIVATE OPENECE_PROJECT_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/project-v1.openece")
