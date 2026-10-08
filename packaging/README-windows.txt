@@ -86,7 +86,11 @@ preserved within storage limits. Files contain editable experiment state, NOT
 plots, numerical results, simulation state, sweep progress or BER results. Loading
 runs nothing: choose Generate/Evaluate/Solve/Simulate/Run explicitly afterward.
 
-Only UTF-8 JSON schema 1 is supported. Unsupported versions and malformed files
+This development build reads UTF-8 JSON schemas 1 and 2 and saves schema 2.
+Schema-1 imports add an empty inert Transient draft. An in-place upgrade warns
+that released OpenECE 1.0.x cannot read schema 2 and offers Save As. The Transient
+page edits configuration only; it does not execute simulations or produce plots.
+Unsupported versions and malformed files
 are rejected without replacing the active project. Unknown optional fields prompt
 a warning because they are discarded on re-save. Files are limited to 8 MiB with
 additional row/text/nesting limits. No external assets, scripts or plugins load.

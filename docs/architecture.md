@@ -404,7 +404,7 @@ or test executable inside the release package.
 
 `MainWindow` wires File/Help actions, title/path and a document-owned
 `ProjectWorkspace`. That workspace contains scrollable persistent SignalsDspView,
-DigitalWorkspace (combinational/timing), CircuitsWorkspace (DC/AC) and
+DigitalWorkspace (combinational/timing), CircuitsWorkspace (DC/AC/inert Transient editor) and
 CommunicationsView. The `project/` library owns editable ProjectSnapshot DTOs and
 strict serialization; `communications/` owns normalized baseband/BER types.
 Neither reuses unrelated signal, digital or circuit representations. About reports
@@ -422,6 +422,10 @@ It reuses circuit identities, passive ranges, private structural validation and
 numerical acceptance policies without changing DC/AC APIs. OpenECE owns the
 backward-Euler stamps, storage/source initialization, source-breakpoint batches,
 physical residual checks and explicit-time traces; Eigen remains private.
-There is currently no Transient GUI or persisted transient draft. Those require
-a separate reviewed GUI/schema-2 integration checkpoint; schema-1 codec and
-release-pinned fixtures are unchanged.
+The next checkpoint adds an inert TransientView borrowing authoritative
+TransientDraft state, with schema-2 encoding and strict schema-1 import. No
+Simulation, timers or transient results are constructed by this editor. Document
+provenance remains outside editable state; in-place schema upgrades are explained
+before saving. See [transient-project-format.md](transient-project-format.md).
+Execution controls and plots remain a separate review. Release-pinned fixtures
+are unchanged.

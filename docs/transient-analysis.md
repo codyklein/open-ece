@@ -1,8 +1,9 @@
 # Linear transient analysis — v1.1 core contract
 
-This is the approved core implementation contract, not a claim that a Transient
-GUI or schema-2 project support is already shipped. The initial milestone adds
-core and tests only; GUI and persistence changes require a further review.
+This is the transient core implementation contract. The subsequent configuration
+checkpoint adds an inert editor and schema-2 persistence, described in
+[transient-project-format.md](transient-project-format.md). GUI simulation controls
+and plots are not implemented yet.
 
 ## Model and conventions
 
@@ -15,7 +16,7 @@ Sources are instantaneous physical values, not RMS AC phasors. No Qt, Eigen or
 project-codec types occur in public transient APIs. Definitions and requests are
 owned; validated snapshots never borrow widget data.
 
-DC/AC APIs, numerical policies and project schema 1 remain unchanged. Only small
+DC/AC APIs, numerical policies and schema-1 field meanings remain unchanged. Only small
 internal structural validation utilities are reused. A transient time grid is not
 a SampledSignal and the digital event simulator is not a circuit integrator.
 
@@ -160,10 +161,10 @@ Analytical RC/RL and all RLC damping regimes, nonzero energy, convergence, dampi
 KCL/KVL, invalid/floating/singular constraints, ordering, ownership, bounds and
 incremental/Run equivalence precede GUI use. Retain the complete existing matrix.
 
-Schema-2 design will add exact transient draft text/units/IDs/probes without
-changing schema-1 meanings. Keep release-pinned v0.9 fixture bytes intact. No
-schema changes, GUI, nonlinear devices, adaptive stepping, SPICE integration,
-schematic editor or unrelated domain feature is part of this core checkpoint.
+Schema 2 now stores transient draft text/units/IDs/probes without changing
+schema-1 meanings or release-pinned v0.9 fixture bytes. The inert editor never
+executes this core. GUI execution, nonlinear devices, adaptive stepping, SPICE
+integration and schematic editing remain outside this checkpoint.
 
 ## Public entry points and a minimal RC run
 
