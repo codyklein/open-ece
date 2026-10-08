@@ -89,7 +89,14 @@ Stamp conductance C/h and the corresponding history current. For an inductor:
 
     v_new - (L/h)*i_new = -(L/h)*i_old
 
-The source-incidence block uses an ordinary transpose. No regularization, added
+Between source knots, solve for increments about the last accepted state,
+centering each component's RHS before accumulation. This avoids subtracting large
+already-rounded history terms near a settled value. At knots use the absolute
+form to preserve exact small source endpoints after large preceding values.
+These are algebraically equivalent backward-Euler equations with the same matrix,
+variable ordering and acceptance thresholds. Check the backward error of both the
+centered solve and the recovered original equations, then physical branch/KCL
+residuals. The source-incidence block uses an ordinary transpose. No regularization, added
 resistance, hidden ground, pseudoinverse or nonlinear iteration is permitted.
 OpenECE owns all indexing/stamps and physical checks; private Eigen FullPivLU
 performs the dense solve. Four matrix-only equilibration passes and the existing

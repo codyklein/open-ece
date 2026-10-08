@@ -345,6 +345,14 @@ TEST(Transient, LinearVoltageSourceClampedCapacitorAndInitialDerivative) {
     }
     EXPECT_EQ(r.times.back().side, tr::SampleSide::after_breakpoint);
     EXPECT_NEAR(r.currents[1].back(), 0, 1e-14);
+    auto& source = std::get<tr::VoltageSource>(d.components[0]).voltage_volts;
+    source.initial = 1e9;
+    source.points = {{1, 1e-20}};
+    req = specified(1, .25, {{{2}, 1e9}});
+    req.voltages = {{{1}, {0}}};
+    r = run(d, req);
+    EXPECT_EQ(r.voltages[0][r.voltages[0].size() - 2], 1e-20);
+    EXPECT_EQ(r.voltages[0].back(), 1e-20);
 }
 TEST(Transient, StepSourcesHaveBothSidesAndContinuousStorage) {
     auto d = rc(0);
@@ -751,4 +759,20 @@ TEST(Transient, InitializationRejectsUnrepresentableStorageVoltage) {
     d.components.back() = tr::VoltageSource{{4}, "tiny differential", {2}, {3}, {1e-8, {}}};
     req.initial.capacitor_voltages.clear();
     error([&] { tr::Simulation s(tr::Circuit(d), req); }, tr::ErrorCode::numerical_failure);
+}
+TEST(Transient, FineStepSettlingAndSteadyOperatingPointDoNotCancelLargeHistoryTerms) {
+    auto r = run(rc(), rc_request(.015, .000001));
+    EXPECT_EQ(r.current_time_seconds, .015);
+    for (std::size_t i = 0; i < r.times.size(); ++i)
+        EXPECT_NEAR(r.voltages[0][i], 10 * (1 - std::exp(-r.times[i].seconds / .001)), .002);
+    tr::Request req;
+    req.stop_seconds = .015;
+    req.maximum_step_seconds = .000001;
+    req.voltages = {{{2}, {0}}};
+    req.currents = {{{12}}};
+    r = run(rc(), req);
+    for (std::size_t i = 0; i < r.times.size(); ++i) {
+        EXPECT_DOUBLE_EQ(r.voltages[0][i], 10);
+        EXPECT_DOUBLE_EQ(r.currents[0][i], 0);
+    }
 }

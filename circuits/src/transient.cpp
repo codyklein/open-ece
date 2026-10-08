@@ -52,6 +52,25 @@ void check_constraint(double actual, double expected, NumericalQuality& quality)
         error > policy::constraint_absolute_volts + policy::physical_relative * scale)
         numerical();
 }
+void check_backward(const System& s, const std::vector<double>& result, NumericalQuality& quality) {
+    double backward_error = 0;
+    for (std::size_t i = 0; i < s.count; ++i) {
+        double residual = -s.b[i], scale = std::abs(s.b[i]);
+        for (std::size_t j = 0; j < s.count; ++j) {
+            double term = s.a[i * s.count + j] * result[j];
+            residual += term;
+            scale += std::abs(term);
+        }
+        if (!std::isfinite(residual) || !std::isfinite(scale))
+            numerical();
+        double error = scale == 0 ? (residual == 0 ? 0 : std::numeric_limits<double>::infinity())
+                                  : std::abs(residual) / scale;
+        backward_error = std::max(backward_error, error);
+    }
+    quality.backward_error = std::max(quality.backward_error, backward_error);
+    if (backward_error > policy::backward_threshold(s.count))
+        numerical();
+}
 std::vector<double> solve(const System& s, NumericalQuality& quality) {
     if (!s.count)
         return {};
@@ -99,23 +118,7 @@ std::vector<double> solve(const System& s, NumericalQuality& quality) {
     std::vector<double> result(s.count);
     for (std::size_t i = 0; i < s.count; ++i)
         result[i] = x[static_cast<Eigen::Index>(i)];
-    double backward_error = 0;
-    for (std::size_t i = 0; i < s.count; ++i) {
-        double residual = -s.b[i], scale = std::abs(s.b[i]);
-        for (std::size_t j = 0; j < s.count; ++j) {
-            double term = s.a[i * s.count + j] * result[j];
-            residual += term;
-            scale += std::abs(term);
-        }
-        if (!std::isfinite(residual) || !std::isfinite(scale))
-            numerical();
-        double error = scale == 0 ? (residual == 0 ? 0 : std::numeric_limits<double>::infinity())
-                                  : std::abs(residual) / scale;
-        backward_error = std::max(backward_error, error);
-    }
-    quality.backward_error = std::max(quality.backward_error, backward_error);
-    if (backward_error > policy::backward_threshold(s.count))
-        numerical();
+    check_backward(s, result, quality);
     return result;
 }
 struct Edge {
@@ -328,19 +331,29 @@ struct Simulation::Impl {
                         {}, redundant);
     }
     void stamp(System& s, double t, bool left, double h, const std::vector<double>& history,
-               bool operating = false) const {
+               bool operating = false, bool centered = true) const {
         for (auto i : order) {
             const auto& p = parts[i];
             auto a = node_columns[p.p], b = node_columns[p.n];
+            // Dynamic unknowns are increments about the last accepted state.
+            // Center each component before accumulation, never subtract A*x_old
+            // from an already rounded, potentially huge history RHS.
+            const bool incremental = !operating && centered;
+            const double old_voltage = incremental
+                                           ? result.latest.node_voltages[p.p].voltage_volts -
+                                                 result.latest.node_voltages[p.n].voltage_volts
+                                           : 0;
             switch (p.kind) {
             case Kind::resistor:
                 s.conductance(a, b, 1 / p.value);
+                if (incremental)
+                    s.inject(a, b, old_voltage / p.value);
                 break;
             case Kind::capacitor:
                 if (!operating) {
                     double g = p.value / h;
                     s.conductance(a, b, g);
-                    s.inject(a, b, -g * history[i]);
+                    s.inject(a, b, g * (old_voltage - history[i]));
                 }
                 break;
             case Kind::inductor:
@@ -348,12 +361,16 @@ struct Simulation::Impl {
                 if (!operating) {
                     double g = p.value / h;
                     s.add(p.slot, p.slot, -g);
-                    s.b[p.slot] = -g * history[i];
+                    s.b[p.slot] = incremental ? -old_voltage : -g * history[i];
+                    if (incremental)
+                        s.inject(a, b, history[i]);
                 }
                 break;
             case Kind::voltage:
                 s.incidence(a, b, p.slot);
-                s.b[p.slot] = source_value(*p.source, t, left);
+                s.b[p.slot] = source_value(*p.source, t, left) - old_voltage;
+                if (incremental)
+                    s.inject(a, b, result.latest.branch_currents[i].current_amperes);
                 break;
             case Kind::current:
                 s.inject(a, b, source_value(*p.source, t, left));
@@ -524,12 +541,15 @@ struct Simulation::Impl {
     State integrate(double t, double h, bool left, const std::vector<double>& history) const {
         check_voltage_sources(t, left);
         System s(unknowns);
-        stamp(s, t, left, h, history);
+        // Solve absolute values at source knots, preserving their exact constraints
+        // even when a large prior value falls to a very small specified endpoint.
+        const bool centered = !left;
+        stamp(s, t, left, h, history, false, centered);
         NumericalQuality quality;
         auto x = solve(s, quality);
         std::vector<double> v(node_columns.size()), currents(parts.size());
         for (std::size_t i = 0; i < v.size(); ++i)
-            v[i] = voltage(x, i);
+            v[i] = (centered ? result.latest.node_voltages[i].voltage_volts : 0) + voltage(x, i);
         for (std::size_t i = 0; i < parts.size(); ++i) {
             const auto& p = parts[i];
             double branch = v[p.p] - v[p.n];
@@ -541,18 +561,31 @@ struct Simulation::Impl {
                 currents[i] = (p.value / h) * (branch - history[i]);
                 break;
             case Kind::inductor: {
-                currents[i] = x[p.slot];
+                currents[i] = (centered ? history[i] : 0) + x[p.slot];
                 const double expected = (p.value / h) * (currents[i] - history[i]);
                 check_constraint(branch, expected, quality);
                 break;
             }
             case Kind::voltage:
-                currents[i] = x[p.slot];
+                currents[i] =
+                    (centered ? result.latest.branch_currents[i].current_amperes : 0) + x[p.slot];
                 break;
             case Kind::current:
                 currents[i] = source_value(*p.source, t, left);
                 break;
             }
+        }
+        if (centered) {
+            System original(unknowns);
+            stamp(original, t, left, h, history, false, false);
+            std::vector<double> recovered(unknowns);
+            for (std::size_t i = 0; i < v.size(); ++i)
+                if (i != ground)
+                    recovered[node_columns[i]] = v[i];
+            for (std::size_t i = 0; i < parts.size(); ++i)
+                if (parts[i].kind == Kind::voltage || parts[i].kind == Kind::inductor)
+                    recovered[parts[i].slot] = currents[i];
+            check_backward(original, recovered, quality);
         }
         return state(v, currents, quality, t, left);
     }
