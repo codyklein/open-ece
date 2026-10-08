@@ -151,3 +151,10 @@ target_link_libraries(openece_ac_benchmark PRIVATE OpenECE::circuits openece_opt
 
 add_executable(openece_communications_benchmark EXCLUDE_FROM_ALL ../benchmarks/communications_ber.cpp)
 target_link_libraries(openece_communications_benchmark PRIVATE OpenECE::communications openece_options)
+
+add_executable(openece_transient_benchmark EXCLUDE_FROM_ALL ../benchmarks/transient.cpp)
+target_link_libraries(openece_transient_benchmark PRIVATE OpenECE::circuits openece_options)
+if(OPENECE_BUILD_GUI)
+    target_link_libraries(openece_transient_benchmark PRIVATE openece_workbench)
+    target_compile_definitions(openece_transient_benchmark PRIVATE OPENECE_BENCH_GUI QT_NO_KEYWORDS)
+endif()
