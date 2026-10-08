@@ -194,6 +194,9 @@ TEST(TransientModel, SourceSemanticsAndValidation) {
         std::get<tr::VoltageSource>(d.components[0]).voltage_volts.points = points;
         error([&] { tr::Circuit c(d); }, tr::ErrorCode::invalid_definition);
     }
+    const tr::Source small_endpoint{1e9, {{1, 1e-20}}, tr::Interpolation::linear};
+    EXPECT_EQ(tr::source_value(small_endpoint, 1, true), 1e-20);
+    EXPECT_EQ(tr::source_value(small_endpoint, 1), 1e-20);
     auto d = rc();
     std::get<tr::VoltageSource>(d.components[0]).voltage_volts.interpolation =
         static_cast<tr::Interpolation>(99);

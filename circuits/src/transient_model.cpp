@@ -99,8 +99,8 @@ double source_value(const Source& s, double t, bool left) {
     const auto previous_value = found == s.points.begin() ? s.initial : (found - 1)->value;
     if (found == s.points.end() || s.interpolation == Interpolation::hold)
         return previous_value;
-    return previous_value + (found->value - previous_value) *
-                                ((t - previous_time) / (found->time_seconds - previous_time));
+    return std::lerp(previous_value, found->value,
+                     (t - previous_time) / (found->time_seconds - previous_time));
 }
 double source_derivative(const Source& s, double t) {
     if (!std::isfinite(t) || t < 0 || t > limits::time_max)
