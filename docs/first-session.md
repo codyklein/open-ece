@@ -4,7 +4,7 @@
    `./build/dev/gui/openece` after a Fedora build. The sidebar selects Signals / DSP,
    Digital Logic, Circuits or Communications. Digital and Circuits have sub-tabs.
 2. Choose **File → Open…** (`Ctrl+O`) and select `examples/dc-divider.openece`.
-   Source checkouts and current candidate packages include `examples/`. Opening
+   Source checkouts and portable packages include `examples/`. Opening
    leaves every result empty; nothing computes just because a project is opened.
 3. In **Circuits → DC**, press **Solve DC**. The 10 V supply and two 1 kΩ resistors
    give a 5 V midpoint and −5 mA voltage-source current. Current is positive from

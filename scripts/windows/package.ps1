@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string]$QtRoot,
     [string]$BuildDir = "$PSScriptRoot/../../build/windows",
     [string]$DependenciesRoot = "$PSScriptRoot/../../build/windows-deps",
-    [string]$OutputDir = "$PSScriptRoot/../../build/packages"
+    [string]$OutputDir = "$PSScriptRoot/../../build/packages",
+    [switch]$StageOnly
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -57,8 +58,20 @@ Copy-Item "$PSScriptRoot/../../packaging/THIRD-PARTY-NOTICES.txt" $destination
 # Ordinary schema-1 projects and offline user documentation; no runtime loader feature.
 Copy-Item "$PSScriptRoot/../../examples" $destination -Recurse
 Copy-Item "$PSScriptRoot/../../docs" $destination -Recurse
+# Useful approved branding exports only; no fonts, export scripts or development inputs.
+$brandSource = "$PSScriptRoot/../../assets/branding"
+$brandDestination = "$destination/branding"
+New-Item -ItemType Directory -Force "$brandDestination/png" | Out-Null
+foreach ($asset in @('openece.ico', 'openece-icon.svg', 'openece-icon-dark.svg', 'openece-icon-monochrome.svg', 'openece-icon-white.svg', 'openece-wordmark.svg', 'openece-lockup-light.svg', 'openece-lockup-dark.svg')) {
+    Copy-Item "$brandSource/$asset" $brandDestination
+}
+foreach ($size in @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024)) {
+    Copy-Item "$brandSource/png/openece-$size.png" "$brandDestination/png/"
+}
+Copy-Item "$PSScriptRoot/../../packaging/README-branding.txt" "$brandDestination/README.txt"
 $notices = "$destination/licenses"
-New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt", "$notices/Eigen", "$notices/nlohmann-json" | Out-Null
+New-Item -ItemType Directory -Force "$notices/Qwt", "$notices/GoogleTest", "$notices/Qt", "$notices/Eigen", "$notices/nlohmann-json", "$notices/Noto-Sans" | Out-Null
+Copy-Item "$brandSource/notices/Noto-Sans-OFL.txt" "$notices/Noto-Sans/"
 Copy-Item "$DependenciesRoot/sources/qwt-6.3.0/COPYING" "$notices/Qwt/"
 Copy-Item "$DependenciesRoot/sources/googletest-1.17.0/LICENSE" "$notices/GoogleTest/"
 Copy-Item "$DependenciesRoot/sources/eigen-5.0.0/COPYING.MPL2" "$notices/Eigen/"
@@ -67,11 +80,17 @@ Copy-Item "$DependenciesRoot/sources/json-3.12.0/include/nlohmann/thirdparty/hed
 # Notices are generated from the checksum-pinned upstream archive by the
 # maintainer utility; packaging does not download or process Qt sources.
 Copy-Item "$PSScriptRoot/../../packaging/Qt-6.8.3-NOTICES.txt" "$notices/Qt/"
-Get-ChildItem $destination -Recurse -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
-    "$((Get-FileHash $_.FullName).Hash.ToLowerInvariant())  $([IO.Path]::GetRelativePath($destination, $_.FullName).Replace('\', '/'))"
-} | Set-Content "$destination/SHA256SUMS.txt"
-$zip = Join-Path $OutputDir "$name.zip"
-Write-Host "Compressing $name..."
-Compress-Archive -Path $destination -DestinationPath $zip -Force
-Write-Host "Created $zip"
-Get-ChildItem $destination -Recurse -File | Select-Object FullName, Length
+# Sidecar metadata is never included in the distributable. The Qwt name comes
+# from the installed Release target, not a guessed DLL basename.
+@{
+    packageName = $name
+    qwtRuntime = [IO.Path]::GetFileName($qwtRuntime)
+    sourceCommit = $env:GITHUB_SHA
+} | ConvertTo-Json | Set-Content -LiteralPath "$staging/stage-inputs.json" -Encoding utf8NoBOM
+Set-Content -LiteralPath "$OutputDir/stage-location.txt" -Value $staging -Encoding utf8NoBOM
+if ($StageOnly) {
+    Write-Host "Staged final contents in $destination; no manifest or ZIP created."
+} else {
+    # Local and ordinary PR builds remain explicit unsigned developer packages.
+    & "$PSScriptRoot/finalize-package.ps1" -PackageDirectory $destination -OutputDir $OutputDir
+}

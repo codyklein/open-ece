@@ -1,0 +1,16 @@
+<RCC>
+  <qresource prefix="/branding">
+    <file alias="openece-16.png">../../assets/branding/png/openece-16.png</file>
+    <file alias="openece-20.png">../../assets/branding/png/openece-20.png</file>
+    <file alias="openece-24.png">../../assets/branding/png/openece-24.png</file>
+    <file alias="openece-32.png">../../assets/branding/png/openece-32.png</file>
+    <file alias="openece-40.png">../../assets/branding/png/openece-40.png</file>
+    <file alias="openece-48.png">../../assets/branding/png/openece-48.png</file>
+    <file alias="openece-64.png">../../assets/branding/png/openece-64.png</file>
+    <file alias="openece-96.png">../../assets/branding/png/openece-96.png</file>
+    <file alias="openece-128.png">../../assets/branding/png/openece-128.png</file>
+    <file alias="openece-256.png">../../assets/branding/png/openece-256.png</file>
+    <file alias="openece-512.png">../../assets/branding/png/openece-512.png</file>
+    <file alias="openece-1024.png">../../assets/branding/png/openece-1024.png</file>
+  </qresource>
+</RCC>

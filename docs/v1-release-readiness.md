@@ -272,3 +272,11 @@ candidate report after validation; the hash is not embedded back into the ZIP.
 The [physical RC smoke](release-candidate.md) is still pending on that new ZIP.
 Passing checkpoint-4 binaries do not establish acceptance of the new artifact.
 No tag, merge or GitHub release is created by candidate preparation.
+
+## Published baseline
+
+The final Windows 11 RC smoke passed on the exact 1.0.0 artifact; the release was
+published at `3e688548d3d71a12fdceee173ee780047f23f854`. Its immutable ZIP SHA-256
+is `7883bef22db15027bc2992d64b227175cb34561beaed42f663eaab0c16a30431`.
+This supersedes the historical pending statements above without erasing their
+checkpoint chronology. Current post-v1 branding checks are in [branding](branding.md).

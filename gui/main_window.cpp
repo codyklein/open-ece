@@ -1,4 +1,5 @@
 #include "main_window.hpp"
+#include "branding.hpp"
 #include <QAction>
 #include <QFileInfo>
 #include <QMenuBar>
@@ -14,6 +15,7 @@ MainWindow::MainWindow(std::unique_ptr<ProjectDocument> document,
                        std::shared_ptr<ProjectPreferences> preferences, QWidget* parent)
     : QMainWindow(parent), document_(std::move(document)) {
     resize(1280, 820);
+    setWindowIcon(application_icon());
     if (!dialogs)
         dialogs = qt_project_dialogs(this);
     workflow_ =
@@ -50,7 +52,9 @@ MainWindow::MainWindow(std::unique_ptr<ProjectDocument> document,
     about->setObjectName("about_openece");
     connect(about, &QAction::triggered, this, [this] {
         QMessageBox box(this);
+        box.setObjectName("about_openece_dialog");
         box.setWindowTitle("About OpenECE");
+        box.setIconPixmap(application_icon().pixmap(64, 64));
         box.setTextFormat(Qt::PlainText);
         box.setText(
             QString("OpenECE %1\n\nElectrical and computer engineering workbench.\n"

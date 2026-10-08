@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20" role="img" aria-labelledby="title desc">
+  <title id="title">OpenECE Waveform O</title>
+  <desc id="desc">A circular O with a smooth wave; optically refined ring joins.</desc>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.0" cy="10.0" r="7.125" stroke-width="1.75"/>
+    <path d="M2.875 10 C4.3 9.6 5.7 7 7.1 7 C8.5 7 8.65 8.35 10 10 C11.35 11.65 11.5 13 12.9 13 C14.3 13 15.7 10.4 17.125 10" stroke-width="1.65"/>
+  </g>
+</svg>

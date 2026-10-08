@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/branding/openece-lockup-dark.svg">
+  <img src="assets/branding/openece-lockup-light.svg" alt="OpenECE — waveform O and wordmark" width="360">
+</picture>
+
 # OpenECE
 
 OpenECE is an MIT-licensed C++20/Qt desktop workbench for exploring electrical and
@@ -16,11 +21,10 @@ libraries with editable experiments, plots and automated numerical tests.
   domains, including incomplete drafts. Results are recomputed explicitly after
   opening; project files do not contain plot or solver caches.
 
-This branch is the **OpenECE 1.0.0 release candidate**, building on v0.9.0.
-Checkpoint-4 physical retests passed on native Fedora and Windows 11. The final
-1.0.0 package still requires the [bounded RC smoke test](docs/release-candidate.md)
-and approval before tagging or publishing. No new engineering subsystem is part
-of this stabilization milestone.
+[OpenECE 1.0.0 is released](https://github.com/codyklein/open-ece/releases/tag/v1.0.0).
+The current branch prepares **1.0.1**, a branding and presentation patch with the
+approved Waveform O icon and outlined wordmark. It adds no engineering features;
+the new portable package awaits review and [bounded physical testing](docs/branding.md).
 
 ## Try it
 
@@ -62,7 +66,8 @@ screen-reader validation. See the [physical validation record and checklist](doc
   [AC](docs/ac-analysis.md), [Communications](docs/communications.md)
 - [Architecture](docs/architecture.md), [development](docs/development.md),
   [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md),
-  [1.0 release notes](docs/release-notes-v1.0.md)
+  [1.0 release notes](docs/release-notes-v1.0.md),
+  [1.0.1 candidate notes and branding](docs/branding.md)
 
 The source tree separates `core/`, `signals/`, `dsp/`, `digital/`, `circuits/`,
 `communications/` and `project/`. `gui/` composes the domain views and project

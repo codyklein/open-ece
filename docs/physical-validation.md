@@ -4,8 +4,9 @@ Checkpoint 4 is **closed** following the final user-reported Fedora and physical
 Windows 11 retests recorded below. Earlier failures and pending requests remain
 as historical evidence and are superseded only by the identified final retests.
 This is not formal accessibility certification or a v1.0 release freeze.
-Checkpoint 5 is now authorized for release-candidate preparation only; no v1.0
-tag or release is authorized by this closure.
+This opening summary records checkpoint-4 closure. Final RC acceptance and
+publication subsequently completed; see the final record below. The chronology
+retains earlier pending gates rather than treating them as current instructions.
 
 ## Initial evidence (2026-09-28)
 
@@ -417,3 +418,17 @@ screen-reader gaps remain explicit limitations. Any later application change
 requires fresh candidate identification and affected retesting. Checkpoint 5
 is authorized for metadata/documentation and exact RC validation; v1.0 must not
 be tagged or published before physical RC smoke and release approval.
+
+## Final 1.0.0 acceptance and publication
+
+The user reported final physical Windows 11 acceptance of the exact RC at
+`3e688548d3d71a12fdceee173ee780047f23f854`. Inner ZIP SHA-256:
+`7883bef22db15027bc2992d64b227175cb34561beaed42f663eaab0c16a30431`.
+Fresh startup, About 1.0.0, the shipped Signals example, Save As/close/reopen,
+editable-state preservation, inert load and clean exit all passed. That artifact
+was published unchanged as v1.0.0. This closes the historical checkpoint-5 gate;
+it does not establish Windows 10, mixed-monitor DPI or screen-reader evidence.
+
+The subsequent 1.0.1 branding package needs its own exact hash and bounded
+physical review. Use [branding candidate checks](branding.md); no 1.0.1 physical
+acceptance is claimed by the historical v1.0 records here.
