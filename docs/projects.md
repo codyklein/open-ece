@@ -2,7 +2,7 @@
 
 OpenECE saves editable experiments from all four domains in one `.openece`
 file. It is a UTF-8 JSON document with a versioned schema, not a snapshot of plots
-or a cache of numerical results. You can share it with another schema-1-compatible
+or a cache of numerical results. New saves use schema 2 and require a schema-2-compatible
 OpenECE installation on Fedora or Windows. No Qt installation is needed when using
 the complete Windows portable package.
 
@@ -57,6 +57,7 @@ failure does not undo a successful project save.
 | Timing / sequential | Ordered inputs, clock definitions, elements/pins/delays/initial Q, outputs, stimuli, observed-node text, horizon, display unit, allocator and editor tab. |
 | DC circuits | Ordered nodes/components, stable IDs, names, terminals, ground, values/units, allocators and selected tab. |
 | AC circuits | DC-style editable records plus R/C/L/source phases, frequency, probe/reference selections, transfer/absolute mode, sweep range/count/grid and selected tab. |
+| Transient configuration | Nodes/components, retained source points, initialization, ordered probes, units, exact text, references and counters; editor only. |
 | Communications | Modulation, bit source, manual bits (even when disabled), counts, samples/symbol, rate/unit, noise setting, seeds, Eb/N0, BER configuration and selected tab. |
 | Workspace navigation | Top-level domain and the meaningful Digital/Circuits and per-domain tab selections. |
 
@@ -86,10 +87,14 @@ restoring a file or using New.
 
 ## Compatibility, errors and file safety
 
-OpenECE supports exactly schema version **1**, identified by
-`format: "org.openece.project"` and integer `schema_version: 1`. Application version
-and schema version are different. Other schema versions are rejected clearly;
-there is no migration framework. Unknown optional fields within schema 1 are
+OpenECE supports schema versions **1 and 2**, identified by
+`format: "org.openece.project"` and integer `schema_version`. New saves use 2;
+schema-1 imports retain their existing editable state and add an empty inert
+Transient draft. Saving over an imported schema-1 original warns that OpenECE
+1.0.x cannot reopen the newer format and offers Save As. Failed/cancelled saves
+keep the original path and provenance. Application version and schema version
+are different. Other versions are rejected; there is no general migration
+framework. Unknown optional fields are
 accepted but ignored, and a warning explains that saving discards them. This is
 not lossless forward compatibility. Fields essential to future interpretation
 must use an appropriate schema-version change.
@@ -113,13 +118,13 @@ Files are limited to 8 MiB plus smaller limits for strings, rows, nesting and
 aggregate content. Unknown fields consume the same budgets. No project property
 loads an external asset, URL, script or plugin, or executes commands. Text that
 resembles a path or command remains inert text. See the complete
-[schema and limits](project-format.md) and [transaction/ownership contract](project-transactions.md).
+[schema-1 specification](project-format.md), [schema-2 extension](transient-project-format.md) and [transaction/ownership contract](project-transactions.md).
 A complete deliberately incomplete cross-domain example is
 [`tests/fixtures/project-v1.openece`](../tests/fixtures/project-v1.openece).
 
 ## Current limitations
 
-Schema 1 only; no arbitrary-version migration, undo/redo, autosave/recovery,
+Schemas 1 and 2 only; no arbitrary-version migration, undo/redo, autosave/recovery,
 cloud sync, collaboration, external assets, embedded results or plugin state.
 Incidental UI state such as geometry, selection highlights and runtime progress
 remains in memory; recent-project history is the explicit QSettings exception.
@@ -130,7 +135,7 @@ Windows Signals layout at 150%. True mixed-DPI and native screen-reader behavior
 remain unvalidated. The exact 1.0.0 ZIP passed its final Windows 11 RC smoke
 and is published; the branding patch requires its own bounded candidate checks.
 Windows 10 and MinGW may work but are not validated or claimed
-supported for v1.0. The portable ZIP is unsigned and has no installer/updater.
+supported for v1.0. Published v1.0.1 Windows packages are signed; development artifacts may be unsigned. There is no installer/updater.
 See the [physical validation record](physical-validation.md).
 
 ## v1.0 compatibility promise

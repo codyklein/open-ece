@@ -40,6 +40,17 @@ void reject(const Json& j, ErrorCode code) {
     }
 }
 } // namespace
+TEST(TransientProject, CompleteSchemaTwoFixture) {
+    std::ifstream input(std::string(OPENECE_SOURCE_DIR) + "/tests/fixtures/project-v2.openece",
+                        std::ios::binary);
+    ASSERT_TRUE(input);
+    std::string bytes((std::istreambuf_iterator<char>(input)), {});
+    auto p = decode_project(bytes);
+    EXPECT_EQ(p.source_schema_version, 2);
+    EXPECT_EQ(p.snapshot.circuits.transient.components[0].source.points[0].value_text, " 1e- ");
+    EXPECT_EQ(p.snapshot.circuits.transient.initial_conditions[0].component, Reference{Id{99}});
+    EXPECT_EQ(decode_project(encode_project(p.snapshot)).snapshot, p.snapshot);
+}
 TEST(TransientProject, SchemaTwoPreservesInvalidInactiveOrderedState) {
     auto p = draft();
     auto bytes = encode_project(p);
@@ -167,9 +178,9 @@ TEST(TransientProject, LimitsCountDisabledSourcesAndAllRows) {
     p.digital.timing.stimuli.resize(10000);
     t.components[0].source.points.resize(1024);
     for (unsigned i = 0; i < 2; ++i) {
-        auto c = t.components[0];
-        c.id = {10 + i};
-        t.components.push_back(c);
+        auto part = t.components[0];
+        part.id = {10 + i};
+        t.components.push_back(part);
     }
     t.next_component = {12};
     EXPECT_THROW(encode_project(p), Error); // global 12000 rows, not just per-domain counts

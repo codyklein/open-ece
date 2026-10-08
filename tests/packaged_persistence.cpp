@@ -53,6 +53,8 @@ QByteArray bytes(const QString& path) {
     return f.readAll();
 }
 void inert(ProjectWorkspace& w) {
+    require(w.findChild<QWidget*>("transient_view")->findChildren<QTimer*>().empty(),
+            "Transient editor contains execution timers");
     for (auto* timer : w.findChildren<QTimer*>())
         require(!timer->isActive(), "Restore started execution");
     for (auto name : {"digital_truth_table", "timing_results", "circuit_voltages", "ac_voltages",
@@ -102,8 +104,26 @@ void run() {
             std::make_unique<QSettings>(temp.filePath("preferences.ini"), QSettings::IniFormat));
     };
     project::ProjectSnapshot expected;
+    auto initial = project::default_project();
+    auto& transient = initial.circuits.transient;
+    transient.nodes = {{{0}, "π ground"}};
+    transient.next_node = {1};
+    transient.next_component = {8};
+    transient.components = {{{7},
+                             "incomplete source",
+                             "voltage_source",
+                             project::Id{55},
+                             std::nullopt,
+                             {" 1e- ", "mV"},
+                             {"constant", {{{"", "ms"}, " odd π "}}}}};
+    transient.initial_conditions = {{project::Id{99}, "inductor_current", {"", "mA"}}};
+    transient.probes = {{"current", "current", project::Id{100}, std::nullopt, project::Id{90}},
+                        {"voltage", "voltage", project::Id{80}, project::Id{81}, std::nullopt}};
+    transient.stop = {" 1e- ", "s"};
     {
-        MainWindow w(std::make_unique<ProjectDocument>(), dialogs, preferences());
+        MainWindow w(
+            std::make_unique<ProjectDocument>(std::make_unique<ProjectWorkspace>(initial, true)),
+            dialogs, preferences());
         w.show();
         QApplication::processEvents();
         control<QPushButton>(w, "generate")->click();

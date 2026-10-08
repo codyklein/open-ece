@@ -2,6 +2,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QScopedValueRollback>
 namespace openece::gui {
 namespace {
@@ -29,6 +30,25 @@ class QtProjectDialogs final : public ProjectDialogs {
         box.setTextFormat(Qt::PlainText);
         box.setDefaultButton(QMessageBox::Cancel);
         return box.exec() == QMessageBox::Save;
+    }
+    SchemaUpgradeChoice schema_upgrade(const QString& path) override {
+        QMessageBox box(QMessageBox::Warning, "Upgrade project format?",
+                        "Saving this schema-1 project uses schema 2. OpenECE 1.0.x cannot reopen "
+                        "the newer format.",
+                        QMessageBox::NoButton, parent_);
+        box.setTextFormat(Qt::PlainText);
+        box.setInformativeText(path + "\nChoose Save As to preserve the original file.");
+        auto* copy = box.addButton("Save As…", QMessageBox::ActionRole);
+        auto* replace = box.addButton("Upgrade original", QMessageBox::AcceptRole);
+        auto* cancel = box.addButton(QMessageBox::Cancel);
+        box.setDefaultButton(copy);
+        box.setEscapeButton(cancel);
+        box.exec();
+        if (box.clickedButton() == copy)
+            return SchemaUpgradeChoice::save_as;
+        if (box.clickedButton() == replace)
+            return SchemaUpgradeChoice::overwrite;
+        return SchemaUpgradeChoice::cancel;
     }
     UnsavedChoice unsaved(const QString& name) override {
         QMessageBox box(QMessageBox::Warning, "Unsaved project", "Save changes to " + name + "?",
@@ -129,17 +149,32 @@ bool ProjectWorkflow::save_impl(bool save_as) {
     if (!synchronize())
         return false;
     ProjectResult<SaveStatus> result = SaveStatus::cancelled;
-    if (save_as || document_.path().isEmpty()) {
-        auto selected = dialogs_->choose_save(document_.path());
-        if (!selected || selected->isEmpty())
-            return false;
-        auto destination = project_save_destination(*selected);
+    bool choose = save_as || document_.path().isEmpty();
+    for (;;) {
+        QString destination = document_.path();
+        if (choose) {
+            auto selected = dialogs_->choose_save(document_.path());
+            if (!selected || selected->isEmpty())
+                return false;
+            destination = project_save_destination(*selected);
+        }
+        if (document_.requires_schema_upgrade(destination)) {
+            switch (dialogs_->schema_upgrade(destination)) {
+            case SchemaUpgradeChoice::cancel:
+                return false;
+            case SchemaUpgradeChoice::save_as:
+                choose = true;
+                continue;
+            case SchemaUpgradeChoice::overwrite:
+                break;
+            }
+        }
         QFileInfo info(destination);
-        if ((info.exists() || info.isSymLink()) && !dialogs_->overwrite(destination))
+        if (choose && (info.exists() || info.isSymLink()) && !dialogs_->overwrite(destination))
             return false;
-        result = document_.save_as(destination);
-    } else
-        result = document_.save();
+        result = choose ? document_.save_as(destination) : document_.save();
+        break;
+    }
     if (auto* e = std::get_if<ProjectFailure>(&result)) {
         dialogs_->error(*e);
         return false;

@@ -1,3 +1,5 @@
+> This is the unchanged schema-1 compatibility specification. Current development saves schema 2; see [transient-project-format.md](transient-project-format.md). Schema-1 imports remain supported.
+
 # OpenECE project schema 1
 
 Implemented in v0.9: a Qt-independent model/codec, authoritative GUI bindings,

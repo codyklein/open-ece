@@ -109,3 +109,5 @@ Restoration is inert and notification-suppressed. Widgets edit borrowed draft
 state; exact pending table/line text is synchronized before capture. Navigation
 is retained without dirtying; persisted data edits dirty normally. No transient
 execution feature is introduced by schema support.
+
+A complete cross-domain schema-2 fixture is [project-v2.openece](../tests/fixtures/project-v2.openece). It deliberately includes incomplete text and inactive/dangling references.

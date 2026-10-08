@@ -116,8 +116,7 @@ never resolve identity. Nodes and components have separate namespaces; zero is
 an ordinary ID, and ground can be null or dangling.
 
 Allocator invariants include every declared and retained dangling ID in terminals,
-ground, probes and initial-state rows. Next counters must exceed all reserved IDs,
-or hold the existing exhausted sentinel. (Superseded allocator wording: see the finalized contract below.) Keep deletion monotonic; a new component
+ground, probes and initial-state rows. Next counters exceed declared IDs or hold the existing exhausted sentinel; allocation skips all retained references without requiring counters to exceed dangling IDs. Keep deletion monotonic; a new component
 must not reconnect a retained dangling initialization/probe reference.
 
 Storage proposals: 32 nodes, 128 components, 64 probes, 128 initialization rows,

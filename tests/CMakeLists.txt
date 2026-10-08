@@ -28,6 +28,13 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_transient_gui_tests transient_gui_test.cpp)
+    set_target_properties(openece_transient_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_transient_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    target_compile_definitions(openece_transient_gui_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    add_test(NAME transient_editor_workflow COMMAND openece_transient_gui_tests
+        -o "${CMAKE_BINARY_DIR}/transient-editor-$<CONFIG>.log,txt")
+    set_tests_properties(transient_editor_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     add_executable(openece_branding_tests branding_test.cpp)
     set_target_properties(openece_branding_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_branding_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -134,7 +141,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(transient_editor_workflow branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 

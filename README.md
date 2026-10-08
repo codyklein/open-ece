@@ -60,7 +60,7 @@ screen-reader validation. See the [physical validation record and checklist](doc
 
 - [First session](docs/first-session.md), [examples and expected results](examples/README.md),
   [current screenshots](docs/screenshots.md)
-- [Saving projects](docs/projects.md), [schema 1](docs/project-format.md),
+- [Saving projects](docs/projects.md), [schema 1](docs/project-format.md), [schema 2 / inert transient editor](docs/transient-project-format.md),
   [ownership and transactions](docs/project-transactions.md)
 - [Signals/DSP conventions](docs/numerics.md), [Digital Logic](docs/digital-logic.md),
   [Timing](docs/digital-timing.md), [DC](docs/circuit-analysis.md),
