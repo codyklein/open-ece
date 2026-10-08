@@ -105,11 +105,12 @@ TransientExecution transient_execution(const project::TransientDraft& d) {
     std::vector<TransientProbeLabel> labels;
     for (const auto& p : d.probes) {
         if (p.kind == "voltage") {
+            const tr::VoltageProbe ref{{reference(p.positive, "Voltage probe positive")},
+                                       {reference(p.negative, "Voltage probe negative")}};
             labels.push_back({qt_text(p.name) + ": " + node_label(p.positive, d) + " → " +
                                   node_label(p.negative, d) + " (V)",
-                              true, request.voltages.size()});
-            request.voltages.push_back({{reference(p.positive, "Voltage probe positive")},
-                                        {reference(p.negative, "Voltage probe negative")}});
+                              true, request.voltages.size(), ref});
+            request.voltages.push_back(ref);
         } else {
             const auto id = reference(p.component, "Current probe component");
             QString component = "Missing component [" + QString::number(id) + "]";
@@ -118,8 +119,8 @@ TransientExecution transient_execution(const project::TransientDraft& d) {
                     component = qt_text(c.name) + " [" + QString::number(id) +
                                 "]: " + node_label(c.positive, d) + " → " +
                                 node_label(c.negative, d);
-            labels.push_back(
-                {qt_text(p.name) + ": " + component + " (A)", false, request.currents.size()});
+            labels.push_back({qt_text(p.name) + ": " + component + " (A)", false,
+                              request.currents.size(), tr::CurrentProbe{{id}}});
             request.currents.push_back({{id}});
         }
     }

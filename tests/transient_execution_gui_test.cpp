@@ -226,7 +226,14 @@ class TransientExecutionTests final : public QObject {
         QCOMPARE(d.maximum_step.text, std::string("1e-"));
         const auto labels = w.result_probes();
         control<QTableWidget>(w, "transient_probes")->item(1, 0)->setText("different");
+        auto* reference = qobject_cast<QComboBox*>(
+            control<QTableWidget>(w, "transient_probes")->cellWidget(1, 2));
+        QVERIFY(reference);
+        reference->setCurrentIndex(reference->findData(1U));
+        QCOMPARE(d.probes[1].positive, project::Reference{project::Id{1}});
         QCOMPARE(w.result_probes()[1].label, labels[1].label);
+        QCOMPARE(std::get<tr::VoltageProbe>(w.result_probes()[1].reference).positive.value, 2U);
+        QCOMPARE(std::get<tr::CurrentProbe>(w.result_probes()[0].reference).component.value, 10U);
         QVERIFY(w.result());
         click(w, "transient_run");
         QVERIFY(state(w, "Failed"));
@@ -456,7 +463,7 @@ class TransientExecutionTests final : public QObject {
         QVERIFY(std::ranges::find(indices, 10000) != indices.end());
         QVERIFY(std::ranges::find(indices, 10001) != indices.end());
         TransientTraceModel m(nullptr);
-        m.set_result(r, {{"V", true, 0}}, "s", 1);
+        m.set_result(r, {{"V", true, 0, tr::VoltageProbe{{1}, {0}}}}, "s", 1);
         QCOMPARE(m.rowCount(), 31250);
         QCOMPARE(m.data(m.index(10001, 2)).toString(), QString("50"));
     }

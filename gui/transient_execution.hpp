@@ -8,6 +8,8 @@ struct TransientProbeLabel {
     QString label;
     bool voltage;
     std::size_t index;
+    // Frozen active terminal/component identities, not references inferred from labels.
+    std::variant<transient_core::VoltageProbe, transient_core::CurrentProbe> reference;
 };
 // Immutable run inputs/metadata, separate from the borrowed editable draft.
 struct TransientExecution {
