@@ -10,7 +10,7 @@ add_executable(openece_communications_tests communications_model_test.cpp commun
 target_link_libraries(openece_communications_tests PRIVATE OpenECE::communications GTest::gtest_main openece_options)
 target_include_directories(openece_communications_tests PRIVATE ${PROJECT_SOURCE_DIR}/communications/src)
 gtest_discover_tests(openece_communications_tests DISCOVERY_MODE PRE_TEST)
-add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp)
+add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp transient_test.cpp)
 target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
 target_include_directories(openece_circuit_tests PRIVATE ${PROJECT_SOURCE_DIR}/circuits/src)
 gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)

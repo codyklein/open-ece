@@ -13,7 +13,7 @@ flowchart TD
     CommunicationsTests[Mapping / channel / BER tests] --> Communications
     UI --> Circuits[circuits]
     Circuits --> Eigen[Eigen: private dense linear algebra]
-    CircuitTests[Independent DC / AC tests] --> Circuits
+    CircuitTests[Independent DC / AC / transient tests] --> Circuits
     UI --> Project[project: owned editable drafts and codec]
     Project --> JSON[nlohmann/json: private headers]
     ProjectTests[Codec / allocator / round-trip tests] --> Project
@@ -413,3 +413,15 @@ the CMake version and license locations; it introduces no document state.
 The v1.0 compatibility boundary is schema-1 editable files, not C++ ABI. Ordinary
 [examples](../examples/README.md) and [v0.9 fixtures](../tests/fixtures/v0.9/README.md)
 exercise this boundary without automatic execution or special example loaders.
+
+## v1.1 transient core checkpoint
+
+`circuits/transient/analysis.hpp` adds a separate owning real-time-domain model
+and move-only incremental Simulation, described in [transient-analysis.md](transient-analysis.md).
+It reuses circuit identities, passive ranges, private structural validation and
+numerical acceptance policies without changing DC/AC APIs. OpenECE owns the
+backward-Euler stamps, storage/source initialization, source-breakpoint batches,
+physical residual checks and explicit-time traces; Eigen remains private.
+There is currently no Transient GUI or persisted transient draft. Those require
+a separate reviewed GUI/schema-2 integration checkpoint; schema-1 codec and
+release-pinned fixtures are unchanged.

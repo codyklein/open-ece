@@ -2,7 +2,7 @@
 
 This is the approved core implementation contract, not a claim that a Transient
 GUI or schema-2 project support is already shipped. The initial milestone adds
-core tests only; GUI and persistence changes require a further review.
+core and tests only; GUI and persistence changes require a further review.
 
 ## Model and conventions
 
@@ -29,8 +29,10 @@ the final value. Times must be finite, strictly increasing and within the suppor
 range; no sorting or deduplication. Signed finite values and zero are permitted.
 
 The engine includes t=0 and the exact requested final time. Each integration
-interval is at most the requested maximum step. Shorten it at every source point
-and the final endpoint, without stepping across a breakpoint. All simultaneous
+interval is at most the requested maximum step. Subdivide each interval between
+fixed source/final endpoints evenly (one extra subdivision when required by
+rounding) rather than accumulating a microscopic final remainder. Do not step
+across a breakpoint. All simultaneous
 source changes are applied together, in stable component-ID accumulation order.
 Floating-point grid construction must make strictly positive progress; reject
 unrepresentable intervals, excessive work and nonfinite coefficients explicitly.
@@ -66,7 +68,8 @@ arbitrary observable currents. Inductor derivatives follow v=L*di/dt.
 
 Independent voltage-source cycles are rejected: individual source currents would
 be nonunique even if voltages were consistent. Distinguish contradictory loops
-where possible. A source jump that would require an instantaneous capacitor-
+where possible. Operating-point checks also include the zero-voltage inductor
+constraints; redundant inductor/source loops have nonunique initial branch currents. A source jump that would require an instantaneous capacitor-
 voltage or inductor-current jump is unsupported (impulses are not simulated).
 Certain higher-index source/inductor cutsets cannot be initialized by this bounded
 formulation; report unsupported initialization, not a fabricated solution.
@@ -130,15 +133,17 @@ magnitude is 1e9; supported positive time/step requests extend through 1e9 secon
 Reuse existing R/C/L ranges and 128-byte exact nonempty unique names. Actual
 representable grid progress and finite arithmetic are additional requirements.
 
-Bound worst-case dense work by (intervals + initialization allowance) times
-max(1,unknowns)^3 <= 1e9, checked before a simulation begins. These are provisional
+Bound worst-case dense work by (grid points + twice the source/final boundary
+count + 3) times max(1,unknowns)^3 <= 1e9, checked before a simulation begins.
+This conservatively includes the two right-limit reconciliation solves at each
+breakpoint and up to three initialization solves. These are provisional
 execution policies, not accuracy/latency guarantees; benchmark Fedora and Windows
 before future GUI limits are frozen. Resource failure never truncates a request.
 
 ## Tests and deferred integration
 
 Analytical RC/RL and all RLC damping regimes, nonzero energy, convergence, damping,
-independent branch-formulated references, source boundaries, continuity, signs,
+480+ independent branch-formulated reference steps, source boundaries, continuity, signs,
 KCL/KVL, invalid/floating/singular constraints, ordering, ownership, bounds and
 incremental/Run equivalence precede GUI use. Retain the complete existing matrix.
 
@@ -146,3 +151,41 @@ Schema-2 design will add exact transient draft text/units/IDs/probes without
 changing schema-1 meanings. Keep release-pinned v0.9 fixture bytes intact. No
 schema changes, GUI, nonlinear devices, adaptive stepping, SPICE integration,
 schematic editor or unrelated domain feature is part of this core checkpoint.
+
+## Public entry points and a minimal RC run
+
+The public header is `openece/circuits/transient/analysis.hpp`, linked through
+`OpenECE::circuits`. `CircuitDefinition` is an owning editable input; constructing
+`Circuit` validates structural rules only. `Source` points are likewise checked
+by Circuit; the public source evaluation helpers require a valid Source.
+`Request` selects time bounds, initialization and ordered probes. `time_grid()`
+validates the execution grid/probe budgets without executing a circuit.
+`Simulation` performs initialization, owns that validated circuit/request and
+provides `step()`, `run()`, `cancel()` and an owned `snapshot()`.
+
+```cpp
+namespace tr = openece::circuits::transient;
+using openece::circuits::NodeId;
+using openece::circuits::Resistor;
+tr::CircuitDefinition draft{
+    {{{0}, "ground"}, {{1}, "supply"}, {{2}, "output"}}, NodeId{0},
+    {tr::VoltageSource{{10}, "V", {1}, {0}, {10, {}}},
+     Resistor{{11}, "R", {1}, {2}, 1000},
+     tr::Capacitor{{12}, "C", {2}, {0}, 1e-6}}};
+tr::Request request;
+request.stop_seconds = 0.005;
+request.maximum_step_seconds = 1e-5;
+request.initial.mode = tr::Initialization::specified_storage;
+request.initial.capacitor_voltages = {{{12}, 0}};
+request.voltages = {{{2}, {0}}};
+request.currents = {{{10}}, {{12}}};
+tr::Simulation simulation(tr::Circuit(draft), request);
+simulation.run();
+auto result = simulation.snapshot(); // Check status/failure before claiming completion.
+```
+
+Here the analytical capacitor response is 10*(1-exp(-t/0.001)) V. Initial source
+current is -10 mA; the positive-to-negative capacitor current is +10 mA. The
+backward-Euler samples approximate this response with first-order step error.
+With default operating-point initialization the same circuit instead starts at
+10 V with zero charging current. There is no implicit zero-energy start.
