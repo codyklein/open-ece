@@ -34,7 +34,9 @@ The single-slot mailbox replaces older unconsumed updates instead of queuing
 unbounded full traces. No snapshot is made on every integration step.
 
 Numerical state, mailbox and GUI trace can each hold one bounded trace (~50 MB
-combined at the core limit, excluding matrix/Qt overhead). Plot envelope buckets
+steady trace payload; publication can briefly add another ~16.5 MB, and growing
+core vectors have spare capacity). Aim below 128 MB transient execution storage,
+excluding the application baseline; this is a measured budget, not a hard RSS cap. Plot envelope buckets
 bound ordinary samples; every ordered breakpoint side is retained additionally.
 The worker never accesses a widget, borrowed draft or GUI QObject. Control commands
 are checked between atomic initialization/interval operations. Pause/Cancel cannot

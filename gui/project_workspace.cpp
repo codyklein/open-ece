@@ -3,6 +3,7 @@
 #include "communications_view.hpp"
 #include "digital_workspace.hpp"
 #include "signals_dsp_view.hpp"
+#include "transient_view.hpp"
 #include <QAbstractSpinBox>
 #include <QApplication>
 #include <QFocusFrame>
@@ -135,6 +136,8 @@ void ProjectWorkspace::synchronize_pending_text() {
         static_cast<DraftView*>(pages->widget(i))->synchronize_pending_text();
 }
 void ProjectWorkspace::stop_execution() {
+    for (auto* view : findChildren<TransientView*>())
+        view->stop_execution();
     for (auto* timer : findChildren<QTimer*>())
         timer->stop();
 }

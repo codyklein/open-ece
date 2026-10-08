@@ -46,14 +46,14 @@ project::ProjectSnapshot configured() {
 }
 void inert(ProjectWorkspace& w) {
     auto* v = control<TransientView>(w, "transient_view");
-    QCOMPARE(v->findChildren<QTimer*>().size(), 0);
+    QVERIFY(!v->result());
     for (auto* timer : w.findChildren<QTimer*>())
         QVERIFY(!timer->isActive());
     for (auto name : {"digital_truth_table", "timing_results", "circuit_voltages", "ac_voltages",
                       "ac_sweep_results", "comm_bits", "comm_ber_results"})
         QCOMPARE(control<QTableWidget>(w, name)->rowCount(), 0);
     QCOMPARE(control<QLabel>(w, "transient_status")->text(),
-             QString("Editor only — no simulation results."));
+             QString("Ready — no simulation results."));
 }
 QByteArray bytes(const QString& path) {
     QFile f(path);

@@ -1,14 +1,20 @@
 #include "transient_view.hpp"
 #include "circuit_draft_rows.hpp"
+#include "transient_results.hpp"
 #include <QFormLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScopedValueRollback>
+#include <QTableView>
 #include <QTableWidget>
 #include <QTextBrowser>
+#include <QTimer>
 #include <QVBoxLayout>
+#include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 namespace openece::gui {
@@ -90,7 +96,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     setObjectName("transient_view");
     auto* layout = new QVBoxLayout(this);
     auto* description = new QLabel(
-        "Transient configuration — editor only; no simulation is executed in this milestone.",
+        "Transient analysis — instantaneous SI voltages/currents; first-order backward Euler.",
         this);
     description->setWordWrap(true);
     description->setTextFormat(Qt::PlainText);
@@ -354,10 +360,13 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     auto* help_text = new QTextBrowser(this);
     help_text->setObjectName("transient_help");
     help_text->setPlainText(
-        "Configuration only: no analysis runs here yet.\n\nValues are instantaneous volts/amperes, "
+        "Run creates an owned experiment. Pause/Resume retain it; Step accepts one interval. "
+        "Cancel retains the accepted prefix; Reset results leaves the draft unchanged. "
+        "Edits make retained results stale and end resumability.\n\nValues are instantaneous "
+        "volts/amperes, "
         "not RMS phasors. Current orientation is positive to negative.\nOperating point starts at "
         "steady state; specified storage uses explicit capacitor voltages and inductor "
-        "currents.\nFuture integration uses first-order backward Euler, with numerical damping. "
+        "currents.\nIntegration uses first-order backward Euler, with numerical damping. "
         "Source breakpoints preserve storage continuity where physically possible.\n\nComponent "
         "physical kinds are fixed at creation. Add a separate component to change dimension "
         "without reinterpreting retained values. Same-dimension unit conversion is all-or-nothing, "
@@ -365,11 +374,90 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         "savable. Schema-2 files require this version of OpenECE; older 1.0.x readers reject "
         "them.");
     help->addWidget(help_text);
-    status_ = new QLabel("Editor only — no simulation results.", this);
+    status_ = new QLabel("Ready — no simulation results.", this);
     status_->setObjectName("transient_status");
     status_->setWordWrap(true);
     status_->setTextFormat(Qt::PlainText);
     layout->addWidget(status_);
+    diagnostic_ = new QLabel(this);
+    diagnostic_->setObjectName("transient_diagnostic");
+    diagnostic_->setWordWrap(true);
+    diagnostic_->setTextFormat(Qt::PlainText);
+    diagnostic_->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    layout->addWidget(diagnostic_);
+    progress_ = new QProgressBar(this);
+    progress_->setObjectName("transient_progress");
+    progress_->setAccessibleName("Transient accepted time progress");
+    progress_->setRange(0, 1000);
+    layout->addWidget(progress_);
+    auto* controls = new QHBoxLayout;
+    layout->addLayout(controls);
+    auto button = [&](const QString& text, const char* name) {
+        auto* b = new QPushButton(text, this);
+        b->setObjectName(name);
+        controls->addWidget(b);
+        return b;
+    };
+    run_ = button("Run", "transient_run");
+    pause_ = button("Pause", "transient_pause");
+    step_ = button("Step", "transient_step_execution");
+    cancel_ = button("Cancel", "transient_cancel");
+    reset_ = button("Reset results", "transient_reset");
+    connect(run_, &QPushButton::clicked, this, [this] { start_execution(false); });
+    connect(step_, &QPushButton::clicked, this, [this] { start_execution(true); });
+    connect(pause_, &QPushButton::clicked, this, [this] {
+        if (!runner_)
+            return;
+        if (execution_state_ == ExecutionState::paused) {
+            runner_->resume();
+            execution_state_ = ExecutionState::running;
+        } else {
+            runner_->pause();
+            pending_ = true;
+        }
+        update_execution_ui();
+    });
+    connect(cancel_, &QPushButton::clicked, this, [this] {
+        if (runner_) {
+            runner_->cancel();
+            pending_ = true;
+            update_execution_ui();
+        }
+    });
+    connect(reset_, &QPushButton::clicked, this, &TransientView::reset_results);
+    // Result navigation is transient, never a schema token or persisted edit.
+    auto* results = new QTabWidget(this);
+    results->setObjectName("transient_results_tabs");
+    layout->addWidget(results);
+    auto plot_page = [&](const QString& title, const char* selector_name, QComboBox*& selector,
+                         TransientPlot*& plot) {
+        auto* w = new QWidget(results);
+        auto* l = new QVBoxLayout(w);
+        selector = new QComboBox(w);
+        selector->setObjectName(selector_name);
+        selector->setAccessibleName(title + " trace selection (frozen run metadata)");
+        plot = new TransientPlot(w);
+        l->addWidget(selector);
+        l->addWidget(plot);
+        results->addTab(w, title);
+        connect(selector, &QComboBox::currentIndexChanged, this, &TransientView::update_plots);
+    };
+    plot_page("Voltages (V)", "transient_voltage_trace", voltage_select_, voltage_plot_);
+    plot_page("Currents (A)", "transient_current_trace", current_select_, current_plot_);
+    auto* trace = new QTableView(results);
+    trace->setObjectName("transient_trace");
+    trace->setAccessibleName("Accepted numerical trace, mixed probe declaration order");
+    trace_model_ = new TransientTraceModel(trace);
+    trace->setModel(trace_model_);
+    trace->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    trace->horizontalHeader()->setDefaultSectionSize(180);
+    trace->horizontalHeader()->setStretchLastSection(true);
+    results->addTab(trace, "Numerical trace");
+    poll_ = new QTimer(this);
+    poll_->setInterval(50);
+    connect(poll_, &QTimer::timeout, this, &TransientView::receive_update);
+    connect(this, &DraftView::draftEdited, this, &TransientView::invalidate_execution);
+    update_execution_ui();
     for (auto* t : {nodes_, components_, points_, initial_, probes_}) {
         bind_table(t, [this, t](int r, int c, const QString& text) { text_edit(t, r, c, text); });
         connect(t, &QTableWidget::itemChanged, this,
@@ -642,6 +730,181 @@ void TransientView::render_points() {
             }
             edited();
         });
+    }
+}
+
+TransientView::~TransientView() {
+    poll_->stop();
+    runner_.reset();
+}
+void TransientView::start_execution(bool single) {
+    synchronize_pending_text();
+    if (single && runner_ && execution_state_ == ExecutionState::paused && !pending_) {
+        pending_ = true;
+        runner_->step();
+        update_execution_ui();
+        return;
+    }
+    reset_results();
+    try {
+        auto execution = transient_execution(state_.get());
+        run_draft_ = transient_active_draft(state_.get());
+        labels_ = execution.probes;
+        time_unit_ = execution.time_unit;
+        time_scale_ = execution.time_scale;
+        stop_seconds_ = execution.request.stop_seconds;
+        for (std::size_t i = 0; i < labels_.size(); ++i) {
+            auto* select = labels_[i].voltage ? voltage_select_ : current_select_;
+            select->addItem(labels_[i].label, static_cast<int>(i));
+        }
+        runner_ = std::make_unique<TransientRunner>(std::move(execution), single);
+        execution_state_ = ExecutionState::running;
+        pending_ = single;
+        poll_->start();
+    } catch (const transient_core::Error& e) {
+        execution_state_ = ExecutionState::failed;
+        diagnostic_->setText("Configuration rejected: " + QString::fromUtf8(e.what()));
+    }
+    update_execution_ui();
+}
+void TransientView::receive_update() {
+    if (!runner_)
+        return;
+    const auto update = runner_->take_update();
+    if (!update)
+        return;
+    result_ = update->result;
+    using M = TransientRunner::Mode;
+    switch (update->mode) {
+    case M::running:
+        execution_state_ = ExecutionState::running;
+        break;
+    case M::paused:
+        execution_state_ = ExecutionState::paused;
+        break;
+    case M::complete:
+        execution_state_ = ExecutionState::complete;
+        break;
+    case M::cancelled:
+        execution_state_ = ExecutionState::cancelled;
+        break;
+    case M::failed:
+        execution_state_ = ExecutionState::failed;
+        break;
+    }
+    pending_ = false;
+    if (!update->error.isEmpty())
+        diagnostic_->setText(update->error);
+    if (result_ && result_->failure) {
+        const auto& failure = *result_->failure;
+        diagnostic_->setText(
+            "Attempted failure time: " + QString::number(failure.time_seconds, 'g', 17) +
+            " s; last accepted time: " + QString::number(result_->current_time_seconds, 'g', 17) +
+            " s.\n" + QString::fromUtf8(failure.error.what()));
+    }
+    trace_model_->set_result(result_, labels_, time_unit_, time_scale_);
+    update_plots();
+    update_execution_ui();
+    if (update->mode == M::complete || update->mode == M::cancelled || update->mode == M::failed) {
+        poll_->stop();
+        runner_.reset();
+    }
+}
+void TransientView::update_execution_ui() {
+    const bool running = execution_state_ == ExecutionState::running;
+    const bool paused = execution_state_ == ExecutionState::paused;
+    const bool resumable = bool(runner_);
+    run_->setEnabled(!running && !pending_);
+    pause_->setEnabled(resumable && !pending_ && (running || paused));
+    pause_->setText(paused ? "Resume" : "Pause");
+    step_->setEnabled(!running && !pending_);
+    cancel_->setEnabled(resumable && !pending_);
+    QString status;
+    switch (execution_state_) {
+    case ExecutionState::ready:
+        status = "Ready — no simulation results.";
+        break;
+    case ExecutionState::running:
+        status = pending_ ? "Running — command pending; retaining accepted prefix."
+                          : "Running — partial accepted trace.";
+        break;
+    case ExecutionState::paused:
+        status = pending_ ? "Paused — one interval pending."
+                          : "Paused — partial accepted trace; Resume or Step.";
+        break;
+    case ExecutionState::complete:
+        status = "Complete — accepted trace matches the frozen run inputs.";
+        break;
+    case ExecutionState::cancelled:
+        status = "Cancelled — partial accepted trace retained; cannot resume.";
+        break;
+    case ExecutionState::failed:
+        status = result_ ? "Failed — partial accepted trace retained."
+                         : "Failed — no accepted simulation result.";
+        break;
+    case ExecutionState::stale:
+        status = "Stale — retained trace belongs to previous inputs; cannot resume.";
+        break;
+    }
+    if (result_)
+        status += " Last accepted: " +
+                  QString::number(result_->current_time_seconds / time_scale_, 'g', 12) + " " +
+                  time_unit_ + "; " + QString::number(result_->times.size()) + " ordered samples.";
+    status_->setText(status);
+    progress_->setValue(
+        result_ ? static_cast<int>(
+                      std::clamp(result_->current_time_seconds / stop_seconds_, 0.0, 1.0) * 1000)
+                : 0);
+}
+void TransientView::update_plots() {
+    auto update = [&](QComboBox* selector, TransientPlot* plot) {
+        if (!result_ || selector->currentIndex() < 0) {
+            plot->clear();
+            return;
+        }
+        const auto index = static_cast<std::size_t>(selector->currentData().toInt());
+        plot->show_trace(*result_, labels_.at(index), time_unit_, time_scale_);
+    };
+    update(voltage_select_, voltage_plot_);
+    update(current_select_, current_plot_);
+}
+void TransientView::reset_results() {
+    poll_->stop();
+    runner_.reset();
+    result_.reset();
+    labels_.clear();
+    pending_ = false;
+    {
+        const QSignalBlocker a(voltage_select_), b(current_select_);
+        voltage_select_->clear();
+        current_select_->clear();
+    }
+    diagnostic_->clear();
+    trace_model_->set_result({}, {}, "s", 1);
+    execution_state_ = ExecutionState::ready;
+    update_plots();
+    update_execution_ui();
+}
+void TransientView::invalidate_execution() {
+    if (execution_state_ == ExecutionState::ready || execution_state_ == ExecutionState::stale)
+        return;
+    if (transient_active_draft(state_.get()) == run_draft_)
+        return;
+    poll_->stop();
+    runner_.reset();
+    pending_ = false;
+    execution_state_ = ExecutionState::stale;
+    update_execution_ui();
+}
+void TransientView::stop_execution() {
+    if (!runner_)
+        return;
+    runner_->cancel();
+    // Join before session destruction, then collect the final accepted prefix.
+    while (runner_) {
+        receive_update();
+        if (runner_)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 } // namespace openece::gui
