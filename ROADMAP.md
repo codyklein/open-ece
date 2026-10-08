@@ -153,15 +153,26 @@ Windows 10, true mixed-monitor DPI and native screen-reader checks remain unvali
 No transient analysis, schematic capture, higher-order communications, undo/redo,
 autosave, cloud features or general migrations in this milestone.
 
-## v1.0.1 — Approved branding integration (candidate)
+## v1.0.1 — Branding and signed Windows distribution (released)
 
 - [x] Integrate the frozen Waveform O icon, outlined wordmark and light/dark lockups.
 - [x] Embed Qt PNG resources and the multi-resolution Windows executable icon.
 - [x] Refresh presentation/screenshots and retain MIT/Noto Sans OFL notices.
-- [ ] Complete final CI/package checks and bounded candidate physical review.
+- [x] Complete CI/package checks and physical Windows 11 acceptance with Smart App Control enabled.
+- [x] Publish the exact signed artifact, with all vendor signatures preserved.
 
 No engineering feature, dependency change, UI redesign or schema change is included.
 Keep v1.0.0 immutable. See [branding scope and checks](docs/branding.md).
+
+## v1.1.0 — Linear transient circuit analysis (in development)
+
+- Separate Qt-independent transient R/C/L model and backward-Euler MNA engine.
+- Constant/piecewise independent sources, explicit initial conditions and breakpoints.
+- Bounded incremental execution, explicit timestamps and voltage/current probes.
+- Core/reference tests first; GUI and schema-2 integration require a further review.
+
+See [the numerical contract](docs/transient-analysis.md). No nonlinear devices,
+adaptive integration, schematic capture or unrelated domain expansion.
 
 ## Later — Expand only through useful connections
 

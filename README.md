@@ -21,10 +21,11 @@ libraries with editable experiments, plots and automated numerical tests.
   domains, including incomplete drafts. Results are recomputed explicitly after
   opening; project files do not contain plot or solver caches.
 
-[OpenECE 1.0.0 is released](https://github.com/codyklein/open-ece/releases/tag/v1.0.0).
-The current branch prepares **1.0.1**, a branding and presentation patch with the
-approved Waveform O icon and outlined wordmark. It adds no engineering features;
-the new portable package awaits review and [bounded physical testing](docs/branding.md).
+[OpenECE 1.0.1 is released](https://github.com/codyklein/open-ece/releases/tag/v1.0.1),
+including approved branding and a signed Windows portable package. Development
+on `feature/v1.1.0` introduces linear transient circuit analysis; see the
+[transient contract](docs/transient-analysis.md). The released application has
+no transient GUI yet; stable version metadata remains 1.0.1 during development.
 
 ## Try it
 
@@ -67,7 +68,7 @@ screen-reader validation. See the [physical validation record and checklist](doc
 - [Architecture](docs/architecture.md), [development](docs/development.md),
   [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md),
   [1.0 release notes](docs/release-notes-v1.0.md),
-  [1.0.1 candidate notes and branding](docs/branding.md)
+  [1.0.1 branding and acceptance](docs/branding.md)
 
 The source tree separates `core/`, `signals/`, `dsp/`, `digital/`, `circuits/`,
 `communications/` and `project/`. `gui/` composes the domain views and project

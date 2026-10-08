@@ -1,11 +1,13 @@
-# OpenECE 1.0.1 — branding candidate
+# OpenECE 1.0.1 — branding and acceptance
 
 This patch integrates the approved Waveform O / Technical cobalt identity.
 Artwork is copied unchanged from the frozen source package and verified by hash.
 It changes no numerical API, project schema, plotting convention or execution
 workflow. The published v1.0.0 tag, release and Windows ZIP remain immutable.
-Version 1.0.1 is a candidate until its CI/package checks, physical checks and
-separate release approval are complete; do not tag or publish it automatically.
+Version 1.0.1 is published. The exact signed Windows ZIP passed physical Windows 11
+acceptance with Smart App Control enabled; extra manual Fedora testing was waived.
+Automated Fedora tests passed. See the appended [physical evidence](physical-validation.md#final-101-acceptance-and-publication).
+Published release tags and assets remain immutable.
 
 ## Integration
 
@@ -75,7 +77,8 @@ is introduced; desktop-shell grouping behavior is not an installed-app claim.
 The full previous platform checklist need not be repeated for unchanged engine
 code. Windows 10, MinGW, true mixed-monitor DPI and native screen-reader behavior
 remain unvalidated. Any demonstrated defect needs a narrow fix, fresh package/hash
-and affected retest; this document does not claim the new physical tests passed.
+and affected retest. These are the retained candidate-check instructions; the
+final acceptance record identifies the exact published artifact.
 
 ## Automated acceptance
 

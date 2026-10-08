@@ -55,7 +55,8 @@ debugger or sandbox prevents that inspection, rather than disabling leak detecti
 See [building](building.md) for all local configurations and [Windows](windows.md) for the pinned SDK, tests and packaging. CI runs six Fedora 44 configurations and Windows MSVC Debug/Release plus a fresh packaged-runtime job. Keep all engineering, persistence, sanitizer and workflow tests intact. Offscreen keyboard/scaling tests are useful coverage, not physical screen-reader or mixed-monitor certification.
 
 [Historical records](validation-history.md) retain earlier counts and measurements. [v1.0 release readiness](v1-release-readiness.md) records the completed stabilization.
-[Branding candidate checks](branding.md) track the bounded 1.0.1 review.
+[Branding acceptance](branding.md) records the released 1.0.1 patch.
+[Transient contracts](transient-analysis.md) guide the approved v1.1 core milestone.
 
 ## Examples and compatibility
 

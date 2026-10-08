@@ -1,0 +1,148 @@
+# Linear transient analysis — v1.1 core contract
+
+This is the approved core implementation contract, not a claim that a Transient
+GUI or schema-2 project support is already shipped. The initial milestone adds
+core tests only; GUI and persistence changes require a further review.
+
+## Model and conventions
+
+`openece::circuits::transient` owns a separate validated circuit definition with
+nodes, explicit ground, resistors, capacitors, inductors and independent voltage/
+current sources. NodeId/ComponentId retain the circuit identifiers, exact names,
+declaration ordering and positive-to-negative terminal/current convention.
+Values are SI doubles: seconds, ohms, farads, henries, volts and amperes.
+Sources are instantaneous physical values, not RMS AC phasors. No Qt, Eigen or
+project-codec types occur in public transient APIs. Definitions and requests are
+owned; validated snapshots never borrow widget data.
+
+DC/AC APIs, numerical policies and project schema 1 remain unchanged. Only small
+internal structural validation utilities are reused. A transient time grid is not
+a SampledSignal and the digital event simulator is not a circuit integrator.
+
+## Sources and time grid
+
+A source has an initial value and an ordered list of positive-time points.
+An empty list means a constant source. Piecewise-constant sources take each point's
+new value on its right; the initial value holds until the first point. Piecewise-
+linear sources interpolate from (0, initial) through their points and then hold
+the final value. Times must be finite, strictly increasing and within the supported
+range; no sorting or deduplication. Signed finite values and zero are permitted.
+
+The engine includes t=0 and the exact requested final time. Each integration
+interval is at most the requested maximum step. Shorten it at every source point
+and the final endpoint, without stepping across a breakpoint. All simultaneous
+source changes are applied together, in stable component-ID accumulation order.
+Floating-point grid construction must make strictly positive progress; reject
+unrepresentable intervals, excessive work and nonfinite coefficients explicitly.
+
+Integrate to a breakpoint using its left-limit source values. Then reconcile the
+right-limit algebraic values with capacitor voltages and inductor currents held
+continuous. Record before/after breakpoint samples at the same timestamp in that
+order, identified by an explicit sample-side enum. No interpolation conceals a
+source discontinuity. A final-time breakpoint is processed too. Sources beyond
+the horizon remain in the definition but do not generate execution work.
+
+## Initialization
+
+Two explicit modes:
+
+- Operating point (default): capacitors are open and inductors have zero voltage;
+  solve the linear operating point using each source's t=0 value. Reject floating,
+  inconsistent or nonunique operating points. Use the accepted capacitor voltages
+  and inductor currents as storage state. Initial-state lists must be empty.
+- Specified storage: require exactly one finite voltage per capacitor and current
+  per inductor, by ComponentId, with no duplicate, missing or wrong-kind entries.
+  Determine algebraic node voltages/source currents consistently with those values.
+  There is no silent defaulting or least-squares fitting of conflicting states.
+
+Initial reconciliation first groups capacitor-voltage and voltage-source
+constraints, checks consistent offsets, and solves resistor-connected group
+potentials. It then solves capacitor differential currents and voltage-source
+currents from KCL and the source's right-hand derivative. Relative derivative
+coordinates within each constraint group remove unobservable common derivatives;
+they do not ground a physical node or alter its accepted voltage. This supports
+consistent parallel capacitors and capacitor/source constraints without assigning
+arbitrary observable currents. Inductor derivatives follow v=L*di/dt.
+
+Independent voltage-source cycles are rejected: individual source currents would
+be nonunique even if voltages were consistent. Distinguish contradictory loops
+where possible. A source jump that would require an instantaneous capacitor-
+voltage or inductor-current jump is unsupported (impulses are not simulated).
+Certain higher-index source/inductor cutsets cannot be initialized by this bounded
+formulation; report unsupported initialization, not a fabricated solution.
+
+## Backward-Euler MNA
+
+Unknowns are non-ground node voltages in declaration order, followed by currents
+of voltage sources and inductors in component declaration order. Stamp resistors
+and independent sources with the existing positive-to-negative sign convention.
+Ground is omitted from the unknown vector and returned as exactly zero.
+
+For step h and previous capacitor voltage v_old:
+
+    i_C = (C/h) * (v_new - v_old)
+
+Stamp conductance C/h and the corresponding history current. For an inductor:
+
+    v_new - (L/h)*i_new = -(L/h)*i_old
+
+The source-incidence block uses an ordinary transpose. No regularization, added
+resistance, hidden ground, pseudoinverse or nonlinear iteration is permitted.
+OpenECE owns all indexing/stamps and physical checks; private Eigen FullPivLU
+performs the dense solve. Four matrix-only equilibration passes and the existing
+rank/rcond/backward-error policies are reused, without changing DC/AC acceptance.
+Independently check branch equations and KCL, including omitted ground KCL.
+
+Backward Euler is first order and introduces numerical damping. A successful
+linear solve does not establish integration accuracy. Verify step refinement and
+analytical responses; users will choose a step small relative to relevant time
+constants/oscillation periods. No adaptive accuracy controller or trapezoidal
+method is included in this milestone.
+
+## Execution, traces and errors
+
+A move-only Simulation owns its circuit/request, storage state and accepted trace.
+One step processes one interval and its endpoint source changes without recursive
+execution. Run uses the same operation. Cancellation is terminal for that instance;
+it retains the accepted prefix, while pausing is simply not calling step. Completion,
+cancellation and failure are distinct statuses. Failed intervals append nothing
+and leave the last accepted state/time intact. Structured failure includes time,
+error code, message and implicated IDs where known. Constructor validation or
+initialization fails before any normal result is exposed.
+
+Requests select bounded ordered differential-voltage and component-current probes.
+Node voltage is a probe relative to ground. Returned traces retain request order;
+latest full node/branch results retain declaration order. All records are owned,
+with explicit timestamps/sides. No normal complete result is returned for a partial
+or failed run. Allocation/system exceptions are not mislabeled circuit failures.
+
+Diagnostics distinguish malformed definitions/requests, floating topology,
+contradictory storage/source constraints, nonunique source currents, unsupported
+initialization, numerical rank/conditioning/residual failures and resource limits.
+
+## Initial resource policies
+
+Centralize and test limits before allocation: 128 nodes, 512 components, 64 voltage
+sources, 64 inductors, 255 dynamic MNA unknowns; 4096 points per source and 16384
+total source points; 64 total probes; 100000 integration intervals and 200001
+recorded time points; 2000000 recorded probe values. Maximum source/initial-value
+magnitude is 1e9; supported positive time/step requests extend through 1e9 seconds.
+Reuse existing R/C/L ranges and 128-byte exact nonempty unique names. Actual
+representable grid progress and finite arithmetic are additional requirements.
+
+Bound worst-case dense work by (intervals + initialization allowance) times
+max(1,unknowns)^3 <= 1e9, checked before a simulation begins. These are provisional
+execution policies, not accuracy/latency guarantees; benchmark Fedora and Windows
+before future GUI limits are frozen. Resource failure never truncates a request.
+
+## Tests and deferred integration
+
+Analytical RC/RL and all RLC damping regimes, nonzero energy, convergence, damping,
+independent branch-formulated references, source boundaries, continuity, signs,
+KCL/KVL, invalid/floating/singular constraints, ordering, ownership, bounds and
+incremental/Run equivalence precede GUI use. Retain the complete existing matrix.
+
+Schema-2 design will add exact transient draft text/units/IDs/probes without
+changing schema-1 meanings. Keep release-pinned v0.9 fixture bytes intact. No
+schema changes, GUI, nonlinear devices, adaptive stepping, SPICE integration,
+schematic editor or unrelated domain feature is part of this core checkpoint.

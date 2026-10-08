@@ -5,7 +5,7 @@ Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
 VS 2022; this is MSVC/Windows runtime validation, not a physical Windows 11
 hardware test. The 1.0.0 physical Windows 11 retests and final RC smoke passed.
-The 1.0.1 branding candidate requires its own [bounded checks](branding.md). Windows 10 and MinGW
+The signed 1.0.1 package passed its [bounded Windows 11 checks](branding.md). Windows 10 and MinGW
 may work but are not validated or claimed supported for v1.0. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
 
 ## Prerequisites
@@ -221,8 +221,9 @@ round-trips all nine packaged files, in addition to its existing persistence tes
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 1.0.1 filenames above match the current CMake/CI candidate metadata.
-OpenECE 1.0.0 remains the published release. The fresh package probe additionally
+Version 1.0.1 filenames above match the published release and current metadata.
+OpenECE 1.0.0 and 1.0.1 releases are immutable. The fresh package probe additionally
 checks application/About branding and compares all ten executable-icon frames
 (16–256 px) with the approved ICO. The script checks PE file/product versions.
-Complete the [1.0.1 physical checks](branding.md) before release approval.
+The [1.0.1 acceptance record](physical-validation.md#final-101-acceptance-and-publication)
+identifies the exact signed artifact tested on Windows 11.

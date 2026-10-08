@@ -7,8 +7,9 @@ The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
 Physically validated desktop platform: Windows 11 x86_64. Native Fedora also
-passed v1.0 validation, including the exact 1.0.0 RC. This 1.0.1 branding
-candidate requires bounded physical checks; see docs/branding.md.
+passed v1.0 validation, including the exact 1.0.0 RC. The signed 1.0.1 release
+passed bounded Windows 11 acceptance with Smart App Control enabled. Additional
+manual Fedora testing was waived; automated Fedora validation passed.
 Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
@@ -106,8 +107,8 @@ examples/README.md for actions, analytical expectations and unit conventions.
 Help > About OpenECE identifies the actual built version, MIT license and notices.
 Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
-This is the OpenECE 1.0.1 branding candidate. Physical Windows 11 and Fedora
-validation passed for the released v1.0 baseline; true mixed-monitor DPI and screen-reader behavior
+OpenECE 1.0.1 is published. Physical Windows 11 acceptance passed for the
+exact signed release ZIP; Fedora retains the v1.0 physical baseline and CI coverage; true mixed-monitor DPI and screen-reader behavior
 remain unvalidated. No installer, updater or automatic migration is included.
 See docs/physical-validation.md for the checklist and evidence boundaries.
 
