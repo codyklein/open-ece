@@ -277,6 +277,31 @@ class TransientGuiTest final : public QObject {
         control<QPushButton>(v, "transient_add_node")->click();
         QCOMPARE(p.circuits.transient, before);
     }
+    void exhaustedAllocationDirtyTracksCounterChange() {
+        auto p = project::default_project();
+        auto& t = p.circuits.transient;
+        t.next_node = {project::limits::exhausted_id - 1};
+        t.next_component = {project::limits::exhausted_id - 1};
+        t.probes = {{"reserved", "current", project::Id{0xffffffffU}, std::nullopt,
+                     project::Id{0xffffffffU}}};
+        ProjectDocument d(std::make_unique<ProjectWorkspace>(p, true));
+        QVERIFY(!d.dirty());
+        QSignalSpy edits(&d.workspace(), &DraftView::draftEdited);
+        control<QPushButton>(d.workspace(), "transient_add_node")->click();
+        QCOMPARE(d.workspace().capture().circuits.transient.next_node.value,
+                 project::limits::exhausted_id);
+        QVERIFY(d.dirty());
+        QCOMPARE(edits.size(), 1);
+        control<QPushButton>(d.workspace(), "transient_add_component")->click();
+        QCOMPARE(d.workspace().capture().circuits.transient.next_component.value,
+                 project::limits::exhausted_id);
+        QCOMPARE(edits.size(), 2);
+        control<QPushButton>(d.workspace(), "transient_add_node")->click();
+        control<QPushButton>(d.workspace(), "transient_add_component")->click();
+        QCOMPARE(edits.size(), 2); // Already exhausted: no additional persisted edit.
+        QVERIFY(d.workspace().capture().circuits.transient.nodes.empty());
+        QVERIFY(d.workspace().capture().circuits.transient.components.empty());
+    }
     void pendingSaveOpenNewClose() {
         QTemporaryDir dir;
         auto destination = dir.filePath("project π space.openece");

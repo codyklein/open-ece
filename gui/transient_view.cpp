@@ -187,12 +187,15 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             report("Node limit reached.");
             return;
         }
+        const auto previous_counter = d.next_node;
         try {
             auto id = project::allocate_id(d.next_node, project::reserved_node_ids(d));
             d.nodes.push_back({id, "N" + std::to_string(id.value)});
             render();
             edited();
         } catch (const project::Error& e) {
+            if (d.next_node != previous_counter)
+                edited();
             report(QString::fromUtf8(e.what()));
         }
     });
@@ -217,6 +220,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             report("Component limit reached.");
             return;
         }
+        const auto previous_counter = d.next_component;
         try {
             project::TransientComponent c;
             c.id = project::allocate_id(d.next_component, project::reserved_component_ids(d));
@@ -227,6 +231,8 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             render();
             edited();
         } catch (const project::Error& e) {
+            if (d.next_component != previous_counter)
+                edited();
             report(QString::fromUtf8(e.what()));
         }
     });
