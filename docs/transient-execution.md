@@ -140,3 +140,14 @@ Resume/Pause, Cancel, exact raw/delegate edits, frozen labels, both failure stag
 and active Open/New/close. Four ordinary schema-2 examples are decoded/round-tripped
 headlessly, opened inertly and explicitly executed in GUI and fresh runtime probes.
 Historical schema-1 fixtures remain byte-for-byte unchanged.
+
+## Editor and trace layout
+
+Execution controls/status remain above a vertically resizable editor/results split.
+For small circuits the node/component tables fit their row counts rather than
+reserving a large empty editor. Visible editor rows are capped and additional rows
+scroll; heights follow font/style metrics. Columns are manually resizable and may
+scroll horizontally. Full cell/reference labels and frozen numerical probe headers
+are available through tooltips; the trace model still owns no per-cell widgets.
+Component creation uses human-readable labels backed by unchanged schema tokens.
+Neither splitter movement nor column resizing changes editable project state.

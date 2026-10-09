@@ -81,3 +81,49 @@ limits unchanged; no interruption inside an atomic solve; full-prefix snapshots
 at bounded running cadence; table-model resets during publication; one selected
 voltage/current plot at a time, with all probes in the complete numerical table.
 No adaptive integration, nonlinear devices or unrelated capability is introduced.
+
+## Transient GUI polish physical review
+
+This follow-up changes presentation only: execution controls precede the editor,
+a vertical splitter shares space between editor/results, and circuit tables show
+only a bounded number of rows initially (four nodes, six other editor rows).
+Additional rows remain available by scrolling. Component labels are human-readable;
+the original schema tokens, IDs, numerical trace and execution semantics are unchanged.
+Splitter position and column sizes are transient UI state, not project-file fields.
+
+Use the final polish commit identified in the accompanying CI report. On Fedora
+use the branch build; Windows review still requires a development build or a
+separately approved signed candidate. This milestone does not authorize signing
+or stable-version changes.
+
+1. At a maximized 1920×1080 desktop with normal fonts, open `transient-rc-step`.
+   Confirm the three-row node/component tables are compact, Run/Step/Cancel/Reset
+   are above the editor, and the results area is visible. Drag the vertical splitter
+   toward the editor to give the plot/table more space; restore the editor afterward.
+   Repeat at a smaller window and with enlarged text/125%, 150%, and 200% scaling.
+   Required controls must remain reachable using workspace scrolling.
+2. Inspect the compact **Component** selector beside **Add component**. Verify
+   Resistor, Capacitor, Inductor, Voltage Source and Current Source labels. Add a
+   temporary component; its kind, units and ID must survive Save/reopen. Remove it
+   afterward. Retained missing references and invalid raw text must not be repaired.
+3. Add enough temporary rows to exceed the initial table heights. Scroll to the
+   final row and edit it. Resize name/reference columns; horizontally scroll the
+   component table at smaller widths. Hover a truncated name/reference to see its
+   complete text. Verify long Unicode names remain readable and savable.
+4. Use Tab/Shift+Tab between the component selector and Add component, then reach
+   the execution commands and table editors. Focus must remain visible; F2 editing
+   and leaving a delegate must work without trapping focus or losing pending text.
+5. Step RC once, inspect **Numerical trace**, and check the mixed current/voltage
+   order. Two-line headers show probe names and frozen orientation/units; tooltips
+   contain the complete labels. Resize columns and horizontally scroll. Run, pause
+   if still active, cancel or reset; editing must still mark retained results stale.
+6. Save/reopen in a Unicode/space path. Verify editable state is retained and results
+   are empty on load. Resizing the splitter/columns must not add the dirty marker.
+   Exit normally. Record platform, scaling, commit and any clipping/focus defects.
+
+Automated coverage in the existing transient editor/execution suites checks four
+window/font combinations, bounded row growth and final-row scrolling, kind-label
+mapping/round trips, forward/reverse toolbar focus, inert loading, read-only cell
+and trace-header tooltips, resizable columns and unchanged execution workflows.
+Physical display/desktop-style review remains required; offscreen checks alone
+are not a claim of mixed-monitor DPI acceptance.
