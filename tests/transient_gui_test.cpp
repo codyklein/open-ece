@@ -2,13 +2,18 @@
 #include "transient_view.hpp"
 #include <QComboBox>
 #include <QFile>
+#include <QHeaderView>
 #include <QLabel>
 #include <QListWidget>
 #include <QPersistentModelIndex>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSplitter>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextDocument>
 #include <QTimer>
 #include <QtTest>
 using namespace openece;
@@ -152,6 +157,137 @@ void pending(QTableWidget* t, int row, int column, const QString& text) {
 class TransientGuiTest final : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void compactLayout_data() {
+        QTest::addColumn<QSize>("size");
+        QTest::addColumn<double>("font_scale");
+        QTest::newRow("1080-desktop") << QSize(1800, 940) << 1.;
+        QTest::newRow("reduced-window") << QSize(1000, 700) << 1.;
+        QTest::newRow("large-text") << QSize(1400, 900) << 1.5;
+        QTest::newRow("double-text-small-window") << QSize(1000, 700) << 2.;
+    }
+    void compactLayout() {
+        QFETCH(QSize, size);
+        QFETCH(double, font_scale);
+        auto p = project::decode_project(
+                     bytes(QString(OPENECE_SOURCE_DIR) + "/examples/transient-rc-step.openece")
+                         .toStdString())
+                     .snapshot;
+        ProjectWorkspace w(p, true);
+        auto font = w.font();
+        font.setPointSizeF(font.pointSizeF() * font_scale);
+        w.setFont(font);
+        w.resize(size);
+        w.show();
+        w.activateWindow();
+        QTest::qWait(30);
+        auto* scroll = control<QScrollArea>(w, "workspace_scroll");
+        auto* run = control<QPushButton>(w, "transient_run");
+        if (size.height() >= 940 && font_scale == 1.) {
+            QCOMPARE(scroll->verticalScrollBar()->value(), 0);
+            auto* results = control<QTabWidget>(w, "transient_results_tabs");
+            QVERIFY(
+                scroll->viewport()->rect().contains(results->mapTo(scroll->viewport(), QPoint())));
+            QVERIFY(scroll->viewport()->rect().contains(
+                results->mapTo(scroll->viewport(), results->rect().bottomRight())));
+        }
+        // Execution commands precede editor/results and remain reachable through
+        // the existing workspace scroll at small sizes/enlarged system text.
+        scroll->ensureWidgetVisible(run);
+        QCoreApplication::processEvents();
+        QVERIFY(scroll->viewport()->rect().contains(run->mapTo(scroll->viewport(), QPoint(0, 0))));
+        QVERIFY(scroll->viewport()->rect().contains(
+            run->mapTo(scroll->viewport(), run->rect().bottomRight())));
+        auto* nodes = control<QTableWidget>(w, "transient_nodes");
+        auto* components = control<QTableWidget>(w, "transient_components");
+        QCOMPARE(nodes->rowCount(), 3);
+        QCOMPARE(components->rowCount(), 3);
+        QVERIFY(nodes->height() < 6 * nodes->verticalHeader()->defaultSectionSize());
+        QVERIFY(components->height() < 6 * components->verticalHeader()->defaultSectionSize());
+        QVERIFY(nodes->rowHeight(0) >= nodes->fontMetrics().height() + 6);
+        QCOMPARE(components->horizontalHeader()->sectionResizeMode(1), QHeaderView::Interactive);
+        QVERIFY(!components->horizontalHeader()->stretchLastSection());
+        auto* selector = control<QComboBox>(w, "transient_new_kind");
+        auto* add = control<QPushButton>(w, "transient_add_component");
+        QCOMPARE(selector->mapTo(&w, QPoint()).y(), add->mapTo(&w, QPoint()).y());
+        QVERIFY(selector->width() < components->width());
+        selector->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), selector);
+        QTest::keyClick(selector, Qt::Key_Tab);
+        QCOMPARE(QApplication::focusWidget(), add);
+        QTest::keyClick(add, Qt::Key_Tab, Qt::ShiftModifier);
+        QCOMPARE(QApplication::focusWidget(), selector);
+        auto* split = control<QSplitter>(w, "transient_editor_results_split");
+        auto before = w.capture();
+        QSignalSpy edits(&w, &DraftView::draftEdited);
+        split->setSizes({0, 400});
+        QCoreApplication::processEvents();
+        QVERIFY(split->sizes()[1] > 0);
+        QCOMPARE(w.capture(), before);
+        QCOMPARE(edits.size(), 0);
+        inert(w);
+    }
+    void boundedTableRowsAndTooltips() {
+        auto d = configured().circuits.transient;
+        d.nodes.resize(1);
+        TransientView w(nullptr, &d);
+        w.resize(1150, 900);
+        w.show();
+        auto* nodes = control<QTableWidget>(w, "transient_nodes");
+        const auto small = nodes->height();
+        for (int i = 0; i < 8; ++i)
+            control<QPushButton>(w, "transient_add_node")->click();
+        QCoreApplication::processEvents();
+        QVERIFY(nodes->height() > small);
+        const auto capped = nodes->height();
+        control<QPushButton>(w, "transient_add_node")->click();
+        QCOMPARE(nodes->height(), capped);
+        QCoreApplication::processEvents();
+        QVERIFY(nodes->verticalScrollBar()->maximum() > 0);
+        nodes->scrollToItem(nodes->item(nodes->rowCount() - 1, 1));
+        QVERIFY(nodes->visualItemRect(nodes->item(nodes->rowCount() - 1, 1))
+                    .intersects(nodes->viewport()->rect()));
+        const QString name = "Long Unicode π node name that remains fully available";
+        nodes->item(0, 1)->setText(name);
+        QCOMPARE(nodes->item(0, 1)->toolTip(), Qt::convertFromPlainText(name));
+        QCOMPARE(d.nodes[0].name, name.toStdString());
+        nodes->setColumnWidth(1, 90);
+        QCOMPARE(nodes->columnWidth(1), 90);
+    }
+    void friendlyKindsPreserveSchemaTokens() {
+        auto p = project::default_project();
+        p.selected_domain = "circuits";
+        p.circuits.selected_tab = "transient";
+        ProjectWorkspace w(p, true);
+        auto* selector = control<QComboBox>(w, "transient_new_kind");
+        const QStringList labels{"Resistor", "Capacitor", "Inductor", "Voltage Source",
+                                 "Current Source"};
+        const QStringList tokens{"resistor", "capacitor", "inductor", "voltage_source",
+                                 "current_source"};
+        for (int i = 0; i < labels.size(); ++i) {
+            QCOMPARE(selector->itemText(i), labels[i]);
+            QCOMPARE(selector->itemData(i).toString(), tokens[i]);
+            selector->setCurrentIndex(i);
+            control<QPushButton>(w, "transient_add_component")->click();
+            auto captured = w.capture();
+            QCOMPARE(captured.circuits.transient.components.back().kind, tokens[i].toStdString());
+        }
+        auto captured = w.capture();
+        ProjectWorkspace restored(
+            project::decode_project(project::encode_project(captured)).snapshot, true);
+        QCOMPARE(restored.capture(), captured);
+        auto* components = control<QTableWidget>(restored, "transient_components");
+        for (int i = 0; i < labels.size(); ++i) {
+            auto* kind = static_cast<QComboBox*>(components->cellWidget(i, 2));
+            QCOMPARE(kind->currentText(), labels[i]);
+            QCOMPARE(kind->currentData().toString(), tokens[i]);
+        }
+        auto* initial = control<QComboBox>(restored, "transient_new_initial_kind");
+        QCOMPARE(initial->itemText(0), QString("Capacitor voltage"));
+        QCOMPARE(initial->itemData(0).toString(), QString("capacitor_voltage"));
+        QCOMPARE(initial->itemText(1), QString("Inductor current"));
+        QCOMPARE(initial->itemData(1).toString(), QString("inductor_current"));
+        inert(restored);
+    }
     void inertRoundTrips() {
         for (auto p : {project::default_project(), configured()}) {
             ProjectWorkspace w(p, true);
@@ -210,7 +346,7 @@ class TransientGuiTest final : public QObject {
         QCOMPARE(edits.size(), 0);
         QCOMPARE(u->currentText(), QString("V"));
         auto* kind = static_cast<QComboBox*>(components->cellWidget(0, 2));
-        kind->setCurrentText("current_source");
+        kind->setCurrentText("Current Source");
         QCOMPARE(p.circuits.transient, before);
         QCOMPARE(edits.size(), 0);
         control<QTableWidget>(view, "transient_points")->item(1, 2)->setText("4");

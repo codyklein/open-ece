@@ -1,6 +1,7 @@
 #include "transient_view.hpp"
 #include "circuit_draft_rows.hpp"
 #include "transient_results.hpp"
+#include <QEvent>
 #include <QFormLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -8,37 +9,106 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScopedValueRollback>
+#include <QSplitter>
+#include <QStyle>
 #include <QTableView>
 #include <QTableWidget>
 #include <QTextBrowser>
+#include <QTextDocument>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <limits>
 namespace openece::gui {
 namespace {
 const QStringList kinds{"resistor", "capacitor", "inductor", "voltage_source", "current_source"};
+const QStringList kind_labels{"Resistor", "Capacitor", "Inductor", "Voltage Source",
+                              "Current Source"};
+const QStringList initial_kinds{"capacitor_voltage", "inductor_current"};
+const QStringList initial_labels{"Capacitor voltage", "Inductor current"};
 const QStringList times{"s", "ms", "us", "ns"};
 QStringList units(const std::string& kind) {
     if (kind == "capacitor")
         return {"F", "mF", "uF", "nF", "pF"};
     return component_units(kind, true);
 }
+// Bound the editor footprint by visible rows, not by the complete circuit size.
+// Recalculate on font/style changes so larger system text remains editable.
+class DraftTable final : public QTableWidget {
+  public:
+    DraftTable(QWidget* parent, int columns, int visible_rows)
+        : QTableWidget(0, columns, parent), visible_rows_(visible_rows) {
+        sizing_connections_ = {
+            connect(model(), &QAbstractItemModel::rowsInserted, this, [this] { fit_rows(); }),
+            connect(model(), &QAbstractItemModel::rowsRemoved, this, [this] { fit_rows(); }),
+            connect(model(), &QAbstractItemModel::modelReset, this, [this] { fit_rows(); })};
+    }
+    ~DraftTable() override {
+        // The base table destroys its headers before its model emits modelReset.
+        // Stop our sizing callbacks before that teardown begins.
+        for (const auto& connection : sizing_connections_)
+            disconnect(connection);
+    }
+    QSize sizeHint() const override { return {QTableWidget::sizeHint().width(), maximumHeight()}; }
+    void fit_rows() {
+        QComboBox sample;
+        sample.setFont(font());
+        const int row = std::max(fontMetrics().height() + 6, sample.sizeHint().height() + 2);
+        verticalHeader()->setDefaultSectionSize(row);
+        const int height = horizontalHeader()->sizeHint().height() +
+                           std::clamp(rowCount(), 1, visible_rows_) * row + 2 * frameWidth() +
+                           style()->pixelMetric(QStyle::PM_ScrollBarExtent);
+        setFixedHeight(height);
+    }
+
+  protected:
+    void changeEvent(QEvent* event) override {
+        QTableWidget::changeEvent(event);
+        if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
+            fit_rows();
+    }
+
+  private:
+    int visible_rows_;
+    std::array<QMetaObject::Connection, 3> sizing_connections_;
+};
 QTableWidget* table(QWidget* parent, const char* name, const QStringList& headers) {
-    auto* t = new QTableWidget(0, static_cast<int>(headers.size()), parent);
+    auto* t = new DraftTable(parent, static_cast<int>(headers.size()),
+                             QString::fromUtf8(name) == "transient_nodes" ? 4 : 6);
     t->setObjectName(name);
     t->setAccessibleName(QString::fromUtf8(name).replace('_', ' '));
     t->setHorizontalHeaderLabels(headers);
     t->setTabKeyNavigation(false);
-    t->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    t->horizontalHeader()->setStretchLastSection(true);
+    t->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    t->horizontalHeader()->setStretchLastSection(false);
     t->verticalHeader()->hide();
+    for (int c = 0; c < headers.size(); ++c) {
+        const auto& h = headers[c];
+        const int chars = h == "ID"                         ? 7
+                          : h == "Unit" || h == "Time unit" ? 9
+                          : h == "Name"                     ? 26
+                          : h == "Kind"                     ? 19
+                                                            : 18;
+        t->setColumnWidth(c, t->fontMetrics().horizontalAdvance(QString(chars, '0')) + 16);
+        t->horizontalHeaderItem(c)->setToolTip(h);
+    }
+    t->fit_rows();
     return t;
 }
+class DraftItem final : public QTableWidgetItem {
+  public:
+    using QTableWidgetItem::QTableWidgetItem;
+    QVariant data(int role) const override {
+        if (role == Qt::ToolTipRole)
+            return Qt::convertFromPlainText(QTableWidgetItem::data(Qt::DisplayRole).toString());
+        return QTableWidgetItem::data(role);
+    }
+};
 void item(QTableWidget* t, int r, int c, const std::string& text, bool editable = true) {
-    auto* i = new QTableWidgetItem(qt_text(text));
+    auto* i = new DraftItem(qt_text(text));
     if (!editable)
         i->setFlags(i->flags() & ~Qt::ItemIsEditable);
     t->setItem(r, c, i);
@@ -49,6 +119,9 @@ QComboBox* choice(QTableWidget* t, int r, int c, const QStringList& tokens,
     b->addItems(tokens);
     b->setCurrentText(qt_text(selected));
     b->setAccessibleName(t->horizontalHeaderItem(c)->text() + " row " + QString::number(r + 1));
+    b->setToolTip(Qt::convertFromPlainText(b->currentText()));
+    QObject::connect(b, &QComboBox::currentTextChanged, b,
+                     [b](const QString& text) { b->setToolTip(Qt::convertFromPlainText(text)); });
     t->setCellWidget(r, c, b);
     return b;
 }
@@ -59,6 +132,7 @@ void fill_ref(QComboBox* b, const std::vector<project::Node>& nodes, project::Re
     for (const auto& n : nodes)
         b->addItem(qt_text(n.name) + " [" + QString::number(n.id.value) + "]", n.id.value);
     select_reference(b, ref);
+    b->setToolTip(Qt::convertFromPlainText(b->currentText()));
 }
 // Conversion is an explicit user action only. Never invoked by capture or restore.
 std::optional<std::string> converted(const std::string& text, const std::string& old_unit,
@@ -95,6 +169,8 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     : DraftView(parent), state_(draft, project::TransientDraft{}) {
     setObjectName("transient_view");
     auto* layout = new QVBoxLayout(this);
+    layout->setAlignment(Qt::AlignTop);
+    layout->setSpacing(4);
     auto* description = new QLabel(
         "Transient analysis — instantaneous SI voltages/currents; first-order backward Euler.",
         this);
@@ -102,6 +178,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     description->setTextFormat(Qt::PlainText);
     layout->addWidget(description);
     auto* form = new QFormLayout;
+    form->setVerticalSpacing(4);
     layout->addLayout(form);
     auto quantity = [&](const QString& label, const char* name, project::Quantity& q) {
         auto* row = new QWidget(this);
@@ -142,7 +219,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
                 edited();
             });
     };
-    quantity("Stop time (instantaneous SI time)", "transient_stop", state_.get().stop);
+    quantity("Stop time", "transient_stop", state_.get().stop);
     quantity("Maximum integration step", "transient_step", state_.get().maximum_step);
     auto* mode = new QComboBox(this);
     mode->setObjectName("transient_initialization");
@@ -159,7 +236,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     bind_choice(display, state_.get().display_time_unit, times);
     auto* tabs = new QTabWidget(this);
     tabs->setObjectName("transient_tabs");
-    layout->addWidget(tabs);
+
     auto page = [&](const QString& title) {
         auto* w = new QWidget(tabs);
         auto* l = new QVBoxLayout(w);
@@ -167,17 +244,16 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         return l;
     };
     auto* editor = page("Circuit");
+    auto* node_actions = new QHBoxLayout;
+    editor->addLayout(node_actions);
     nodes_ = table(this, "transient_nodes", {"ID", "Name"});
     editor->addWidget(nodes_);
     ground_ = new QComboBox(this);
     ground_->setObjectName("transient_ground");
     ground_->setAccessibleName("Transient ground reference");
-    editor->addWidget(new QLabel("Ground/reference node (0 V)", this));
-    editor->addWidget(ground_);
-    components_ = table(this, "transient_components",
-                        {"ID", "Name", "Kind", "Positive", "Negative", "Value", "Unit"});
-    editor->addWidget(components_);
-    auto actions = [&](QVBoxLayout* l, const QString& label, const char* name,
+    ground_->setMinimumContentsLength(14);
+    ground_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    auto actions = [&](QBoxLayout* l, const QString& label, const char* name,
                        std::function<void()> f) {
         auto* b = new QPushButton(label, this);
         b->setObjectName(name);
@@ -186,8 +262,9 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             synchronize_pending_text();
             f();
         });
+        return b;
     };
-    actions(editor, "Add node", "transient_add_node", [this] {
+    actions(node_actions, "Add node", "transient_add_node", [this] {
         auto& d = state_.get();
         if (d.nodes.size() >= project::limits::circuit_nodes) {
             report("Node limit reached.");
@@ -205,22 +282,36 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             report(QString::fromUtf8(e.what()));
         }
     });
-    actions(editor, "Remove selected node (references are retained)", "transient_remove_node",
-            [this] {
-                auto r = nodes_->currentRow();
-                if (r >= 0) {
-                    auto& d = state_.get();
-                    d.nodes.erase(d.nodes.begin() + r);
-                    render();
-                    edited();
-                }
-            });
+    actions(node_actions, "Remove node", "transient_remove_node", [this] {
+        auto r = nodes_->currentRow();
+        if (r >= 0) {
+            auto& d = state_.get();
+            d.nodes.erase(d.nodes.begin() + r);
+            render();
+            edited();
+        }
+    });
+    auto* ground_label = new QLabel("Ground (0 V)", this);
+    ground_label->setBuddy(ground_);
+    node_actions->addWidget(ground_label);
+    node_actions->addWidget(ground_, 1);
+    auto* component_actions = new QHBoxLayout;
+    editor->addLayout(component_actions);
+    components_ = table(this, "transient_components",
+                        {"ID", "Name", "Kind", "Positive", "Negative", "Value", "Unit"});
+    editor->addWidget(components_);
     auto* add_kind = new QComboBox(this);
     add_kind->setObjectName("transient_new_kind");
     add_kind->setAccessibleName("New transient component kind");
-    add_kind->addItems(kinds);
-    editor->addWidget(add_kind);
-    actions(editor, "Add component of selected kind", "transient_add_component", [this, add_kind] {
+    for (int i = 0; i < kinds.size(); ++i)
+        add_kind->addItem(kind_labels[i], kinds[i]);
+    add_kind->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    add_kind->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    auto* kind_label = new QLabel("Component", this);
+    kind_label->setBuddy(add_kind);
+    component_actions->addWidget(kind_label);
+    component_actions->addWidget(add_kind);
+    actions(component_actions, "Add component", "transient_add_component", [this, add_kind] {
         auto& d = state_.get();
         if (d.components.size() >= project::limits::circuit_components) {
             report("Component limit reached.");
@@ -230,7 +321,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         try {
             project::TransientComponent c;
             c.id = project::allocate_id(d.next_component, project::reserved_component_ids(d));
-            c.kind = draft_text(add_kind->currentText());
+            c.kind = draft_text(add_kind->currentData().toString());
             c.name = "P" + std::to_string(c.id.value);
             c.value.unit = draft_text(units(c.kind).front());
             d.components.push_back(c);
@@ -242,15 +333,21 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             report(QString::fromUtf8(e.what()));
         }
     });
-    actions(editor, "Remove selected component (references are retained)",
-            "transient_remove_component", [this] {
-                auto r = components_->currentRow();
-                if (r >= 0) {
-                    state_.get().components.erase(state_.get().components.begin() + r);
-                    render();
-                    edited();
-                }
-            });
+    actions(component_actions, "Remove component", "transient_remove_component", [this] {
+        auto r = components_->currentRow();
+        if (r >= 0) {
+            state_.get().components.erase(state_.get().components.begin() + r);
+            render();
+            edited();
+        }
+    });
+    component_actions->addStretch();
+    QWidget::setTabOrder(add_kind, findChild<QPushButton*>("transient_add_component"));
+    QWidget::setTabOrder(findChild<QPushButton*>("transient_add_component"),
+                         findChild<QPushButton*>("transient_remove_component"));
+    for (auto name : {"transient_remove_node", "transient_remove_component"})
+        findChild<QPushButton*>(name)->setToolTip(
+            "Remove the selected row. References to its ID are retained until you edit them.");
     auto* sources = page("Sources");
     auto* note =
         new QLabel("Constant mode retains inactive points. Point amplitudes share the component "
@@ -309,7 +406,8 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     auto* initial_kind = new QComboBox(this);
     initial_kind->setObjectName("transient_new_initial_kind");
     initial_kind->setAccessibleName("New stored-energy condition kind");
-    initial_kind->addItems({"capacitor_voltage", "inductor_current"});
+    for (int i = 0; i < initial_kinds.size(); ++i)
+        initial_kind->addItem(initial_labels[i], initial_kinds[i]);
     storage->addWidget(initial_kind);
     actions(storage, "Add initial condition", "transient_add_initial", [this, initial_kind] {
         auto& v = state_.get().initial_conditions;
@@ -318,7 +416,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
             return;
         }
         project::TransientInitialCondition i;
-        i.kind = draft_text(initial_kind->currentText());
+        i.kind = draft_text(initial_kind->currentData().toString());
         i.value.unit = i.kind == "capacitor_voltage" ? "V" : "A";
         v.push_back(i);
         render();
@@ -428,7 +526,19 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     // Result navigation is transient, never a schema token or persisted edit.
     auto* results = new QTabWidget(this);
     results->setObjectName("transient_results_tabs");
-    layout->addWidget(results);
+    auto* split = new QSplitter(Qt::Vertical, this);
+    split->setObjectName("transient_editor_results_split");
+    split->setAccessibleName("Resize transient editor and results");
+    split->addWidget(tabs);
+    split->addWidget(results);
+    split->setStretchFactor(0, 0);
+    split->setStretchFactor(1, 1);
+    split->setSizes({360, 300});
+    split->setMinimumHeight(300);
+    // Other domain pages can make the outer stacked workspace taller than its
+    // viewport. Do not stretch this editor/results block into that spare height.
+    split->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    layout->addWidget(split);
     auto plot_page = [&](const QString& title, const char* selector_name, QComboBox*& selector,
                          TransientPlot*& plot) {
         auto* w = new QWidget(results);
@@ -452,8 +562,20 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     trace_model_ = new TransientTraceModel(trace);
     trace->setModel(trace_model_);
     trace->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-    trace->horizontalHeader()->setDefaultSectionSize(180);
-    trace->horizontalHeader()->setStretchLastSection(true);
+    trace->horizontalHeader()->setDefaultSectionSize(
+        trace->fontMetrics().horizontalAdvance(QString(28, '0')) + 16);
+    trace->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    trace->horizontalHeader()->setMinimumHeight(2 * trace->fontMetrics().height() + 12);
+    trace->setWordWrap(false);
+    trace->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    trace->horizontalHeader()->setStretchLastSection(false);
+    auto size_time_columns = [trace] {
+        trace->setColumnWidth(0, trace->fontMetrics().horizontalAdvance(QString(19, '0')) + 16);
+        trace->setColumnWidth(1, trace->fontMetrics().horizontalAdvance("before breakpoint") + 24);
+    };
+    size_time_columns();
+    connect(trace->horizontalHeader(), &QHeaderView::sectionCountChanged, trace,
+            [size_time_columns] { size_time_columns(); });
     results->addTab(trace, "Numerical trace");
     poll_ = new QTimer(this);
     poll_->setInterval(50);
@@ -607,14 +729,19 @@ void TransientView::render() {
         components_->insertRow(r);
         item(components_, r, 0, std::to_string(c.id.value), false);
         item(components_, r, 1, c.name);
-        auto* kind = choice(components_, r, 2, kinds, c.kind);
-        connect(kind, &QComboBox::currentTextChanged, this, [this, kind, r](const QString& next) {
+        auto* kind = choice(
+            components_, r, 2, kind_labels,
+            kind_labels.value(kinds.indexOf(qt_text(c.kind)), qt_text(c.kind)).toStdString());
+        for (int i = 0; i < kinds.size(); ++i)
+            kind->setItemData(i, kinds[i]);
+        connect(kind, &QComboBox::currentTextChanged, this, [this, kind, r](const QString&) {
             if (rendering_ || restoring_)
                 return;
             auto& current = state_.get().components.at(static_cast<std::size_t>(r));
-            if (next != qt_text(current.kind)) {
+            if (kind->currentData().toString() != qt_text(current.kind)) {
                 const QSignalBlocker b(kind);
-                kind->setCurrentText(qt_text(current.kind));
+                kind->setCurrentIndex(static_cast<int>(kinds.indexOf(qt_text(current.kind))));
+                kind->setToolTip(Qt::convertFromPlainText(kind->currentText()));
                 report("Component kind has a different physical dimension. Add a separate "
                        "component; this row and its source points are kept unchanged.");
             }
@@ -636,7 +763,10 @@ void TransientView::render() {
         ref(initial_, r, 0, [this, r](auto v) {
             edit(state_.get().initial_conditions.at(static_cast<std::size_t>(r)).component, v);
         });
-        item(initial_, r, 1, i.kind, false);
+        item(initial_, r, 1,
+             draft_text(
+                 initial_labels.value(initial_kinds.indexOf(qt_text(i.kind)), qt_text(i.kind))),
+             false);
         item(initial_, r, 2, i.value.text);
         auto* u = choice(initial_, r, 3,
                          i.kind == "capacitor_voltage" ? units("voltage_source")
@@ -817,6 +947,7 @@ void TransientView::receive_update() {
     }
 }
 void TransientView::update_execution_ui() {
+    diagnostic_->setVisible(!diagnostic_->text().isEmpty());
     const bool running = execution_state_ == ExecutionState::running;
     const bool paused = execution_state_ == ExecutionState::paused;
     const bool resumable = bool(runner_);

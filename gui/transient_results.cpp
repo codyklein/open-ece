@@ -1,5 +1,6 @@
 #include "transient_results.hpp"
 #include <QPen>
+#include <QTextDocument>
 #include <algorithm>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
@@ -52,7 +53,7 @@ int TransientTraceModel::columnCount(const QModelIndex& parent) const {
 }
 QVariant TransientTraceModel::data(const QModelIndex& i, int role) const {
     if (!result_ || !i.isValid() || i.row() < 0 || i.row() >= rowCount() || i.column() < 0 ||
-        i.column() >= columnCount() || role != Qt::DisplayRole)
+        i.column() >= columnCount() || (role != Qt::DisplayRole && role != Qt::ToolTipRole))
         return {};
     const auto row = static_cast<std::size_t>(i.row());
     if (i.column() == 0)
@@ -72,7 +73,7 @@ QVariant TransientTraceModel::data(const QModelIndex& i, int role) const {
     return QString::number(trace[row], 'g', 17);
 }
 QVariant TransientTraceModel::headerData(int section, Qt::Orientation orientation, int role) const {
-    if (role != Qt::DisplayRole)
+    if (role != Qt::DisplayRole && role != Qt::ToolTipRole)
         return {};
     if (orientation == Qt::Vertical)
         return section + 1;
@@ -80,8 +81,17 @@ QVariant TransientTraceModel::headerData(int section, Qt::Orientation orientatio
         return "Time (" + time_unit_ + ")";
     if (section == 1)
         return "Sample side";
-    if (section >= 2 && section < columnCount())
-        return probes_[static_cast<std::size_t>(section - 2)].label;
+    if (section >= 2 && section < columnCount()) {
+        auto label = probes_[static_cast<std::size_t>(section - 2)].label;
+        if (role == Qt::ToolTipRole)
+            return Qt::convertFromPlainText(label);
+        if (role == Qt::DisplayRole) {
+            const auto separator = label.indexOf(": ");
+            if (separator >= 0)
+                label.replace(separator, 2, "\n");
+        }
+        return label;
+    }
     return {};
 }
 TransientPlot::TransientPlot(QWidget* parent) : QwtPlot(parent), curve_(new QwtPlotCurve) {

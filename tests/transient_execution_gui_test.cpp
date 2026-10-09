@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -11,6 +12,7 @@
 #include <QTableView>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextDocument>
 #include <QTimer>
 #include <QtTest>
 #include <algorithm>
@@ -96,6 +98,35 @@ class TransientExecutionTests final : public QObject {
                      .toDouble(),
                  r->voltages[0].back());
         QCOMPARE(table->model()->headerData(0, Qt::Horizontal).toString(), QString("Time (ms)"));
+    }
+    void traceHeaderPresentation() {
+        auto d = rc();
+        TransientView w(nullptr, &d);
+        w.resize(1100, 900);
+        w.show();
+        click(w, "transient_step_execution");
+        QTRY_VERIFY_WITH_TIMEOUT(state(w, "Paused"), 10000);
+        auto* table = control<QTableView>(w, "transient_trace");
+        auto* tabs = control<QTabWidget>(w, "transient_results_tabs");
+        tabs->setCurrentWidget(table);
+        QCoreApplication::processEvents();
+        auto* header = table->horizontalHeader();
+        QVERIFY(header->height() >= 2 * table->fontMetrics().height());
+        QCOMPARE(header->sectionResizeMode(2), QHeaderView::Interactive);
+        QVERIFY(!header->stretchLastSection());
+        for (int i = 0; i < static_cast<int>(w.result_probes().size()); ++i) {
+            QCOMPARE(
+                table->model()->headerData(i + 2, Qt::Horizontal, Qt::ToolTipRole).toString(),
+                Qt::convertFromPlainText(w.result_probes()[static_cast<std::size_t>(i)].label));
+            QVERIFY(table->model()->headerData(i + 2, Qt::Horizontal).toString().contains('\n'));
+        }
+        header->resizeSection(2, 100);
+        QCOMPARE(header->sectionSize(2), 100);
+        const auto index = table->model()->index(1, 3);
+        QCOMPARE(table->model()->data(index, Qt::ToolTipRole), table->model()->data(index));
+        QVERIFY(table->findChildren<QLineEdit*>().isEmpty());
+        click(w, "transient_cancel");
+        QTRY_VERIFY_WITH_TIMEOUT(state(w, "Cancelled"), 10000);
     }
     void operatingPointAndInactiveConfiguration() {
         auto d = rc();

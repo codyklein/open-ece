@@ -27,6 +27,7 @@ class TransientTraceModel final : public QAbstractTableModel {
 class TransientPlot final : public QwtPlot {
   public:
     explicit TransientPlot(QWidget* parent);
+    QSize sizeHint() const override { return minimumSize(); }
     void clear();
     void show_trace(const transient_core::Result&, const TransientProbeLabel&,
                     const QString& time_unit, double time_scale);
