@@ -40,7 +40,7 @@ if(OPENECE_BUILD_GUI)
     target_link_libraries(openece_transient_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
     target_compile_definitions(openece_transient_gui_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_test(NAME transient_editor_workflow COMMAND openece_transient_gui_tests
-        -o "${CMAKE_BINARY_DIR}/transient-editor-$<CONFIG>.log,txt")
+        -o "${CMAKE_CURRENT_BINARY_DIR}/transient-editor-$<CONFIG>.log,txt" -o "-,txt")
     set_tests_properties(transient_editor_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     add_executable(openece_branding_tests branding_test.cpp)
     set_target_properties(openece_branding_tests PROPERTIES AUTOMOC ON)
