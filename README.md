@@ -14,19 +14,20 @@ libraries with editable experiments, plots and automated numerical tests.
 - **Digital Logic:** combinational circuits, truth tables, deterministic timing,
   clocks, SR/D latches and D flip-flops.
 - **Circuits:** linear DC modified nodal analysis, RMS AC phasors, R/C/L networks,
-  frequency sweeps and voltage-transfer plots.
+  frequency sweeps, voltage-transfer plots and RC/RL/RLC transient simulation.
 - **Communications:** ideal coherent BPSK/QPSK, normalized complex baseband,
   deterministic AWGN and bounded BER experiments.
 - **Projects:** versioned `.openece` files preserve editable state across all
   domains, including incomplete drafts. Results are recomputed explicitly after
   opening; project files do not contain plot or solver caches.
 
-[OpenECE 1.0.1 is released](https://github.com/codyklein/open-ece/releases/tag/v1.0.1),
-including approved branding and a signed Windows portable package. Development
-on `feature/v1.1.0` introduces linear transient circuit analysis; see the
-[transient contract](docs/transient-analysis.md) and [execution workflow](docs/transient-execution.md),
-with owned worker execution, voltage/current plots and schema-2 projects. The released application has
-no transient GUI yet; stable version metadata remains 1.0.1 during development.
+**OpenECE 1.1.0 is in release preparation; it is not yet published.** Transient
+analysis is implemented, with worker-owned Run/Step/Pause/Resume/Cancel controls,
+voltage/current plots, numerical traces and schema-2 projects. See the
+[release notes](docs/release-notes-v1.1.md), [numerical conventions](docs/transient-analysis.md)
+and [execution workflow](docs/transient-execution.md). The latest published release
+remains [1.0.1](https://github.com/codyklein/open-ece/releases/tag/v1.0.1).
+The exact signed 1.1.0 Windows candidate still requires physical acceptance.
 
 ## Try it
 
@@ -54,7 +55,7 @@ CI covers Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan, Windows MSVC
 Debug/Release, and a fresh Windows packaged-runtime test. Physically validated
 platforms are Fedora 44 and Windows 11 x86_64; see the recorded physical scope
 below. Windows 10 and MinGW may work but are not validated or claimed supported
-for v1.0. Hosted Windows Server tests do not establish desktop, mixed-DPI or
+for v1.1. Hosted Windows Server tests do not establish desktop, mixed-DPI or
 screen-reader validation. See the [physical validation record and checklist](docs/physical-validation.md).
 
 ## Documentation
@@ -65,10 +66,11 @@ screen-reader validation. See the [physical validation record and checklist](doc
   [ownership and transactions](docs/project-transactions.md)
 - [Signals/DSP conventions](docs/numerics.md), [Digital Logic](docs/digital-logic.md),
   [Timing](docs/digital-timing.md), [DC](docs/circuit-analysis.md),
-  [AC](docs/ac-analysis.md), [Communications](docs/communications.md)
+  [AC](docs/ac-analysis.md), [Transient](docs/transient-analysis.md),
+  [Communications](docs/communications.md)
 - [Architecture](docs/architecture.md), [development](docs/development.md),
   [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md),
-  [1.0 release notes](docs/release-notes-v1.0.md),
+  [1.1 release notes](docs/release-notes-v1.1.md), [1.0 release notes](docs/release-notes-v1.0.md),
   [1.0.1 branding and acceptance](docs/branding.md)
 
 The source tree separates `core/`, `signals/`, `dsp/`, `digital/`, `circuits/`,
@@ -78,9 +80,11 @@ not depend on Qt, and persistence does not turn them into serialization models.
 
 OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 and preserves their supported editable project state.
 
-This promises neither a stable C++/plugin ABI nor future-schema compatibility.
-See [compatibility limits](docs/projects.md). There is no undo/redo, autosave,
-a transient circuit solver in the stable 1.0.1 release, schematic editor, RF synchronization or SDR integration.
+OpenECE 1.1 imports supported schema-1 editable state, including incomplete drafts,
+and saves schema 2. OpenECE 1.0.x cannot read schema-2 files; use Save As to retain
+an older original. This promises neither a stable C++/plugin ABI nor future-schema
+compatibility. See [compatibility limits](docs/projects.md). There is no undo/redo,
+autosave, nonlinear circuit analysis, schematic editor, RF synchronization or SDR integration.
 
 ## License
 

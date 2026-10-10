@@ -1,4 +1,4 @@
-OpenECE v1.0.1 - Windows x86_64
+OpenECE v1.1.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -6,11 +6,11 @@ No Qt installation, environment configuration or administrator access is needed.
 The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
-Physically validated desktop platform: Windows 11 x86_64. Native Fedora also
-passed v1.0 validation, including the exact 1.0.0 RC. The signed 1.0.1 release
-passed bounded Windows 11 acceptance with Smart App Control enabled. Additional
-manual Fedora testing was waived; automated Fedora validation passed.
-Windows 10 and MinGW may work but are not validated or claimed supported for v1.0.
+Desktop validation targets: Fedora 44 and Windows 11 x86_64. Historical 1.0.x
+physical acceptance is recorded separately; native Fedora transient acceptance
+has passed. Every new signed Windows release candidate requires its own physical
+acceptance with Smart App Control enabled. CI is not physical desktop evidence.
+Windows 10 and MinGW may work but are not validated or claimed supported for v1.1.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
 This is a portable application, not an installer. Signed distribution candidates
@@ -86,10 +86,18 @@ preserved within storage limits. Files contain editable experiment state, NOT
 plots, numerical results, simulation state, sweep progress or BER results. Loading
 runs nothing: choose Generate/Evaluate/Solve/Simulate/Run explicitly afterward.
 
-This development build reads UTF-8 JSON schemas 1 and 2 and saves schema 2.
-Schema-1 imports add an empty inert Transient draft. An in-place upgrade warns
-that released OpenECE 1.0.x cannot read schema 2 and offers Save As. The Transient
-page edits configuration only; it does not execute simulations or produce plots.
+OpenECE 1.1 reads UTF-8 JSON schemas 1 and 2 and saves schema 2.
+Schema-1 imports preserve supported editable state and add an empty inert Transient
+draft. An in-place upgrade warns that OpenECE 1.0.x cannot read schema 2 and offers
+Save As. Circuits > Transient provides linear RC/RL/RLC backward-Euler simulation,
+constant/hold/linear sources, explicit initialization, voltage/current plots and
+ordered numerical traces. Run starts fresh; Step advances one interval and pauses;
+Pause/Resume retains execution; Cancel retains an accepted prefix but cannot resume;
+Reset results clears derived data only. Edits to active inputs mark old results stale.
+These are instantaneous SI voltages/currents, not RMS AC phasors. Current is positive
+from the positive terminal to the negative. Choose a small step and compare smaller
+steps: backward Euler is first-order and damps oscillations. No adaptive integration,
+nonlinear devices, impulses, SPICE models or schematic capture are provided.
 Unsupported versions and malformed files
 are rejected without replacing the active project. Unknown optional fields prompt
 a warning because they are discarded on re-save. Files are limited to 8 MiB with
@@ -111,8 +119,10 @@ examples/README.md for actions, analytical expectations and unit conventions.
 Help > About OpenECE identifies the actual built version, MIT license and notices.
 Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
-OpenECE 1.0.1 is published. Physical Windows 11 acceptance passed for the
-exact signed release ZIP; Fedora retains the v1.0 physical baseline and CI coverage; true mixed-monitor DPI and screen-reader behavior
+The package includes thirteen ordinary examples: nine schema-1 projects and four
+schema-2 transient projects. Open them normally and run the analysis explicitly.
+Published OpenECE 1.0.0/1.0.1 packages are immutable. Validation of a new candidate
+must identify its exact ZIP hash; true mixed-monitor DPI and screen-reader behavior
 remain unvalidated. No installer, updater or automatic migration is included.
 See docs/physical-validation.md for the checklist and evidence boundaries.
 

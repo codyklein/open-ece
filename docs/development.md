@@ -56,7 +56,8 @@ See [building](building.md) for all local configurations and [Windows](windows.m
 
 [Historical records](validation-history.md) retain earlier counts and measurements. [v1.0 release readiness](v1-release-readiness.md) records the completed stabilization.
 [Branding acceptance](branding.md) records the released 1.0.1 patch.
-[Transient contracts](transient-analysis.md) guide the approved v1.1 core milestone.
+[Transient contracts](transient-analysis.md) and the [execution architecture](transient-execution.md)
+document the implemented v1.1 model, worker and resource policies.
 
 ## Examples and compatibility
 

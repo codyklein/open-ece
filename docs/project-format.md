@@ -1,4 +1,4 @@
-> This is the unchanged schema-1 compatibility specification. Current development saves schema 2; see [transient-project-format.md](transient-project-format.md). Schema-1 imports remain supported.
+> This is the unchanged schema-1 compatibility specification. OpenECE 1.1 saves schema 2; see [transient-project-format.md](transient-project-format.md). Schema-1 imports remain supported.
 
 # OpenECE project schema 1
 

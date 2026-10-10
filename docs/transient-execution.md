@@ -24,9 +24,14 @@ and 51 accepted intervals. The core's work budget is not a latency bound.
 | 128 | 35.76 | 17.95 / 19.35 | 1.31 | 0.596 / 0.615 |
 | 255 unknowns (separate maximal core case) | 24.51 | 133.66 / 135.34 | 0.93 | 3.87 / 4.06 |
 
-A full 2,000,000-value snapshot payload is about 16.5 MB with timestamps.
-A representative copy took 4.3 ms in both builds. Single-curve render with event
-processing: 4096 samples 1.4–1.7 ms; 16384 samples 2.9–3.2 ms.
+The representative copy benchmark contains 2,000,000 double probe values across
+64 probes and 31,250 timestamps: 16.5 MB of values/timestamp payload on the tested
+64-bit ABI (`sizeof(TimePoint) == 16`). Its copy took 4.3 ms in both Fedora builds.
+This is not a universal maximum: payload is the probe-value count times `sizeof(double)` plus the timestamp count
+times `sizeof(TimePoint)`, before vector/object metadata, allocator overhead,
+spare capacity and solver state. The independent 200,001-timestamp limit can add
+about 3.2 MB to the 16 MB value limit on that ABI. Single-curve rendering with event
+processing took 1.4–1.7 ms for 4096 samples and 2.9–3.2 ms for 16384 samples.
 
 Decision: **worker-owned simulation**, not GUI-thread dense solves. Aim for less
 than 16 ms ordinary GUI callbacks, a 50 ms polling interval, and at most five
@@ -36,10 +41,13 @@ the complete mixed-order numerical trace remains available in a table model.
 The single-slot mailbox replaces older unconsumed updates instead of queuing
 unbounded full traces. No snapshot is made on every integration step.
 
-Numerical state, mailbox and GUI trace can each hold one bounded trace (~50 MB
-steady trace payload; publication can briefly add another ~16.5 MB, and growing
-core vectors have spare capacity). Aim below 128 MB transient execution storage,
-excluding the application baseline; this is a measured budget, not a hard RSS cap. Plot envelope buckets
+Numerical state, mailbox and GUI trace can each retain a bounded trace. Three
+copies of the representative benchmark payload are about 49.5 MB, but this is not
+the worst permitted timestamp arrangement or total process memory. Publication
+can briefly add another snapshot, and growing vectors have spare capacity.
+Aim below 128 MB transient execution storage excluding the application baseline;
+this is a design budget, not an enforced RSS cap or a guarantee for every workload.
+Plot envelope buckets
 bound ordinary samples; every ordered breakpoint side is retained additionally.
 The worker never accesses a widget, borrowed draft or GUI QObject. Control commands
 are checked between atomic initialization/interval operations. Pause/Cancel cannot
@@ -47,8 +55,36 @@ interrupt a dense solve. Shutdown joins that operation before freeing session st
 All rendering and model publication occurs on the GUI thread. A cancelled or failed
 result retains its diagnostic and accepted prefix; no new schema fields store it.
 
-Windows and final responsive-workload measurements are recorded with the milestone
-validation after the controller tests. No Fedora timings are a claim about Windows.
+### Verified Windows measurements
+
+[CI run 38010628714](https://github.com/codyklein/open-ece/actions/runs/38010628714)
+at `5ffb04eb62c35521744db3840aa60dd3ad75287d` recorded these observations on the
+hosted Windows Server 2022 x64 runner, MSVC 2022, Qt 6.8.3 and Qwt 6.3.0. Logs are
+`transient-benchmark-{Debug,Release}.log` and `tests/transient-execution-{Debug,Release}.log`
+in `windows-build-test-logs`. Runner timings vary; this is neither physical Windows
+11 evidence nor a performance promise.
+
+| Case | Debug init ms | Debug p95/max step ms | Release init ms | Release p95/max step ms |
+|---|---:|---:|---:|---:|
+| 2 nodes | 2.281 | 0.098 / 0.221 | 0.282 | 0.002 / 0.045 |
+| 32 nodes | 5.506 | 1.731 / 3.399 | 0.360 | 0.041 / 0.150 |
+| 128 nodes (core-only size) | 84.281 | 41.286 / 41.941 | 2.288 | 1.148 / 1.287 |
+| 255 unknowns (core-only size) | 50.755 | 269.693 / 270.275 | 1.730 | 6.697 / 7.141 |
+
+The same 16.5 MB representative snapshot copied in 5.61 ms Debug / 6.63 ms Release.
+Rendering 4096 samples took 17.52 / 2.23 ms and 16384 samples took 34.47 / 5.16 ms.
+
+| GUI workload (64 probes) | Debug elapsed / max heartbeat gap ms | Release elapsed / max heartbeat gap ms |
+|---|---:|---:|
+| 32-node dense work, 1002 rows | 1953 / 246 | 75 / 24 |
+| 1.6 million probe values, 25002 rows | 5006 / 99 | 219 / 18 |
+
+These results support worker-owned dense solves and bounded publication. They do
+not establish a 16 ms GUI deadline: snapshot rendering/publication can exceed the
+ordinary-callback target, particularly in Debug. Pause/Cancel/shutdown still wait
+for the current atomic operation. Native Fedora controller measurements and
+physical acceptance belong in the [milestone record](transient-execution-acceptance.md);
+no hosted timings replace exact-package physical validation.
 
 ## Creating and running an experiment
 

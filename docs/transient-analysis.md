@@ -1,9 +1,9 @@
 # Linear transient analysis — v1.1 core contract
 
 This is the transient numerical implementation contract. Configuration uses
-[schema-2 persistence](transient-project-format.md). The development GUI now provides
+[schema-2 persistence](transient-project-format.md). OpenECE 1.1 provides
 [owned worker execution and numerical inspection](transient-execution.md). Loading
-a project remains inert. Stable release metadata remains 1.0.1 until release preparation.
+a project remains inert. See [1.1 release notes and acceptance gates](release-notes-v1.1.md).
 
 ## Model and conventions
 
@@ -137,7 +137,7 @@ Diagnostics distinguish malformed definitions/requests, floating topology,
 contradictory storage/source constraints, nonunique source currents, unsupported
 initialization, numerical rank/conditioning/residual failures and resource limits.
 
-## Initial resource policies
+## Execution resource policies
 
 Centralize and test limits before allocation: 128 nodes, 512 components, 64 voltage
 sources, 64 inductors, 255 dynamic MNA unknowns; 4096 points per source and 16384
@@ -150,11 +150,12 @@ representable grid progress and finite arithmetic are additional requirements.
 Bound worst-case dense work by (grid points + twice the source/final boundary
 count + 3) times max(1,unknowns)^3 <= 1e9, checked before a simulation begins.
 This conservatively includes the two right-limit reconciliation solves at each
-breakpoint and up to three initialization solves. These are provisional
-execution policies, not accuracy/latency guarantees; benchmark Fedora and Windows
-before future GUI limits are frozen. Resource failure never truncates a request.
+breakpoint and up to three initialization solves. These are the v1.1 execution
+policies, not accuracy/latency guarantees. [Fedora and Windows benchmarks](transient-execution.md)
+justify worker scheduling; they do not justify relaxing numerical acceptance.
+Resource failure never truncates a request. GUI/storage limits remain separate.
 
-## Tests and deferred integration
+## Tests and compatibility
 
 Analytical RC/RL and all RLC damping regimes, nonzero energy, convergence, damping,
 480+ independent branch-formulated reference steps, source boundaries, continuity, signs,

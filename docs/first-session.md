@@ -35,3 +35,17 @@ BER Cancel retains counts and Run resumes. Editing execution inputs invalidates
 those results. Replace-example/copy-to-Timing actions replace drafts and warn
 before substantial work is discarded. There is no undo or autosave: save work
 before experimenting. [Project documentation](projects.md) explains safety and limits.
+
+For transient circuits, open `examples/transient-rc-step.openece` and select
+**Circuits → Transient**. Run produces a charging curve (~9.93 V at 5 ms); Step
+advances one interval and pauses. The example uses an explicit zero capacitor
+voltage; Operating point instead starts at 10 V. Pause/Resume keeps the run,
+Cancel retains a terminal accepted prefix, and Reset results clears derived data.
+Use the numerical trace for exact timestamps and ordered before/after breakpoint
+rows. Voltages/currents are instantaneous SI quantities, not RMS phasors. See
+[transient examples](../examples/README.md#transient-examples-schema-2).
+
+New saves use schema 2, which OpenECE 1.0.x cannot read. Importing a schema-1 file
+preserves supported editable state and adds an empty Transient workspace. Save As
+to keep the original; an in-place upgrade requires confirmation. Opening either
+schema remains inert.

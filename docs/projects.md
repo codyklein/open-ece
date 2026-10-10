@@ -71,15 +71,16 @@ are project-format errors rather than engineering-draft errors.
 
 ## What is not saved
 
-No samples, FIR outputs/coefficients, FFT/spectrum results, logic evaluation or
+No transient accepted traces/storage/runtime state, samples, FIR outputs/coefficients,
+FFT/spectrum results, logic evaluation or
 truth tables, timing events/traces/runtime state, DC/AC solutions, sweep points or
 progress, link waveforms/decisions, BER counts/progress, plot samples, zoom caches
 or in-progress execution are stored. Seed text and experiment configuration are
 saved; random-engine/cached-Gaussian state is not.
 
 **Open and New leave results empty.** Loading never generates DSP output, evaluates
-logic, runs timing, solves DC/AC, starts an AC sweep, simulates a communications
-link or resumes BER. Choose the workspace's Generate, Evaluate, Solve, Simulate,
+logic, runs timing or transient circuits, solves DC/AC, starts an AC sweep,
+simulates a communications link or resumes BER. Choose the workspace's Generate, Evaluate, Solve, Simulate,
 Run or truth-table command explicitly to recompute results. Invalid drafts must
 be corrected before their engineering operation can run. The initial application
 launch retains its existing generated Signals/DSP example; that is separate from
@@ -132,10 +133,12 @@ There is no cross-process conflict detection, file watching or moved-file search
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
 Server 2022. Checkpoint-4 physical Fedora and Windows 11 retests passed, including
 Windows Signals layout at 150%. True mixed-DPI and native screen-reader behavior
-remain unvalidated. The exact 1.0.0 ZIP passed its final Windows 11 RC smoke
-and is published; the branding patch requires its own bounded candidate checks.
+remain unvalidated. Historical 1.0.x physical acceptance does not establish
+acceptance of the new transient package. Native Fedora transient checks passed;
+the exact signed 1.1.0 Windows candidate requires a new physical check.
 Windows 10 and MinGW may work but are not validated or claimed
-supported for v1.0. Published v1.0.1 Windows packages are signed; development artifacts may be unsigned. There is no installer/updater.
+supported for v1.1. Published v1.0.1 Windows packages are signed; ordinary development
+artifacts may be unsigned. There is no installer/updater.
 See the [physical validation record](physical-validation.md).
 
 ## v1.0 compatibility promise
@@ -149,3 +152,13 @@ remain meaningful. [Release-pinned fixtures](../tests/fixtures/v0.9/README.md)
 verify complete and incomplete v0.9 drafts; [examples](../examples/README.md) are
 editable teaching projects. The 1.0 release is published; this compatibility
 promise and schema semantics also apply to the 1.0.1 branding patch.
+
+## v1.1 compatibility
+
+OpenECE 1.1 supports schema-1 files produced by v0.9 and 1.0.x and preserves their
+supported editable state. It adds an empty inert Transient draft on import and
+saves schema 2. Schema-2 files cannot be opened by OpenECE 1.0.x, even if the
+Transient workspace is empty. Save As retains the old file; upgrading that original
+requires confirmation. There is no schema-1 exporter, arbitrary migration, ABI or
+plugin compatibility promise. Unknown optional fields are still discarded on save
+with a warning. Results and execution state are never persisted.

@@ -1,9 +1,12 @@
 # Example projects
 
 Open these ordinary schema-1/schema-2 `.openece` files with **File → Open**. They contain
-all workspaces, with the relevant domain selected. **Every example opens inertly**:
+all workspaces, with the relevant domain selected. The 1.1 collection has thirteen
+projects: nine schema-1 examples and four schema-2 transient examples. **Every example opens inertly**:
 results appear only after an explicit action. Save As to your own path to keep
 changes. Units and raw draft text are project content; calculated results are not.
+OpenECE 1.1 imports both schemas and saves schema 2, which OpenECE 1.0.x cannot
+read. Save As keeps an older original; loading any example starts no execution.
 
 | File | Action and expected result |
 |---|---|

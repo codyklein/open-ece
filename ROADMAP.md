@@ -164,7 +164,7 @@ autosave, cloud features or general migrations in this milestone.
 No engineering feature, dependency change, UI redesign or schema change is included.
 Keep v1.0.0 immutable. See [branding scope and checks](docs/branding.md).
 
-## v1.1.0 — Linear transient circuit analysis (in development)
+## v1.1.0 — Linear transient circuit analysis (implemented; release preparation)
 
 - Separate Qt-independent transient R/C/L model and backward-Euler MNA engine.
 - Constant/piecewise independent sources, explicit initial conditions and breakpoints.
@@ -173,7 +173,8 @@ Keep v1.0.0 immutable. See [branding scope and checks](docs/branding.md).
 - Owned worker Run/Pause/Resume/Step/Cancel, voltage/current plots and complete trace table.
 - Analytical/reference, workflow, compatibility and packaged-runtime validation.
 
-See [the numerical contract](docs/transient-analysis.md). No nonlinear devices,
+Final signing and exact-artifact Windows 11 acceptance remain release gates.
+See [release notes](docs/release-notes-v1.1.md) and [the numerical contract](docs/transient-analysis.md). No nonlinear devices,
 adaptive integration, schematic capture or unrelated domain expansion.
 
 ## Later — Expand only through useful connections

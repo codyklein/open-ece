@@ -109,7 +109,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.0.1-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.1.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -124,7 +124,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v1.0.1-windows-x86_64/
+OpenECE-v1.1.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -165,7 +165,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v1.0.1-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v1.1.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
@@ -218,12 +218,14 @@ Packages include `examples/` and offline `docs/`, including
 [first-session guidance](first-session.md). Open examples through the normal File
 menu; restoration is inert. The fresh Windows package probe stages, restores and
 round-trips all packaged examples, in addition to its existing persistence test.
-The released 1.0.1 package has nine examples; v1.1 development adds four schema-2
-transient examples and explicitly executes them after checking inert restoration.
+The 1.1.0 candidate contains thirteen examples: nine schema-1 projects and four
+schema-2 transient projects. The runtime probe explicitly executes the transient
+examples only after checking inert restoration.
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 1.0.1 filenames above match the published release and current metadata.
+Version 1.1.0 filenames above match the release-preparation metadata; publication
+and physical acceptance of that exact signed candidate are separate gates.
 OpenECE 1.0.0 and 1.0.1 releases are immutable. The fresh package probe additionally
 checks application/About branding and compares all ten executable-icon frames
 (16–256 px) with the approved ICO. The script checks PE file/product versions.
