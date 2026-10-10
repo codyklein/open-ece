@@ -199,6 +199,12 @@ class TransientGuiTest final : public QObject {
             run->mapTo(scroll->viewport(), run->rect().bottomRight())));
         auto* nodes = control<QTableWidget>(w, "transient_nodes");
         auto* components = control<QTableWidget>(w, "transient_components");
+        if (size.height() >= 940 && font_scale == 1.) {
+            auto* editor_scroll = control<QScrollArea>(w, "transient_editor_scroll");
+            const int bottom =
+                components->mapTo(editor_scroll->viewport(), components->rect().bottomLeft()).y();
+            QVERIFY(bottom < editor_scroll->viewport()->height());
+        }
         QCOMPARE(nodes->rowCount(), 3);
         QCOMPARE(components->rowCount(), 3);
         QVERIFY(nodes->height() < 6 * nodes->verticalHeader()->defaultSectionSize());

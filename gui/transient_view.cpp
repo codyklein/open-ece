@@ -32,6 +32,16 @@ const QStringList kind_labels{"Resistor", "Capacitor", "Inductor", "Voltage Sour
 const QStringList initial_kinds{"capacitor_voltage", "inductor_current"};
 const QStringList initial_labels{"Capacitor voltage", "Inductor current"};
 const QStringList times{"s", "ms", "us", "ns"};
+class TransientEditorScroll final : public QScrollArea {
+  public:
+    using QScrollArea::QScrollArea;
+    QSize sizeHint() const override {
+        // Preserve the compact editor's natural initial height. QScrollArea's
+        // capped/cached hint can otherwise hide even the third component row.
+        return widget() ? widget()->sizeHint() + QSize(2 * frameWidth(), 2 * frameWidth())
+                        : QScrollArea::sizeHint();
+    }
+};
 class TransientSplitterHandle final : public QSplitterHandle {
   public:
     explicit TransientSplitterHandle(QSplitter* parent) : QSplitterHandle(Qt::Vertical, parent) {
@@ -60,6 +70,13 @@ class TransientSplitter final : public QSplitter {
         setOpaqueResize(true);
         setChildrenCollapsible(false);
         fit_handle();
+    }
+    QSize sizeHint() const override {
+        auto size = QSplitter::sizeHint();
+        if (count() == 2)
+            size.setHeight(widget(0)->sizeHint().height() + widget(1)->sizeHint().height() +
+                           handleWidth());
+        return size;
     }
 
   protected:
@@ -576,7 +593,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     auto* split = new TransientSplitter(this);
     split->setObjectName("transient_editor_results_split");
     split->setAccessibleName("Resize transient editor and results");
-    auto* editor_scroll = new QScrollArea(split);
+    auto* editor_scroll = new TransientEditorScroll(split);
     editor_scroll->setObjectName("transient_editor_scroll");
     editor_scroll->setAccessibleName("Transient editor, scroll for additional controls");
     editor_scroll->setFrameShape(QFrame::NoFrame);
@@ -590,7 +607,6 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     // The outer workspace scrolls when these panel minima do not fit.
     split->setStretchFactor(0, 0);
     split->setStretchFactor(1, 1);
-    split->setSizes({360, 300});
     split->setMinimumHeight(300);
     // Other domain pages can make the outer stacked workspace taller than its
     // viewport. Do not stretch this editor/results block into that spare height.
@@ -661,6 +677,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
                  draft_text(m));
     });
     render();
+    split->setSizes({editor_scroll->sizeHint().height(), results->sizeHint().height()});
     bind_tabs(tabs, state_.get().selected_tab,
               {"editor", "sources", "initial_conditions", "probes", "help"});
     restoring_ = false;
