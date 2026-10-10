@@ -693,6 +693,7 @@ void TransientView::change_component_unit(int r, QComboBox* box) {
     if (!value) {
         const QSignalBlocker block(box);
         box->setCurrentText(qt_text(c.value.unit));
+        box->setToolTip(Qt::convertFromPlainText(box->currentText()));
         report("Unit change rejected: component and ALL retained point amplitudes must be valid "
                "and representable. Nothing was converted.");
         return;
@@ -781,6 +782,7 @@ void TransientView::render() {
             if (!v) {
                 const QSignalBlocker b(u);
                 u->setCurrentText(qt_text(q.unit));
+                u->setToolTip(Qt::convertFromPlainText(u->currentText()));
                 report("Initial-value unit conversion rejected; text kept.");
                 return;
             }
@@ -852,6 +854,7 @@ void TransientView::render_points() {
             if (!v) {
                 const QSignalBlocker b(u);
                 u->setCurrentText(qt_text(q.unit));
+                u->setToolTip(Qt::convertFromPlainText(u->currentText()));
                 report("Point-time unit conversion rejected; text kept.");
                 return;
             }

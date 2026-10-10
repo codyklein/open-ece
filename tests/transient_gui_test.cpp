@@ -208,7 +208,13 @@ class TransientGuiTest final : public QObject {
         QVERIFY(!components->horizontalHeader()->stretchLastSection());
         auto* selector = control<QComboBox>(w, "transient_new_kind");
         auto* add = control<QPushButton>(w, "transient_add_component");
-        QCOMPARE(selector->mapTo(&w, QPoint()).y(), add->mapTo(&w, QPoint()).y());
+        // Native styles give combo boxes and buttons different heights.
+        // Their centers share a toolbar row, allowing half a pixel of integer
+        // layout rounding when one native control has an odd height.
+        auto twice_center = [&w](QWidget* widget) {
+            return 2 * widget->mapTo(&w, QPoint()).y() + widget->height();
+        };
+        QVERIFY(std::abs(twice_center(selector) - twice_center(add)) <= 1);
         QVERIFY(selector->width() < components->width());
         selector->setFocus();
         QTRY_COMPARE(QApplication::focusWidget(), selector);
@@ -345,6 +351,14 @@ class TransientGuiTest final : public QObject {
         QCOMPARE(p.circuits.transient, before);
         QCOMPARE(edits.size(), 0);
         QCOMPARE(u->currentText(), QString("V"));
+        QCOMPARE(u->toolTip(), Qt::convertFromPlainText("V"));
+        auto* initial = control<QTableWidget>(view, "transient_initial_conditions");
+        auto* initial_unit = static_cast<QComboBox*>(initial->cellWidget(0, 3));
+        initial_unit->setCurrentText("mV"); // retained invalid text prevents conversion
+        QCOMPARE(initial_unit->currentText(), QString("uV"));
+        QCOMPARE(initial_unit->toolTip(), Qt::convertFromPlainText("uV"));
+        QCOMPARE(p.circuits.transient, before);
+        QCOMPARE(edits.size(), 0);
         auto* kind = static_cast<QComboBox*>(components->cellWidget(0, 2));
         kind->setCurrentText("Current Source");
         QCOMPARE(p.circuits.transient, before);
