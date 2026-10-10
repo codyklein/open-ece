@@ -100,6 +100,10 @@ or stable-version changes.
    Confirm the three-row node/component tables are compact, Run/Step/Cancel/Reset
    are above the editor, and the results area is visible. Drag the vertical splitter
    toward the editor to give the plot/table more space; restore the editor afterward.
+   Keep the mouse held and confirm both panels and the plot resize continuously.
+   Drag to both extremes: neither panel may disappear. Use the editor's local
+   scrollbar to reach its bottom controls when it is compact. Verify the grip
+   remains visible/easy to grab in the active desktop theme.
    Repeat at a smaller window and with enlarged text/125%, 150%, and 200% scaling.
    Required controls must remain reachable using workspace scrolling.
 2. Inspect the compact **Component** selector beside **Add component**. Verify
@@ -117,6 +121,8 @@ or stable-version changes.
    order. Two-line headers show probe names and frozen orientation/units; tooltips
    contain the complete labels. Resize columns and horizontally scroll. Run, pause
    if still active, cancel or reset; editing must still mark retained results stale.
+   While paused, drag the splitter repeatedly: sample count/status must stay fixed,
+   and Step/Resume must still continue the same accepted trace afterward.
 6. Save/reopen in a Unicode/space path. Verify editable state is retained and results
    are empty on load. Resizing the splitter/columns must not add the dirty marker.
    Exit normally. Record platform, scaling, commit and any clipping/focus defects.
@@ -125,5 +131,8 @@ Automated coverage in the existing transient editor/execution suites checks four
 window/font combinations, bounded row growth and final-row scrolling, kind-label
 mapping/round trips, forward/reverse toolbar focus, inert loading, read-only cell
 and trace-header tooltips, resizable columns and unchanged execution workflows.
+Splitter regressions check geometry/plot repaint before mouse release, both
+non-collapsing extremes, editor scrolling, window/font changes and preserved paused
+execution/trace/document state. Qt scale-factor runs complement physical review.
 Physical display/desktop-style review remains required; offscreen checks alone
 are not a claim of mixed-monitor DPI acceptance.

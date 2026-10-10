@@ -9,6 +9,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QSplitter>
 #include <QTableView>
 #include <QTableWidget>
 #include <QTemporaryDir>
@@ -59,10 +60,87 @@ project::ProjectSnapshot project_for(const project::TransientDraft& d) {
     p.selected_domain = "circuits";
     return p;
 }
+class ResizeObserver final : public QObject {
+  public:
+    int resized = 0, painted = 0;
+    bool eventFilter(QObject*, QEvent* event) override {
+        resized += event->type() == QEvent::Resize;
+        painted += event->type() == QEvent::Paint;
+        return false;
+    }
+};
 } // namespace
 class TransientExecutionTests final : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void liveSplitterPreservesExecution() {
+        auto p = project_for(rc());
+        ProjectDocument doc(std::make_unique<ProjectWorkspace>(p, true));
+        auto& workspace = doc.workspace();
+        workspace.resize(1400, 1000);
+        workspace.show();
+        auto* view = control<TransientView>(workspace, "transient_view");
+        click(*view, "transient_step_execution");
+        QTRY_VERIFY_WITH_TIMEOUT(state(*view, "Paused"), 10000);
+        auto accepted = view->result();
+        auto* table = control<QTableView>(*view, "transient_trace");
+        QSignalSpy resets(table->model(), &QAbstractItemModel::modelReset);
+        auto* plot = control<QwtPlot>(*view, "transient_voltage_plot");
+        ResizeObserver observer;
+        plot->canvas()->installEventFilter(&observer);
+        auto* split = control<QSplitter>(*view, "transient_editor_results_split");
+        auto* handle = split->handle(1);
+        QSignalSpy moves(split, &QSplitter::splitterMoved);
+        int minimum = 0, maximum = 0;
+        split->getRange(1, &minimum, &maximum);
+        QVERIFY(maximum - minimum >= 20);
+        split->setSizes({minimum, maximum});
+        QCoreApplication::processEvents();
+        const auto start = handle->mapToGlobal(handle->rect().center());
+        const int start_position = handle->pos().y();
+        const auto initial_sizes = split->sizes();
+        const auto initial_canvas = plot->canvas()->size();
+        observer.resized = observer.painted = 0;
+        QElapsedTimer elapsed;
+        elapsed.start();
+        QTest::mousePress(handle, Qt::LeftButton, Qt::NoModifier, handle->rect().center());
+        for (int fraction : {1, 2, 3}) {
+            const int target = minimum + (maximum - minimum) * fraction / 4;
+            QTest::mouseMove(handle,
+                             handle->mapFromGlobal(start + QPoint(0, target - start_position)));
+            QCoreApplication::processEvents();
+            // Check while the mouse is still held: rubber-band-only resizing
+            // would leave both child geometries unchanged until release.
+            QVERIFY(split->sizes() != initial_sizes);
+            QVERIFY(plot->canvas()->size() != initial_canvas);
+        }
+        QVERIFY(moves.count() >= 3);
+        QVERIFY(observer.resized >= 3);
+        QVERIFY(observer.painted > 0);
+        QVERIFY(elapsed.elapsed() < 2000);
+        QTest::mouseRelease(handle, Qt::LeftButton, Qt::NoModifier, handle->rect().center());
+        QCOMPARE(view->result(), accepted);
+        QCOMPARE(resets.count(), 0);
+        QCOMPARE(workspace.capture(), p);
+        QVERIFY(!doc.dirty());
+        QVERIFY(state(*view, "Paused"));
+        // Neither extreme hides either panel or discards its accepted trace.
+        for (const auto& extreme : {QList<int>{0, 1000}, QList<int>{1000, 0}}) {
+            split->setSizes(extreme);
+            QCoreApplication::processEvents();
+            for (int i = 0; i < 2; ++i)
+                QVERIFY(split->widget(i)->height() >= split->widget(i)->minimumSizeHint().height());
+            QCOMPARE(view->result(), accepted);
+        }
+        click(*view, "transient_step_execution");
+        QTRY_VERIFY_WITH_TIMEOUT(view->result() != accepted, 10000);
+        QVERIFY(state(*view, "Paused"));
+        QVERIFY(view->result()->times.size() > accepted->times.size());
+        click(*view, "transient_run");
+        QTRY_VERIFY_WITH_TIMEOUT(state(*view, "Complete"), 10000);
+        QCOMPARE(workspace.capture(), p);
+        QVERIFY(!doc.dirty());
+    }
     void analyticalRcChargeDischarge_data() {
         QTest::addColumn<bool>("discharge");
         QTest::newRow("charge") << false;

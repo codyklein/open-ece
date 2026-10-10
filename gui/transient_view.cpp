@@ -6,9 +6,11 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScopedValueRollback>
+#include <QScrollArea>
 #include <QSplitter>
 #include <QStyle>
 #include <QTableView>
@@ -30,6 +32,51 @@ const QStringList kind_labels{"Resistor", "Capacitor", "Inductor", "Voltage Sour
 const QStringList initial_kinds{"capacitor_voltage", "inductor_current"};
 const QStringList initial_labels{"Capacitor voltage", "Inductor current"};
 const QStringList times{"s", "ms", "us", "ns"};
+class TransientSplitterHandle final : public QSplitterHandle {
+  public:
+    explicit TransientSplitterHandle(QSplitter* parent) : QSplitterHandle(Qt::Vertical, parent) {
+        setAccessibleName("Resize transient editor and results");
+        setToolTip("Drag to resize the editor and results; both panels remain visible.");
+    }
+
+  protected:
+    void paintEvent(QPaintEvent* event) override {
+        QSplitterHandle::paintEvent(event);
+        // Use the active theme's foreground rather than a fixed light/dark color.
+        QPainter painter(this);
+        auto color = palette().color(QPalette::WindowText);
+        color.setAlpha(180);
+        painter.setPen(QPen(color, 2));
+        const auto center = rect().center();
+        const int half_width = std::min(width() / 4, fontMetrics().height());
+        for (int offset : {-2, 2})
+            painter.drawLine(center.x() - half_width, center.y() + offset, center.x() + half_width,
+                             center.y() + offset);
+    }
+};
+class TransientSplitter final : public QSplitter {
+  public:
+    explicit TransientSplitter(QWidget* parent) : QSplitter(Qt::Vertical, parent) {
+        setOpaqueResize(true);
+        setChildrenCollapsible(false);
+        fit_handle();
+    }
+
+  protected:
+    QSplitterHandle* createHandle() override { return new TransientSplitterHandle(this); }
+    void changeEvent(QEvent* event) override {
+        QSplitter::changeEvent(event);
+        if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
+            fit_handle();
+    }
+
+  private:
+    void fit_handle() {
+        setHandleWidth(std::max(12, fontMetrics().height()));
+        if (count() > 0)
+            widget(0)->setMinimumHeight(6 * fontMetrics().height());
+    }
+};
 QStringList units(const std::string& kind) {
     if (kind == "capacitor")
         return {"F", "mF", "uF", "nF", "pF"};
@@ -526,11 +573,21 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
     // Result navigation is transient, never a schema token or persisted edit.
     auto* results = new QTabWidget(this);
     results->setObjectName("transient_results_tabs");
-    auto* split = new QSplitter(Qt::Vertical, this);
+    auto* split = new TransientSplitter(this);
     split->setObjectName("transient_editor_results_split");
     split->setAccessibleName("Resize transient editor and results");
-    split->addWidget(tabs);
+    auto* editor_scroll = new QScrollArea(split);
+    editor_scroll->setObjectName("transient_editor_scroll");
+    editor_scroll->setAccessibleName("Transient editor, scroll for additional controls");
+    editor_scroll->setFrameShape(QFrame::NoFrame);
+    editor_scroll->setWidgetResizable(true);
+    editor_scroll->setWidget(tabs);
+    editor_scroll->setMinimumHeight(6 * split->fontMetrics().height());
+    split->addWidget(editor_scroll);
     split->addWidget(results);
+    // The editor scrolls instead of clipping its controls at the smaller end.
+    // Results retain their content minimum (tab bar, selector, plot and axes).
+    // The outer workspace scrolls when these panel minima do not fit.
     split->setStretchFactor(0, 0);
     split->setStretchFactor(1, 1);
     split->setSizes({360, 300});

@@ -225,9 +225,51 @@ class TransientGuiTest final : public QObject {
         auto* split = control<QSplitter>(w, "transient_editor_results_split");
         auto before = w.capture();
         QSignalSpy edits(&w, &DraftView::draftEdited);
-        split->setSizes({0, 400});
+        QVERIFY(split->opaqueResize());
+        QVERIFY(!split->childrenCollapsible());
+        QVERIFY(split->handleWidth() >= 12);
+        QVERIFY(split->handleWidth() >= split->fontMetrics().height());
+        QVERIFY(!split->handle(1)->accessibleName().isEmpty());
+        QVERIFY(!split->handle(1)->toolTip().isEmpty());
+        auto* editor_scroll = control<QScrollArea>(w, "transient_editor_scroll");
+        for (const auto& extreme : {QList<int>{0, 400}, QList<int>{400, 0}}) {
+            split->setSizes(extreme);
+            QCoreApplication::processEvents();
+            for (int i = 0; i < 2; ++i) {
+                auto* panel = split->widget(i);
+                QVERIFY(!panel->isHidden());
+                QVERIFY(panel->height() >= panel->minimumSizeHint().height());
+                QVERIFY(panel->height() >= panel->minimumHeight());
+                QVERIFY(split->sizes()[i] > 0);
+                scroll->ensureWidgetVisible(panel);
+                QCoreApplication::processEvents();
+                QVERIFY(scroll->viewport()->rect().intersects(
+                    QRect(panel->mapTo(scroll->viewport(), QPoint()), panel->size())));
+            }
+            // The compact editor is scrollable rather than clipped at its
+            // minimum; the bottom component rows stay reachable.
+            scroll->ensureWidgetVisible(editor_scroll);
+            editor_scroll->verticalScrollBar()->setValue(
+                editor_scroll->verticalScrollBar()->maximum());
+            QCoreApplication::processEvents();
+            const int bottom =
+                components->mapTo(editor_scroll->viewport(), components->rect().bottomLeft()).y();
+            QVERIFY(bottom >= 0);
+            QVERIFY(bottom < editor_scroll->viewport()->height());
+        }
+        w.resize(800, 550);
         QCoreApplication::processEvents();
-        QVERIFY(split->sizes()[1] > 0);
+        for (int i = 0; i < 2; ++i) {
+            QVERIFY(split->sizes()[i] > 0);
+            QVERIFY(split->widget(i)->height() >= split->widget(i)->minimumSizeHint().height());
+        }
+        const auto handle_height = split->handleWidth();
+        auto larger_font = w.font();
+        larger_font.setPointSizeF(larger_font.pointSizeF() * 1.25);
+        w.setFont(larger_font);
+        QCoreApplication::processEvents();
+        QVERIFY(split->handleWidth() >= handle_height);
+        QVERIFY(editor_scroll->minimumHeight() >= 6 * split->fontMetrics().height());
         QCOMPARE(w.capture(), before);
         QCOMPARE(edits.size(), 0);
         inert(w);

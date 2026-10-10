@@ -144,6 +144,11 @@ Historical schema-1 fixtures remain byte-for-byte unchanged.
 ## Editor and trace layout
 
 Execution controls/status remain above a vertically resizable editor/results split.
+The theme-colored grip resizes both panels live during dragging. Neither panel
+can collapse: the editor retains a font-scaled minimum and scrolls internally,
+while results retain their content minimum. The outer workspace also scrolls
+when a small window cannot fit both panels. Resizing only repaints existing plot
+samples; it does not step, reset or recompute the simulation.
 For small circuits the node/component tables fit their row counts rather than
 reserving a large empty editor. Visible editor rows are capped and additional rows
 scroll; heights follow font/style metrics. Columns are manually resizable and may
