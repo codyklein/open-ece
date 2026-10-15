@@ -1,12 +1,14 @@
 # Windows build and portable ZIP
 
-The physically validated v1.0 Windows desktop platform is Windows 11 x86_64,
-Visual Studio 2022 / MSVC, and **Qt 6.8.3**, with **Qwt 6.3.0** and
-**GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses an actual Windows Server 2022 GitHub runner with
-VS 2022; this is MSVC/Windows runtime validation, not a physical Windows 11
-hardware test. The 1.0.0 physical Windows 11 retests and final RC smoke passed.
-The signed 1.0.1 package passed its [bounded Windows 11 checks](branding.md). Windows 10 and MinGW
-may work but are not validated or claimed supported for v1.0. Existing DSP, digital and circuit APIs remain unchanged; v0.9 adds editable project persistence without changing engineering APIs.
+The latest stable release is [OpenECE 1.1.0](https://github.com/codyklein/open-ece/releases/tag/v1.1.0).
+Its signed package passed physical Windows 11 x86_64 acceptance with Smart App
+Control enabled, including transient analysis and project persistence. The build
+uses Visual Studio 2022 / MSVC and **Qt 6.8.3**, with **Qwt 6.3.0**,
+**GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses a
+Windows Server 2022 GitHub runner with VS 2022; that runtime validation is separate
+from physical desktop acceptance. Windows 10 and MinGW may work but are not
+validated or claimed supported for v1.1. True mixed-monitor DPI and native
+screen-reader behavior remain unvalidated.
 
 ## Prerequisites
 
@@ -218,15 +220,16 @@ Packages include `examples/` and offline `docs/`, including
 [first-session guidance](first-session.md). Open examples through the normal File
 menu; restoration is inert. The fresh Windows package probe stages, restores and
 round-trips all packaged examples, in addition to its existing persistence test.
-The 1.1.0 candidate contains thirteen examples: nine schema-1 projects and four
+The 1.1.0 release contains thirteen examples: nine schema-1 projects and four
 schema-2 transient projects. The runtime probe explicitly executes the transient
 examples only after checking inert restoration.
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 1.1.0 filenames above match the release-preparation metadata; publication
-and physical acceptance of that exact signed candidate are separate gates.
-OpenECE 1.0.0 and 1.0.1 releases are immutable. The fresh package probe additionally
+Version 1.1.0 filenames above match the latest stable release. Its exact signed
+ZIP passed physical acceptance and was independently verified after publication.
+Published 1.0.0, 1.0.1 and 1.1.0 tags and assets are immutable; new builds do not
+replace them. The fresh package probe additionally
 checks application/About branding and compares all ten executable-icon frames
 (16–256 px) with the approved ICO. The script checks PE file/product versions.
 The [1.0.1 acceptance record](physical-validation.md#final-101-acceptance-and-publication)

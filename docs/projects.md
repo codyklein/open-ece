@@ -131,13 +131,12 @@ Incidental UI state such as geometry, selection highlights and runtime progress
 remains in memory; recent-project history is the explicit QSettings exception.
 There is no cross-process conflict detection, file watching or moved-file search.
 Windows CI validates MSVC 2022/Qt 6.8.3 and the packaged runtime on hosted Windows
-Server 2022. Checkpoint-4 physical Fedora and Windows 11 retests passed, including
-Windows Signals layout at 150%. True mixed-DPI and native screen-reader behavior
-remain unvalidated. Historical 1.0.x physical acceptance does not establish
-acceptance of the new transient package. Native Fedora transient checks passed;
-the exact signed 1.1.0 Windows candidate requires a new physical check.
-Windows 10 and MinGW may work but are not validated or claimed
-supported for v1.1. Published v1.0.1 Windows packages are signed; ordinary development
+Server 2022. Physical Fedora 44 and Windows 11 acceptance passed for the
+[published 1.1.0 release](https://github.com/codyklein/open-ece/releases/tag/v1.1.0),
+including transient controls, splitter scrolling, persistence and inert loading.
+True mixed-DPI and native screen-reader behavior remain unvalidated.
+Windows 10 and MinGW may work but are not validated or claimed supported for v1.1.
+The published 1.1.0 Windows package uses verified signatures; ordinary development
 artifacts may be unsigned. There is no installer/updater.
 See the [physical validation record](physical-validation.md).
 
