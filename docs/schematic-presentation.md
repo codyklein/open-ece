@@ -42,3 +42,8 @@ belongs to the existing codec. Numerical ranges and solvability remain solver co
 The graph deliberately has no positions, wire segments, graphics objects, selection,
 editing commands or persisted schematic fields. Later layout/rendering can derive
 those from explicit terminal keys without changing the electrical draft.
+
+Checkpoint 2 adds a **separate**, Qt-independent layout layer consuming this unchanged
+graph. See [schematic-layout.md](schematic-layout.md) for geometry, strategies,
+verification, resource limits and review examples. The model itself remains free of
+positions, rendering and persisted schematic state.

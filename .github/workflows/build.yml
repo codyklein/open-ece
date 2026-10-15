@@ -42,6 +42,13 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
           git diff --check
+      - name: Benchmark schematic layout (Release, headless)
+        if: matrix.compiler == 'g++' && matrix.gui == 'OFF' && matrix.sanitize == 'OFF'
+        run: |
+          cmake -S . -B build/layout-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENECE_BUILD_GUI=OFF -DCMAKE_CXX_COMPILER=g++
+          cmake --build build/layout-release --target openece_schematic_benchmark --parallel 4
+          build/layout-release/tests/openece_schematic_benchmark > build/ci/schematic-layout-benchmark.log
+          cat build/ci/schematic-layout-benchmark.log
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -49,6 +56,7 @@ jobs:
           path: |
             build/ci/Testing/
             build/ci/results.xml
+            build/ci/schematic-layout-benchmark.log
             build/ci/example-*.log
             build/ci/compatibility-*.log
             build/ci/branding-*.log
@@ -148,6 +156,13 @@ jobs:
           name: windows-persistence-probe
           path: build/windows/tests/Release/openece_packaged_persistence.exe
           if-no-files-found: error
+      - name: Benchmark schematic layout (Release, headless)
+        shell: pwsh
+        run: |
+          cmake --build build/windows --config Release --target openece_schematic_benchmark --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./build/windows/tests/Release/openece_schematic_benchmark.exe | Tee-Object build/windows/schematic-layout-benchmark.log
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package Release
         id: package
         shell: pwsh
@@ -180,6 +195,7 @@ jobs:
             build/windows/compatibility-*.log
             build/windows/branding-*.log
             build/windows/communications-benchmark.log
+            build/windows/schematic-layout-benchmark.log
             build/windows/transient-benchmark-*.log
             build/windows/tests/transient-execution-*.log
             build/windows/tests/transient-editor-*.log
