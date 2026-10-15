@@ -182,7 +182,7 @@ jobs:
           $oldPath = $env:PATH
           try {
             $env:PATH = "$env:QT_ROOT/bin;$oldPath"
-            $env:QT_QPA_PLATFORM = 'offscreen'
+            $env:QT_QPA_PLATFORM = 'windows'
             ./build/windows/tests/Release/openece_schematic_render_benchmark.exe | Tee-Object build/windows/schematic-render-benchmark.log
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
           } finally { $env:PATH = $oldPath }

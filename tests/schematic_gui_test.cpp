@@ -268,7 +268,9 @@ class SchematicGuiTest final : public QObject {
         const auto cases = q::preview_cases();
         for (int pass = 0; pass < 2; ++pass)
             for (const auto& c : cases) {
-                QVERIFY2(canvas.setGraph(c.graph), qPrintable(canvas.status()));
+                QVERIFY2(canvas.setGraph(c.graph),
+                         qPrintable(c.name + ": " + canvas.status() +
+                                    "; font=" + canvas.font().toString()));
                 QCOMPARE(canvas.diagram()->components.size(), c.graph.components().size());
                 QCOMPARE(canvas.diagram()->nets.size(), c.graph.nodes().size());
                 QVERIFY(canvas.scene()->items().size() < 650);

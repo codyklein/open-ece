@@ -154,8 +154,10 @@ package entry or Azure signing change is added.
 `openece_schematic_gui_tests` covers symbol directions/polarity, measured bounds,
 Unicode/elision/raw metadata, visible crossing gaps, exact selection keys, ground,
 open/dangling terminals, failure clearing, keyboard/zoom/scroll, font changes,
-scene replacement/destruction and maximum bounded layouts. It runs offscreen at
-four scale factors. Optional developer screenshots can be captured by setting
+scene replacement/destruction and maximum bounded layouts. It runs at four scale factors: offscreen on Fedora (fontconfig-backed), and with
+the native Windows backend on MSVC runners. Qt 6.8.3’s Windows offscreen plugin
+does not discover installed system fonts and is unsuitable for these font/paint
+checks; no fonts are bundled or new font dependencies introduced. Optional developer screenshots can be captured by setting
 `OPENECE_SCHEMATIC_SCREENSHOTS` to a directory when running this test executable;
 these are review images, not pixel-golden tests or a product export API.
 
@@ -168,7 +170,8 @@ QT_QPA_PLATFORM=offscreen ./build/render-release/tests/openece_schematic_render_
 
 Configure `build/render-release` as a normal desktop Release build first. Windows
 uses the same target in `build/windows`, `--config Release`, with the Qt runtime on
-PATH. CI records both Fedora and Windows logs. Timings use one warm-up followed by
+PATH and `QT_QPA_PLATFORM=windows` for native font measurement/painting. CI records
+both Fedora and Windows logs. Timings use one warm-up followed by
 five iterations; reported values are medians. They separate measured-font/layout,
 scene replacement (including remeasurement/independent verification), CPU viewport
 painting into an image, zoom+scroll+paint, and net selection/inspection. Peak process
