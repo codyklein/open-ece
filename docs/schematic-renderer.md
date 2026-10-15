@@ -159,7 +159,9 @@ Zoom Out → viewport → entity list → inspector**, then back to Review fixtu
 Shift+Tab reverses that order. The preview-only dropdown uses the same fixed-width
 neutral/blue focus border as the canvas panels. A small preview-only QComboBox
 subclass paints that frame after native painting, without a stylesheet overriding
-complex-control subparts or changing their geometry. It retains its native arrow, text,
+complex-control subparts. Its font-based minimum height reserves space for the
+frame and native text; focus changes never alter its dimensions. It retains its
+native arrow, text,
 popup, Up/Down selection and **Alt+R** label-buddy shortcut. The shared developer
 control in `preview_controls.hpp` is tested directly; it is not a canvas or
 workbench API. Switching fixtures is read-only navigation. Focus does not change

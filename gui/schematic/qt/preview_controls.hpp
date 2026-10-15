@@ -8,6 +8,16 @@ namespace openece::schematic::qt {
 class PreviewFixtureChooser final : public QComboBox {
   public:
     explicit PreviewFixtureChooser(QWidget* parent) : QComboBox(parent) {}
+    QSize sizeHint() const override {
+        auto size = QComboBox::sizeHint();
+        size.setHeight(qMax(size.height(), fontMetrics().height() + 10));
+        return size;
+    }
+    QSize minimumSizeHint() const override {
+        auto size = QComboBox::minimumSizeHint();
+        size.setHeight(qMax(size.height(), fontMetrics().height() + 10));
+        return size;
+    }
 
   protected:
     void paintEvent(QPaintEvent* event) override {

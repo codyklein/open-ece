@@ -42,9 +42,22 @@ std::array<QColor, 4> borderSamples(QWidget* widget) {
     return colors;
 }
 std::array<QColor, 4> dropdownBorderSamples(QComboBox* chooser) {
-    // A native combo paints its arrow too. Capture its complete paint surface,
-    // then sample the border, rather than rendering native subcontrols into strips.
-    const auto image = chooser->grab().toImage();
+    // Inspect the displayed native Windows control without asking the Windows
+    // style to repaint its animated subcontrols into an offscreen widget surface.
+    // Other test backends (including offscreen) use the complete widget surface.
+    QPixmap frame;
+    if (QApplication::platformName() == "windows") {
+        QGuiApplication::sync();
+        auto* window = chooser->window();
+        const auto position = chooser->mapTo(window, QPoint{});
+        frame = chooser->screen()->grabWindow(window->winId(), position.x(), position.y(),
+                                              chooser->width(), chooser->height());
+    } else {
+        frame = chooser->grab();
+    }
+    const auto image = frame.toImage();
+    if (image.isNull())
+        return {};
     const auto inset = qRound(image.devicePixelRatio());
     return {image.pixelColor(image.width() / 2, inset),
             image.pixelColor(image.width() / 2, image.height() - 1 - inset),
