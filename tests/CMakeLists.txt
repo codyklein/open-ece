@@ -1,7 +1,7 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
 find_package(nlohmann_json 3.12 REQUIRED CONFIG)
-add_executable(openece_schematic_tests schematic_projection_test.cpp)
+add_executable(openece_schematic_tests schematic_projection_test.cpp schematic_layout_test.cpp)
 target_link_libraries(openece_schematic_tests PRIVATE openece_schematic_model OpenECE::project GTest::gtest_main openece_options)
 target_compile_definitions(openece_schematic_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 gtest_discover_tests(openece_schematic_tests DISCOVERY_MODE PRE_TEST)
