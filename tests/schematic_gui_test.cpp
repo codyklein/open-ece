@@ -507,12 +507,14 @@ class SchematicGuiTest final : public QObject {
             if (index >= 0)
                 canvas->setGraph(cases.at(static_cast<std::size_t>(index)).graph);
         });
-        QVERIFY(canvas->setGraph(cases.front().graph));
         const auto available = host.screen()->availableGeometry().size() - QSize(40, 60);
         host.resize(QSize(900, 700).boundedTo(available).expandedTo(host.minimumSizeHint()));
         host.show();
         host.activateWindow();
         QVERIFY(QTest::qWaitForWindowActive(&host));
+        // Match preview.cpp: populate only after the viewport has a real layout.
+        // Hidden, not-yet-sized native scroll areas can trigger Qt style warnings.
+        QVERIFY(canvas->setGraph(cases.front().graph));
         auto* tree = canvas->findChild<QTreeWidget*>();
         auto* inspector = canvas->findChild<QPlainTextEdit*>();
         QVERIFY(tree);
