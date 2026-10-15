@@ -6,10 +6,11 @@ No Qt installation, environment configuration or administrator access is needed.
 The optional vc_redist.x64.exe is retained if provided by windeployqt; the
 app-local Release MSVC runtime DLLs allow launch without running its installer.
 
-Desktop validation targets: Fedora 44 and Windows 11 x86_64. Historical 1.0.x
-physical acceptance is recorded separately; native Fedora transient acceptance
-has passed. Every new signed Windows release candidate requires its own physical
-acceptance with Smart App Control enabled. CI is not physical desktop evidence.
+OpenECE 1.1.0 is the latest stable release and passed physical Fedora 44 and
+Windows 11 x86_64 acceptance, including transient analysis. The signed Windows
+ZIP passed with Smart App Control enabled. Every new candidate requires its own
+physical acceptance; CI is not physical desktop evidence.
+https://github.com/codyklein/open-ece/releases/tag/v1.1.0
 Windows 10 and MinGW may work but are not validated or claimed supported for v1.1.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
@@ -26,9 +27,9 @@ https://github.com/codyklein/open-ece
 https://github.com/codyklein/open-ece/blob/main/docs/windows.md
 
 App-local dependencies do not update themselves. Obtain a rebuilt OpenECE ZIP
-when dependency security updates are incorporated. Numerical behavior is the
-same as v0.3: full causal FIR convolution, visible uncompensated group delay,
-and unchanged FFT/window normalization. Digital Logic is a separate two-state
+when dependency security updates are incorporated. Signals/DSP retains full causal
+FIR convolution, visible uncompensated group delay, and unchanged FFT/window
+normalization. Digital Logic is a separate two-state
 domain with separate combinational and timed simulation; it does not change the
 sampled-signal representation.
 
@@ -56,7 +57,8 @@ response is V RMS; transfer gain is 20 log10|H| with a -240 dB display floor.
 Failed frequencies remain visible as diagnostics and plot gaps. Cancel retains
 completed points and explicitly marks unevaluated frequencies. Start with the
 RC low-pass (output across C) or series RLC (output across R) examples.
-No transient, nonlinear, schematic or undo features are included.
+This AC tab is steady-state only. Transient analysis is available separately in
+Circuits > Transient. No nonlinear, schematic or undo features are included.
 See docs/ac-analysis.md in source for phasor signs, limits and numerical policy.
 
 Communications adds an ideal coherent complex-baseband BPSK/QPSK link. Use seeded
@@ -121,7 +123,7 @@ Documentation links to source/test files require the repository checkout; the
 packaged offline guides and examples contain everything needed for a first session.
 The package includes thirteen ordinary examples: nine schema-1 projects and four
 schema-2 transient projects. Open them normally and run the analysis explicitly.
-Published OpenECE 1.0.0/1.0.1 packages are immutable. Validation of a new candidate
+Published OpenECE 1.0.0/1.0.1/1.1.0 packages are immutable. Validation of a new candidate
 must identify its exact ZIP hash; true mixed-monitor DPI and screen-reader behavior
 remain unvalidated. No installer, updater or automatic migration is included.
 See docs/physical-validation.md for the checklist and evidence boundaries.

@@ -21,13 +21,13 @@ libraries with editable experiments, plots and automated numerical tests.
   domains, including incomplete drafts. Results are recomputed explicitly after
   opening; project files do not contain plot or solver caches.
 
-**OpenECE 1.1.0 is in release preparation; it is not yet published.** Transient
-analysis is implemented, with worker-owned Run/Step/Pause/Resume/Cancel controls,
-voltage/current plots, numerical traces and schema-2 projects. See the
-[release notes](docs/release-notes-v1.1.md), [numerical conventions](docs/transient-analysis.md)
-and [execution workflow](docs/transient-execution.md). The latest published release
-remains [1.0.1](https://github.com/codyklein/open-ece/releases/tag/v1.0.1).
-The exact signed 1.1.0 Windows candidate still requires physical acceptance.
+**The latest stable release is [OpenECE 1.1.0](https://github.com/codyklein/open-ece/releases/tag/v1.1.0).**
+Transient analysis includes worker-owned Run/Step/Pause/Resume/Cancel controls,
+voltage/current plots, numerical traces and schema-2 projects. The signed Windows
+package passed physical Windows 11 acceptance with Smart App Control enabled;
+Fedora 44 transient and GUI acceptance also passed. See the published release
+notes, [numerical conventions](docs/transient-analysis.md) and
+[execution workflow](docs/transient-execution.md).
 
 ## Try it
 

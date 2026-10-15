@@ -3,7 +3,7 @@
 This is the transient numerical implementation contract. Configuration uses
 [schema-2 persistence](transient-project-format.md). OpenECE 1.1 provides
 [owned worker execution and numerical inspection](transient-execution.md). Loading
-a project remains inert. See [1.1 release notes and acceptance gates](release-notes-v1.1.md).
+a project remains inert. See the [published 1.1.0 release notes](https://github.com/codyklein/open-ece/releases/tag/v1.1.0).
 
 ## Model and conventions
 
