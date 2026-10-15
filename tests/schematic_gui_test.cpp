@@ -184,6 +184,16 @@ class SchematicGuiTest final : public QObject {
         QApplication::processEvents();
         canvas.fit();
         const auto scale = canvas.view()->transform().m11();
+        const auto* diagram = canvas.diagram();
+        const auto component = diagram->components.front();
+        QTest::mouseClick(canvas.view()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          canvas.view()->mapFromScene(q::point(component.center)));
+        QCOMPARE(canvas.selection(), std::optional<s::LabelOwner>{component.source.key});
+        const auto net = diagram->nets.front();
+        QTest::mouseClick(canvas.view()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          canvas.view()->mapFromScene(q::point(net.anchor)));
+        QCOMPARE(canvas.selection(), std::optional<s::LabelOwner>{net.source.key});
+
         canvas.zoomIn();
         QVERIFY(canvas.view()->transform().m11() > scale);
         canvas.zoomOut();

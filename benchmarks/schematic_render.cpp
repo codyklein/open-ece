@@ -56,7 +56,6 @@ int main(int argc, char** argv) {
             if (!canvas.setDiagram(c.graph, std::get<s::LayoutDiagram>(result), measured.metrics))
                 return 2;
             const auto sm = static_cast<double>(clock.nsecsElapsed()) / 1e6;
-            QApplication::processEvents();
             QImage image(1280, 850, QImage::Format_ARGB32_Premultiplied);
             image.fill(Qt::transparent);
             clock.restart();
@@ -65,6 +64,7 @@ int main(int argc, char** argv) {
                 canvas.view()->render(&p);
             }
             const auto pm = static_cast<double>(clock.nsecsElapsed()) / 1e6;
+            QApplication::processEvents();
             clock.restart();
             canvas.zoomIn();
             canvas.view()->verticalScrollBar()->setValue(40);
@@ -91,7 +91,8 @@ int main(int argc, char** argv) {
         };
         std::cout << std::fixed << std::setprecision(3) << c.name.toStdString()
                   << " layout_font_ms=" << median(layout)
-                  << " scene_replace_verify_ms=" << median(scene) << " paint_ms=" << median(paint)
+                  << " scene_replace_verify_ms=" << median(scene)
+                  << " initial_paint_ms=" << median(paint)
                   << " zoom_pan_paint_ms=" << median(interact)
                   << " net_inspect_ms=" << median(inspect)
                   << " items=" << canvas.scene()->items().size()

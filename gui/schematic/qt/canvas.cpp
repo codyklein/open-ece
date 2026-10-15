@@ -168,7 +168,13 @@ SchematicCanvas::SchematicCanvas(QWidget* parent)
     });
     showFailure("No schematic loaded.");
 }
-SchematicCanvas::~SchematicCanvas() = default;
+SchematicCanvas::~SchematicCanvas() {
+    // Quiesce child selection notifications before member-owned lookup data dies.
+    entities_->blockSignals(true);
+    state_->rows.clear();
+    state_->picks.clear();
+    scene_->clear();
+}
 bool SchematicCanvas::setGraph(const SchematicGraph& graph) {
     const auto measured = measure_labels(graph, font());
     const auto result = layout_schematic(graph, measured.metrics);
