@@ -37,6 +37,8 @@ add_subdirectory(digital)
 add_subdirectory(circuits)
 add_subdirectory(communications)
 add_subdirectory(project)
+# Qt-independent derived presentation data, including in headless builds.
+add_subdirectory(gui/schematic)
 if(OPENECE_BUILD_GUI)
     add_subdirectory(gui)
 endif()
