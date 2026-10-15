@@ -141,7 +141,7 @@ inline std::string label_text(const Component& c, LabelRole role) {
         return text;
     }
     auto text = c.kind;
-    if (c.source)
+    if (c.source && (c.kind == "voltage_source" || c.kind == "current_source"))
         text += " | " + c.source->mode + " (" + std::to_string(c.source->points.size()) +
                 " retained points)";
     for (auto side : {TerminalSide::positive, TerminalSide::negative}) {

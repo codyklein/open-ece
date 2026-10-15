@@ -426,6 +426,24 @@ TEST(SchematicLayout, LabelFormattingExposesIdsAndPreservesEngineeringMetadata) 
     EXPECT_THROW(s::component_label_text(g.components()[0], s::LabelRole::node_name),
                  std::invalid_argument);
 }
+TEST(SchematicLayout, PassiveLabelsDoNotPresentInactiveSourceSettingsAsExcitation) {
+    auto draft = cases::example("transient-rc-step").circuits.transient;
+    draft.components[1].source = {"linear", {{{"invalid", "s"}, " 1e- "}}};
+    const auto graph = s::project_schematic(draft);
+    EXPECT_EQ(s::component_label_text(graph.components()[1], s::LabelRole::component_detail),
+              "resistor");
+    EXPECT_NE(s::component_label_text(graph.components()[0], s::LabelRole::component_detail)
+                  .find("constant"),
+              std::string::npos);
+    const auto d = accepted(graph);
+    exact(graph, d);
+    const auto part = std::find_if(d.components.begin(), d.components.end(), [&](const auto& x) {
+        return x.source.key == graph.components()[1].key;
+    });
+    ASSERT_NE(part, d.components.end());
+    ASSERT_TRUE(part->source.source);
+    EXPECT_EQ(part->source.source->points[0].value_text, " 1e- ");
+}
 TEST(SchematicLayout, BothSchemasAndPinnedInvalidProjectsRemainUnchangedAndOwned) {
     for (const auto* name :
          {"/tests/fixtures/project-v1.openece", "/tests/fixtures/project-v2.openece",

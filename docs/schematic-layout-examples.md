@@ -110,10 +110,10 @@ Label rectangles (origin; width × height):
 - `voltage_source | constant (0 retained points)`: (160,498); 160 × 20.
 - `R [11]`: (584,314); 160 × 20.
 - `1 kohm`: (584,342); 160 × 20.
-- `resistor | constant (0 retained points)`: (584,370); 160 × 20.
+- `resistor`: (584,370); 160 × 20.
 - `C [12]`: (584,570); 160 × 20.
 - `1 uF`: (584,598); 160 × 20.
-- `capacitor | constant (0 retained points)`: (584,626); 160 × 20.
+- `capacitor`: (584,626); 160 × 20.
 - `Ground [0]`: (144,888); 96 × 20.
 - `Supply [1]`: (144,52); 96 × 20.
 - `Output [2]`: (568,470); 96 × 20.
@@ -166,10 +166,10 @@ Label rectangles (origin; width × height):
 - `voltage_source | constant (0 retained points)`: (160,498); 160 × 20.
 - `R [11]`: (584,314); 160 × 20.
 - `100 ohm`: (584,342); 160 × 20.
-- `resistor | constant (0 retained points)`: (584,370); 160 × 20.
+- `resistor`: (584,370); 160 × 20.
 - `L [12]`: (584,570); 160 × 20.
 - `10 mH`: (584,598); 160 × 20.
-- `inductor | constant (0 retained points)`: (584,626); 160 × 20.
+- `inductor`: (584,626); 160 × 20.
 - `Ground [0]`: (144,888); 96 × 20.
 - `Supply [1]`: (144,52); 96 × 20.
 - `Output [2]`: (568,470); 96 × 20.

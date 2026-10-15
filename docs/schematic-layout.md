@@ -39,9 +39,11 @@ and inductors remain their original symbols, never numerical companion elements.
 Names are not identities. Display labels append `[ID]` to original names, including
 empty and duplicate names. `node_label_text()` and `component_label_text()` supply
 the exact strings a caller should measure. Raw original names/values remain intact
-in inspection metadata. Nothing is parsed, normalized or elided. The metrics contain
-default label boxes and optional per-owner/role measured extents; duplicate/unknown
-measurement keys and nonpositive dimensions are rejected. Defaults are nominal
+in inspection metadata. Nothing is parsed, normalized or elided.
+Source-mode labels apply only to independent sources; passive components' inactive
+source records remain in inspection metadata without being described as excitation.
+The metrics contain default label boxes and optional per-owner/role measured extents;
+duplicate/unknown measurement keys and nonpositive dimensions are rejected. Defaults are nominal
 geometry for tests, **not a claim that all Unicode/font combinations fit**. The Qt
 integration must measure using its chosen font and diagram units. It must either
 accommodate full labels or explicitly elide their displayed form while retaining
