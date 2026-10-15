@@ -288,7 +288,7 @@ class SchematicGuiTest final : public QObject {
         host.resize(1200, 850);
         host.show();
         host.activateWindow();
-        QApplication::processEvents();
+        QVERIFY(QTest::qWaitForWindowActive(&host));
         // Host controls retain their own construction order; the canvas's six controls
         // must form a contiguous, correctly ordered group regardless of that order.
         QWidget* before = chooserFirst ? static_cast<QWidget*>(chooser) : following;
@@ -338,6 +338,9 @@ class SchematicGuiTest final : public QObject {
         canvas.resize(1100, 700);
         canvas.show();
         canvas.activateWindow();
+        // Native Windows activation is asynchronous; shortcut delivery requires
+        // an active window, not just QApplication's logical focus widget.
+        QVERIFY(QTest::qWaitForWindowActive(&canvas));
         const auto graph = s::project_schematic(schematic_cases::large_sources());
         QVERIFY(canvas.setGraph(graph));
         QVERIFY(canvas.select(graph.components().front().key));
