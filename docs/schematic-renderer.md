@@ -102,7 +102,11 @@ next replacement/font change or widget destruction.
 - **Zoom In** / **+**, **Zoom Out** / **−**, or **Ctrl+wheel**: bounded zoom.
 - Ordinary wheel: scroll; arrow keys: scroll the focused canvas.
 - Drag empty background: pan. Clicking a component/net inspects it.
-- Tab/Shift+Tab: reach toolbar, viewport, entity list and read-only inspector.
+- Tab: Fit to View → Zoom In → Zoom Out → schematic viewport → entity list →
+  read-only inspector, then the next host control. Shift+Tab follows the exact
+  reverse order. Focusable children are created in this order and linked explicitly
+  after parenting the scroll-area controls, preserving entry/exit when the host
+  adds more controls. Tab leaves the inspector rather than inserting text.
 - Entity list: arrows select components/nets for textual inspection and highlighting.
 
 The entity list provides an ordinary Qt keyboard/textual alternative to interpreting

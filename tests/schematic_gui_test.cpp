@@ -1,6 +1,7 @@
 #include "schematic_layout_cases.hpp"
 #include "schematic_preview_cases.hpp"
 #include <QApplication>
+#include <QComboBox>
 #include <QDir>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
@@ -14,7 +15,9 @@
 #include <QScrollBar>
 #include <QTest>
 #include <QTreeWidget>
+#include <QVBoxLayout>
 #include <QWheelEvent>
+#include <array>
 #include <schematic/qt/canvas.hpp>
 namespace s = openece::schematic;
 namespace q = s::qt;
@@ -233,6 +236,134 @@ class SchematicGuiTest final : public QObject {
         for (auto* button : canvas.findChildren<QPushButton*>())
             QVERIFY(!button->accessibleName().isEmpty());
         QVERIFY(!canvas.findChild<QPlainTextEdit*>()->accessibleName().isEmpty());
+    }
+    void focusTraversal_data() {
+        QTest::addColumn<bool>("chooserFirst");
+        QTest::addColumn<bool>("trailingControl");
+        QTest::newRow("preview-parent") << true << false;
+        QTest::newRow("embedded-with-following-control") << true << true;
+        QTest::newRow("canvas-constructed-first") << false << true;
+    }
+    void focusTraversal() {
+        QFETCH(bool, chooserFirst);
+        QFETCH(bool, trailingControl);
+        QWidget host;
+        auto* layout = new QVBoxLayout(&host);
+        QComboBox* chooser = chooserFirst ? new QComboBox(&host) : nullptr;
+        auto* canvas = new q::SchematicCanvas(&host);
+        if (!chooser)
+            chooser = new QComboBox(&host);
+        layout->addWidget(chooser);
+        layout->addWidget(canvas);
+        auto* following =
+            trailingControl ? new QPushButton("Following host control", &host) : nullptr;
+        if (following)
+            layout->addWidget(following);
+        const auto cases = q::preview_cases();
+        for (const auto& example : cases)
+            chooser->addItem(example.name);
+        connect(chooser, &QComboBox::currentIndexChanged, canvas, [canvas, cases](int index) {
+            canvas->setGraph(cases.at(static_cast<std::size_t>(index)).graph);
+        });
+        auto* tree = canvas->findChild<QTreeWidget*>();
+        auto* inspector = canvas->findChild<QPlainTextEdit*>();
+        QVERIFY(tree);
+        QVERIFY(inspector);
+        QVERIFY(inspector->isReadOnly());
+        QVERIFY(inspector->tabChangesFocus());
+        std::array<QWidget*, 6> order{};
+        for (auto* button : canvas->findChildren<QPushButton*>()) {
+            if (button->text() == "Fit to View")
+                order[0] = button;
+            else if (button->text() == "Zoom In")
+                order[1] = button;
+            else if (button->text() == "Zoom Out")
+                order[2] = button;
+        }
+        order[3] = canvas->view();
+        order[4] = tree;
+        order[5] = inspector;
+        for (auto* widget : order)
+            QVERIFY(widget);
+        host.resize(1200, 850);
+        host.show();
+        host.activateWindow();
+        QApplication::processEvents();
+        // Host controls retain their own construction order; the canvas's six controls
+        // must form a contiguous, correctly ordered group regardless of that order.
+        QWidget* before = chooserFirst ? static_cast<QWidget*>(chooser) : following;
+        QWidget* after = chooserFirst && following ? static_cast<QWidget*>(following) : chooser;
+        for (const auto index : {0, 4, 6}) {
+            chooser->setCurrentIndex(index);
+            const auto& graph = cases.at(static_cast<std::size_t>(index)).graph;
+            // Index zero does not emit currentIndexChanged; subsequent changes use
+            // the same chooser-driven replacement path as the standalone preview.
+            if (index == 0)
+                QVERIFY(canvas->setGraph(graph));
+            QVERIFY(canvas->diagram());
+            QCOMPARE(canvas->diagram()->components.size(), graph.components().size());
+            QVERIFY(canvas->select(graph.components().front().key));
+            const auto selected = canvas->selection();
+            const auto text = canvas->inspection();
+            before->setFocus();
+            QTRY_COMPARE(QApplication::focusWidget(), before);
+            for (auto* expected : order) {
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+                QTRY_COMPARE(QApplication::focusWidget(), expected);
+                QCOMPARE(canvas->selection(), selected);
+            }
+            // Tab leaves the read-only inspector and the canvas, including in the preview host.
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTRY_COMPARE(QApplication::focusWidget(), after);
+            for (auto it = order.rbegin(); it != order.rend(); ++it) {
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+                QTRY_COMPARE(QApplication::focusWidget(), *it);
+                QCOMPARE(canvas->selection(), selected);
+            }
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+            QTRY_COMPARE(QApplication::focusWidget(), before);
+            QCOMPARE(canvas->inspection(), text);
+            tree->setFocus();
+            const auto* first = tree->currentItem();
+            QTest::keyClick(tree, Qt::Key_Down);
+            QVERIFY(tree->currentItem() != first);
+            QVERIFY(canvas->selection() != selected);
+            QTest::keyClick(tree, Qt::Key_Up);
+            QCOMPARE(tree->currentItem(), first);
+            QCOMPARE(canvas->selection(), selected);
+        }
+    }
+    void inspectorKeyboardScrolling() {
+        q::SchematicCanvas canvas;
+        canvas.resize(1100, 700);
+        canvas.show();
+        canvas.activateWindow();
+        const auto graph = s::project_schematic(schematic_cases::large_sources());
+        QVERIFY(canvas.setGraph(graph));
+        QVERIFY(canvas.select(graph.components().front().key));
+        auto* inspector = canvas.findChild<QPlainTextEdit*>();
+        inspector->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), inspector);
+        QVERIFY(inspector->isReadOnly());
+        const auto text = inspector->toPlainText();
+        QTest::keyClick(inspector, Qt::Key_X);
+        QCOMPARE(inspector->toPlainText(), text);
+        QTest::keyClick(inspector, Qt::Key_Home, Qt::ControlModifier);
+        auto* bar = inspector->verticalScrollBar();
+        QTRY_VERIFY(bar->maximum() > 0);
+        QCOMPARE(bar->value(), 0);
+        QTest::keyClick(inspector, Qt::Key_PageDown);
+        QVERIFY(bar->value() > 0);
+        QTest::keyClick(inspector, Qt::Key_PageUp);
+        QCOMPARE(bar->value(), 0);
+        QCOMPARE(inspector->toPlainText(), text);
+        const auto scale = canvas.view()->transform().m11();
+        QTest::keyClick(inspector, Qt::Key_Plus);
+        QVERIFY(canvas.view()->transform().m11() > scale);
+        QTest::keyClick(inspector, Qt::Key_Minus);
+        QVERIFY(std::abs(canvas.view()->transform().m11() - scale) < .001);
+        QTest::keyClick(inspector, Qt::Key_F);
+        QCOMPARE(inspector->toPlainText(), text);
     }
     void retainedSourceMetadata() {
         const auto graph = s::project_schematic(schematic_cases::large_sources());

@@ -105,12 +105,11 @@ struct SchematicCanvas::State {
     std::vector<std::pair<LabelOwner, QTreeWidgetItem*>> rows;
 };
 SchematicCanvas::SchematicCanvas(QWidget* parent)
-    : QWidget(parent), state_(std::make_unique<State>()), scene_(new QGraphicsScene(this)),
-      view_(new NavigationView(scene_, this)), status_(new QLabel(this)),
-      inspector_(new QPlainTextEdit(this)), entities_(new QTreeWidget(this)) {
+    : QWidget(parent), state_(std::make_unique<State>()), scene_(new QGraphicsScene(this)) {
     setObjectName("schematicCanvas");
     auto* layout = new QVBoxLayout(this);
     auto* tools = new QHBoxLayout;
+    std::vector<QWidget*> focusOrder;
     for (const auto& entry : {std::pair{"Fit to View", &SchematicCanvas::fit},
                               {"Zoom In", &SchematicCanvas::zoomIn},
                               {"Zoom Out", &SchematicCanvas::zoomOut}}) {
@@ -118,9 +117,16 @@ SchematicCanvas::SchematicCanvas(QWidget* parent)
         button->setAccessibleName(entry.first);
         connect(button, &QPushButton::clicked, this, entry.second);
         tools->addWidget(button);
+        focusOrder.push_back(button);
     }
     tools->addStretch();
     layout->addLayout(tools);
+    // Keep child creation in visual focus order too, including when a host adds
+    // more controls after constructing this canvas.
+    view_ = new NavigationView(scene_, this);
+    status_ = new QLabel(this);
+    entities_ = new QTreeWidget(this);
+    inspector_ = new QPlainTextEdit(this);
     status_->setTextFormat(Qt::PlainText);
     status_->setWordWrap(true);
     layout->addWidget(status_);
@@ -151,6 +157,11 @@ SchematicCanvas::SchematicCanvas(QWidget* parent)
     view_->setDragMode(QGraphicsView::ScrollHandDrag);
     view_->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     view_->setFocusPolicy(Qt::StrongFocus);
+    // Establish visual order after scroll-area reparenting, independent of the host's
+    // construction order. Qt handles each scroll area's viewport focus delegation.
+    focusOrder.insert(focusOrder.end(), {view_, entities_, inspector_});
+    for (std::size_t i = 1; i < focusOrder.size(); ++i)
+        QWidget::setTabOrder(focusOrder[i - 1], focusOrder[i]);
     auto shortcut = [&](QKeySequence key, auto method) {
         auto* action = new QShortcut(key, this);
         action->setContext(Qt::WidgetWithChildrenShortcut);
