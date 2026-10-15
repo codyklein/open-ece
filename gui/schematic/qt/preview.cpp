@@ -31,16 +31,19 @@ int main(int argc, char** argv) {
     });
     for (const auto& e : examples)
         chooser->addItem(e.name);
-    QObject::connect(chooser, &QComboBox::currentIndexChanged, &window, [&](int index) {
-        if (index >= 0)
-            canvas->setGraph(examples.at(static_cast<std::size_t>(index)).graph);
-    });
+    QObject::connect(chooser, &QComboBox::currentIndexChanged, canvas,
+                     [canvas, examples](int index) {
+                         if (index >= 0)
+                             canvas->setGraph(examples.at(static_cast<std::size_t>(index)).graph);
+                     });
     window.resize(1280, 850);
     window.show();
     canvas->setGraph(examples.front().graph);
     if (app.arguments().contains("--smoke")) {
-        for (const auto& example : examples) {
-            if (!canvas->setGraph(example.graph))
+        for (std::size_t i = 0; i < examples.size(); ++i) {
+            chooser->setCurrentIndex(static_cast<int>(i));
+            if (!canvas->diagram() ||
+                canvas->diagram()->components.size() != examples[i].graph.components().size())
                 return 1;
             QApplication::processEvents();
             QImage image(800, 600, QImage::Format_ARGB32_Premultiplied);
