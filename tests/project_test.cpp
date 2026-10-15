@@ -129,7 +129,7 @@ TEST(Project, HeaderAndVersionAreNotCoerced) {
     j["format"] = "another app";
     rejected(j.dump(), ErrorCode::wrong_format);
     for (auto version :
-         {Json(0), Json(2), Json(-1), Json(std::numeric_limits<std::uint64_t>::max())}) {
+         {Json(0), Json(3), Json(-1), Json(std::numeric_limits<std::uint64_t>::max())}) {
         j = document();
         j["schema_version"] = version;
         rejected(j.dump(), ErrorCode::unsupported_version);

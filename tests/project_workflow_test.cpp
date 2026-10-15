@@ -505,7 +505,7 @@ class ProjectWorkflowTest final : public QObject {
         QCOMPARE(navigated.signals.selected_tab, std::string("response"));
         QCOMPARE(navigated.digital.selected_tab, std::string("timing"));
         QCOMPARE(navigated.digital.timing.selected_tab, std::string("stimuli"));
-        QCOMPARE(navigated.circuits.selected_tab, std::string("ac"));
+        QCOMPARE(navigated.circuits.selected_tab, std::string("transient"));
         QCOMPARE(navigated.circuits.dc.selected_tab, std::string("help"));
         QCOMPARE(navigated.circuits.ac.selected_tab, std::string("help"));
         QCOMPARE(navigated.communications.selected_tab, std::string("help"));

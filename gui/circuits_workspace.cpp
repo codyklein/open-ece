@@ -1,6 +1,7 @@
 #include "circuits_workspace.hpp"
 #include "ac_view.hpp"
 #include "circuits_view.hpp"
+#include "transient_view.hpp"
 #include <QTabWidget>
 #include <QVBoxLayout>
 namespace openece::gui {
@@ -12,8 +13,9 @@ CircuitsWorkspace::CircuitsWorkspace(QWidget* parent, project::CircuitsDraft* dr
     tabs->setObjectName("circuits_analysis_tabs");
     tabs->addTab(new CircuitsView(tabs, &state_.get().dc, inert), "DC");
     tabs->addTab(new AcView(tabs, &state_.get().ac, inert), "AC / Phasors");
+    tabs->addTab(new TransientView(tabs, &state_.get().transient), "Transient");
     layout->addWidget(tabs);
-    bind_tabs(tabs, state_.get().selected_tab, {"dc", "ac"});
+    bind_tabs(tabs, state_.get().selected_tab, {"dc", "ac", "transient"});
     for (auto* view : findChildren<DraftView*>())
         connect(view, &DraftView::draftEdited, this, &DraftView::draftEdited);
     restoring_ = false;

@@ -55,7 +55,7 @@ foreach ($file in $files) {
     }
 }
 Write-Host "Verified package: $($files.Count) files, $($entries.Count) manifest hashes. ZIP SHA-256: $((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant())"
-foreach ($name in @('sine-fft-fir', 'half-adder', 'dff-timing', 'dc-divider', 'rc-lowpass', 'series-rlc', 'bpsk-link-ber', 'qpsk-link-ber', 'intentionally-incomplete')) {
+foreach ($name in @('sine-fft-fir', 'half-adder', 'dff-timing', 'dc-divider', 'rc-lowpass', 'series-rlc', 'bpsk-link-ber', 'qpsk-link-ber', 'intentionally-incomplete', 'transient-rc-step', 'transient-rl-response', 'transient-rlc-damping', 'transient-source-breakpoints')) {
     if (!(Test-Path -LiteralPath "$root/examples/$name.openece")) { throw "Missing example $name" }
 }
 if (!(Test-Path -LiteralPath "$root/docs/first-session.md")) { throw 'Missing first-session guide.' }

@@ -24,6 +24,7 @@ class PreparedProject {
     std::shared_ptr<const int> owner_, save_token_;
     DocumentState state_ = DocumentState::clean;
     bool from_file_ = false;
+    int source_schema_version_ = 2;
 };
 // GUI-thread controller. No dialogs, filesystem preferences, or menu actions.
 // It owns the workspace; any visual host must outlive it, and must not delete the workspace.
@@ -39,6 +40,8 @@ class ProjectDocument final : public QObject {
     ProjectWorkspace& workspace() const { return *workspace_; }
     const QString& path() const { return path_; }
     bool dirty() const { return dirty_; }
+    int source_schema_version() const { return source_schema_version_; }
+    bool requires_schema_upgrade(const QString& destination) const;
     std::uint64_t revision() const { return revision_; }
     std::uint64_t saved_revision() const { return saved_revision_; }
     const std::vector<std::string>& ignored_fields() const { return ignored_; }
@@ -55,7 +58,8 @@ class ProjectDocument final : public QObject {
 
   private:
     ProjectResult<PreparedProject> prepare(project::ProjectSnapshot, QString,
-                                           std::vector<std::string>, DocumentState, bool) const;
+                                           std::vector<std::string>, DocumentState, bool,
+                                           int = 2) const;
     ProjectResult<SaveStatus> save_to(const QString&);
     void bind(ProjectWorkspace*);
     std::unique_ptr<ProjectWorkspace> workspace_;
@@ -67,5 +71,6 @@ class ProjectDocument final : public QObject {
     std::shared_ptr<const int> save_token_ = std::make_shared<const int>(0);
     std::uint64_t revision_ = 0, saved_revision_ = 0;
     bool dirty_ = false;
+    int source_schema_version_ = 2;
 };
 } // namespace openece::gui

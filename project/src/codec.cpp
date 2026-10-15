@@ -94,12 +94,14 @@ template <class T> struct is_vector : std::false_type {};
 template <class T> struct is_vector<std::vector<T>> : std::true_type {};
 struct Budget {
     std::size_t text = 0, rows = 0;
+    int schema_version = 2;
 };
 struct Validator;
 template <class T> void validate(const T&, Rule, const std::string&, Budget&);
 struct Validator {
     std::string path;
     Budget& budget;
+    int schema_version;
     template <class T> void field(const char* name, const T& v, Rule rule = {}) {
         validate(v, rule, child(path, name), budget);
     }
@@ -123,24 +125,25 @@ template <class T> void validate(const T& v, Rule rule, const std::string& path,
         for (std::size_t i = 0; i < v.size(); ++i)
             validate(v[i], {}, child(path, std::to_string(i)), budget);
     } else {
-        Validator a{path, budget};
+        Validator a{path, budget, budget.schema_version};
         detail::fields(a, v, rule);
     }
 }
 struct Reader;
-template <class T> T read(const Json&, Rule, const std::string&, std::vector<std::string>&);
+template <class T> T read(const Json&, Rule, const std::string&, std::vector<std::string>&, int);
 struct Reader {
     const Json& object;
     std::string path;
     std::vector<std::string>& warnings;
     std::set<std::string> seen;
+    int schema_version = 2;
     template <class T> void field(const char* name, T& value, Rule rule = {}) {
         seen.insert(name);
         const auto p = child(path, name);
         auto it = object.find(name);
         if (it == object.end())
             fail(ErrorCode::missing_field, p, "Required field is missing");
-        value = read<T>(*it, rule, p, warnings);
+        value = read<T>(*it, rule, p, warnings, schema_version);
     }
     void finish() {
         for (auto it = object.begin(); it != object.end(); ++it)
@@ -149,7 +152,8 @@ struct Reader {
     }
 };
 template <class T>
-T read(const Json& j, Rule rule, const std::string& path, std::vector<std::string>& warnings) {
+T read(const Json& j, Rule rule, const std::string& path, std::vector<std::string>& warnings,
+       int schema_version) {
     if constexpr (std::is_same_v<T, std::string>) {
         if (!j.is_string())
             fail(ErrorCode::wrong_type, path, "Expected a string");
@@ -167,7 +171,7 @@ T read(const Json& j, Rule rule, const std::string& path, std::vector<std::strin
     else if constexpr (std::is_same_v<T, Reference>) {
         if (j.is_null())
             return std::nullopt;
-        return read<Id>(j, {}, path, warnings);
+        return read<Id>(j, {}, path, warnings, schema_version);
     } else if constexpr (is_vector<T>::value) {
         if (!j.is_array())
             fail(ErrorCode::wrong_type, path, "Expected an array");
@@ -176,14 +180,14 @@ T read(const Json& j, Rule rule, const std::string& path, std::vector<std::strin
         T values;
         values.reserve(j.size());
         for (std::size_t i = 0; i < j.size(); ++i)
-            values.push_back(
-                read<typename T::value_type>(j[i], {}, child(path, std::to_string(i)), warnings));
+            values.push_back(read<typename T::value_type>(j[i], {}, child(path, std::to_string(i)),
+                                                          warnings, schema_version));
         return values;
     } else {
         if (!j.is_object())
             fail(ErrorCode::wrong_type, path, "Expected an object");
         T value;
-        Reader r{j, path, warnings, {}};
+        Reader r{j, path, warnings, {}, schema_version};
         detail::fields(r, value, rule);
         r.finish();
         return value;
@@ -193,6 +197,7 @@ struct Writer;
 template <class T> Json write(const T&, Rule = {});
 struct Writer {
     Json value = Json::object();
+    int schema_version = 2;
     template <class T> void field(const char* name, const T& v, Rule rule = {}) {
         value[name] = write(v, rule);
     }
@@ -379,8 +384,9 @@ void counter(NextId next, const std::unordered_set<std::uint32_t>& ids, const st
         fail(ErrorCode::invalid_allocator_state, path, "Counter must exceed all declared IDs");
 }
 } // namespace
-void validate_structure(const ProjectSnapshot& p) {
+void validate_version(const ProjectSnapshot& p, int version) {
     Budget b;
+    b.schema_version = version;
     validate(p, {}, "", b);
     std::unordered_set<std::uint32_t> ids;
     auto& c = p.digital.combinational;
@@ -411,7 +417,18 @@ void validate_structure(const ProjectSnapshot& p) {
     };
     circuit(p.circuits.dc, "/circuits/dc");
     circuit(p.circuits.ac, "/circuits/ac");
+    if (version >= 2) {
+        circuit(p.circuits.transient, "/circuits/transient");
+        std::size_t points = 0;
+        for (const auto& component : p.circuits.transient.components) {
+            if (component.source.points.size() > limits::transient_total_source_points - points)
+                fail(ErrorCode::resource_limit, "/circuits/transient/components",
+                     "Aggregate source-point limit exceeded (including disabled points)");
+            points += component.source.points.size();
+        }
+    }
 }
+void validate_structure(const ProjectSnapshot& p) { validate_version(p, 2); }
 DecodedProject decode_project(std::string_view utf8) {
     preflight(utf8);
     Accounting sax;
@@ -434,21 +451,26 @@ DecodedProject decode_project(std::string_view utf8) {
     const auto& version = required("schema_version");
     if (!version.is_number_integer())
         fail(ErrorCode::wrong_type, "/schema_version", "Schema version must be an integer");
-    if (version != 1)
+    if (version != 1 && version != 2)
         fail(ErrorCode::unsupported_version, "/schema_version",
-             "Only OpenECE project schema 1 is supported");
+             "Only OpenECE project schemas 1 and 2 are supported");
     DecodedProject result;
-    Reader r{root, "", result.ignored_fields, {"format", "schema_version"}};
+    result.source_schema_version = version.get<int>();
+    Reader r{root,
+             "",
+             result.ignored_fields,
+             {"format", "schema_version"},
+             result.source_schema_version};
     detail::fields(r, result.snapshot);
     r.finish();
-    validate_structure(result.snapshot);
+    validate_version(result.snapshot, result.source_schema_version);
     return result;
 }
 std::string encode_project(const ProjectSnapshot& snapshot) {
     validate_structure(snapshot);
     auto root = write(snapshot);
     root["format"] = "org.openece.project";
-    root["schema_version"] = 1;
+    root["schema_version"] = 2;
     auto result = root.dump(2) + '\n';
     if (result.size() > limits::file_bytes)
         fail(ErrorCode::resource_limit, "", "Encoded project exceeds 8 MiB");

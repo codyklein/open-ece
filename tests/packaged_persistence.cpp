@@ -1,15 +1,19 @@
 // Release-only CI also runs this test beside the extracted runtime. It is not shipped.
 #include "branding.hpp"
 #include "main_window.hpp"
+#include "transient_view.hpp"
 #include <QAction>
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QListWidget>
 #include <QPushButton>
+#include <QTableView>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QThread>
 #include <QTimer>
 #include <iostream>
 #include <qwt_plot.h>
@@ -53,6 +57,11 @@ QByteArray bytes(const QString& path) {
     return f.readAll();
 }
 void inert(ProjectWorkspace& w) {
+    require(w.findChild<QWidget*>("transient_view")
+                    ->findChild<QTableView*>("transient_trace")
+                    ->model()
+                    ->rowCount() == 0,
+            "Restore populated transient trace");
     for (auto* timer : w.findChildren<QTimer*>())
         require(!timer->isActive(), "Restore started execution");
     for (auto name : {"digital_truth_table", "timing_results", "circuit_voltages", "ac_voltages",
@@ -66,11 +75,11 @@ void inert(ProjectWorkspace& w) {
 void packaged_examples() {
     const QDir examples(QCoreApplication::applicationDirPath() + "/examples");
     // In a build-tree CTest run the shipped files are covered by example_gui_test.
-    // In the fresh package job the script requires this directory and all nine files.
+    // In the fresh package job the script requires this directory and all thirteen files.
     if (!examples.exists())
         return;
     const auto files = examples.entryList({"*.openece"}, QDir::Files);
-    require(files.size() == 9, "Unexpected shipped example count");
+    require(files.size() == 13, "Unexpected shipped example count");
     for (const auto& file : files) {
         const auto expected =
             project::decode_project(bytes(examples.filePath(file)).toStdString()).snapshot;
@@ -83,12 +92,28 @@ void packaged_examples() {
                 "Packaged example did not install");
         require(doc.workspace().capture() == expected, "Packaged example lost editable state");
         inert(doc.workspace());
+        if (file.startsWith("transient-")) {
+            auto* view = control<TransientView>(doc.workspace(), "transient_view");
+            control<QPushButton>(doc.workspace(), "transient_run")->click();
+            QElapsedTimer deadline;
+            deadline.start();
+            while ((!view->result() ||
+                    view->result()->status != circuits::transient::Status::complete) &&
+                   deadline.elapsed() < 30000) {
+                QApplication::processEvents();
+                QThread::msleep(1);
+            }
+            require(view->result() &&
+                        view->result()->status == circuits::transient::Status::complete,
+                    "Packaged transient execution failed");
+            require(!doc.dirty(), "Execution dirtied packaged project");
+        }
         require(
             project::decode_project(project::encode_project(doc.workspace().capture())).snapshot ==
                 expected,
             "Packaged example round trip failed");
     }
-    std::cout << "PASS: all nine packaged examples restored inertly and round-tripped.\n";
+    std::cout << "PASS: all thirteen packaged examples restored inertly and round-tripped.\n";
 }
 void run() {
     verify_packaged_branding();
@@ -102,8 +127,26 @@ void run() {
             std::make_unique<QSettings>(temp.filePath("preferences.ini"), QSettings::IniFormat));
     };
     project::ProjectSnapshot expected;
+    auto initial = project::default_project();
+    auto& transient = initial.circuits.transient;
+    transient.nodes = {{{0}, "π ground"}};
+    transient.next_node = {1};
+    transient.next_component = {8};
+    transient.components = {{{7},
+                             "incomplete source",
+                             "voltage_source",
+                             project::Id{55},
+                             std::nullopt,
+                             {" 1e- ", "mV"},
+                             {"constant", {{{"", "ms"}, " odd π "}}}}};
+    transient.initial_conditions = {{project::Id{99}, "inductor_current", {"", "mA"}}};
+    transient.probes = {{"current", "current", project::Id{100}, std::nullopt, project::Id{90}},
+                        {"voltage", "voltage", project::Id{80}, project::Id{81}, std::nullopt}};
+    transient.stop = {" 1e- ", "s"};
     {
-        MainWindow w(std::make_unique<ProjectDocument>(), dialogs, preferences());
+        MainWindow w(
+            std::make_unique<ProjectDocument>(std::make_unique<ProjectWorkspace>(initial, true)),
+            dialogs, preferences());
         w.show();
         QApplication::processEvents();
         control<QPushButton>(w, "generate")->click();

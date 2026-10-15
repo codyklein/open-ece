@@ -1,7 +1,7 @@
 find_package(GTest 1.12 REQUIRED CONFIG)
 include(GoogleTest)
 find_package(nlohmann_json 3.12 REQUIRED CONFIG)
-add_executable(openece_project_tests project_test.cpp example_codec_test.cpp)
+add_executable(openece_project_tests project_test.cpp transient_project_test.cpp example_codec_test.cpp)
 target_compile_definitions(openece_project_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 target_link_libraries(openece_project_tests PRIVATE OpenECE::project nlohmann_json::nlohmann_json GTest::gtest_main openece_options)
 target_compile_definitions(openece_project_tests PRIVATE OPENECE_PROJECT_FIXTURE="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/project-v1.openece")
@@ -10,7 +10,7 @@ add_executable(openece_communications_tests communications_model_test.cpp commun
 target_link_libraries(openece_communications_tests PRIVATE OpenECE::communications GTest::gtest_main openece_options)
 target_include_directories(openece_communications_tests PRIVATE ${PROJECT_SOURCE_DIR}/communications/src)
 gtest_discover_tests(openece_communications_tests DISCOVERY_MODE PRE_TEST)
-add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp)
+add_executable(openece_circuit_tests circuit_test.cpp dc_test.cpp ac_circuit_test.cpp ac_analysis_test.cpp ac_sweep_test.cpp transient_test.cpp)
 target_link_libraries(openece_circuit_tests PRIVATE OpenECE::circuits GTest::gtest_main openece_options)
 target_include_directories(openece_circuit_tests PRIVATE ${PROJECT_SOURCE_DIR}/circuits/src)
 gtest_discover_tests(openece_circuit_tests DISCOVERY_MODE PRE_TEST)
@@ -28,6 +28,20 @@ gtest_discover_tests(openece_timing_tests DISCOVERY_MODE PRE_TEST)
 
 if(OPENECE_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(openece_transient_execution_tests transient_execution_gui_test.cpp)
+    set_target_properties(openece_transient_execution_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_transient_execution_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    target_compile_definitions(openece_transient_execution_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    add_test(NAME transient_execution_workflow COMMAND openece_transient_execution_tests
+        -o "${CMAKE_CURRENT_BINARY_DIR}/transient-execution-$<CONFIG>.log,txt")
+    set_tests_properties(transient_execution_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
+    add_executable(openece_transient_gui_tests transient_gui_test.cpp)
+    set_target_properties(openece_transient_gui_tests PROPERTIES AUTOMOC ON)
+    target_link_libraries(openece_transient_gui_tests PRIVATE openece_workbench Qt6::Test openece_options)
+    target_compile_definitions(openece_transient_gui_tests PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    add_test(NAME transient_editor_workflow COMMAND openece_transient_gui_tests
+        -o "${CMAKE_CURRENT_BINARY_DIR}/transient-editor-$<CONFIG>.log,txt" -o "-,txt")
+    set_tests_properties(transient_editor_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 120)
     add_executable(openece_branding_tests branding_test.cpp)
     set_target_properties(openece_branding_tests PROPERTIES AUTOMOC ON)
     target_link_libraries(openece_branding_tests PRIVATE openece_workbench Qt6::Test openece_options)
@@ -42,7 +56,7 @@ if(OPENECE_BUILD_GUI)
     # Separate examples keep MSVC Debug's complete workspace/plot tests bounded.
     # Qt's Windows logger may not reach CTest stdout; always retain explicit logs.
     set(example_tests)
-    foreach(example IN ITEMS sine-fft-fir half-adder dff-timing dc-divider rc-lowpass series-rlc bpsk-link-ber qpsk-link-ber intentionally-incomplete)
+    foreach(example IN ITEMS sine-fft-fir half-adder dff-timing dc-divider rc-lowpass series-rlc bpsk-link-ber qpsk-link-ber intentionally-incomplete transient-rc-step transient-rl-response transient-rlc-damping transient-source-breakpoints)
         list(APPEND example_tests example_${example})
         add_test(NAME example_${example} COMMAND openece_example_gui_tests "examples:${example}"
             -o "${CMAKE_BINARY_DIR}/example-${example}-$<CONFIG>.log,txt")
@@ -134,7 +148,7 @@ endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
     # These are development/test paths only; the ZIP is tested without them.
-    set_tests_properties(branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
+    set_tests_properties(transient_execution_workflow transient_editor_workflow branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")
 endif()
 
@@ -144,3 +158,10 @@ target_link_libraries(openece_ac_benchmark PRIVATE OpenECE::circuits openece_opt
 
 add_executable(openece_communications_benchmark EXCLUDE_FROM_ALL ../benchmarks/communications_ber.cpp)
 target_link_libraries(openece_communications_benchmark PRIVATE OpenECE::communications openece_options)
+
+add_executable(openece_transient_benchmark EXCLUDE_FROM_ALL ../benchmarks/transient.cpp)
+target_link_libraries(openece_transient_benchmark PRIVATE OpenECE::circuits openece_options)
+if(OPENECE_BUILD_GUI)
+    target_link_libraries(openece_transient_benchmark PRIVATE openece_workbench)
+    target_compile_definitions(openece_transient_benchmark PRIVATE OPENECE_BENCH_GUI QT_NO_KEYWORDS)
+endif()

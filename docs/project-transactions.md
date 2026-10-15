@@ -208,3 +208,14 @@ same-file re-staging, extension/overwrite policy, title/dirty behavior, missing
 recent paths, settings recreation, preference failure, and session destruction.
 No undo/redo, autosave, recovery, startup reopening, external assets or results
 are included in persistence.
+
+## Schema provenance in the transient configuration checkpoint
+
+Decoded schema version belongs to PreparedProject/ProjectDocument, not editable
+ProjectSnapshot. Installation transfers it transactionally. New documents start
+at schema 2; successful saves update it to 2 only after commit. Failed/cancelled
+saves keep provenance and path. ProjectWorkflow checks filesystem path identity
+before overwriting an imported schema-1 original, offering Upgrade original,
+Save As or Cancel; Save As to an alias receives the same warning. Intervening
+saves still invalidate staged candidates, so same-file Open re-reads saved bytes.
+No transient numerical object is constructed during any file operation.

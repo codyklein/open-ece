@@ -306,7 +306,8 @@ class AcGuiTest : public QObject {
         QCOMPARE(nav->count(), 4);
         nav->setCurrentRow(2);
         auto* tabs = window.findChild<QTabWidget*>("circuits_analysis_tabs");
-        QCOMPARE(tabs->count(), 2);
+        QCOMPARE(tabs->count(), 3);
+        QCOMPARE(tabs->tabText(2), QString("Transient"));
         auto* dc = table(window, "circuit_components");
         static_cast<QLineEdit*>(dc->cellWidget(0, 5))->setText("12");
         click(window, "circuit_solve");

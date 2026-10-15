@@ -60,7 +60,7 @@ in the repository, GitHub artifacts or GitHub secrets.
    metadata are separate CI artifacts, not release package contents.
 6. A fresh Windows runner extracts the final ZIP into a Unicode/space path,
    verifies all signatures and manifest hashes, and runs existing packaged
-   startup, branding, persistence and nine-example checks with development paths
+   startup, branding, persistence and thirteen-example checks with development paths
    removed. The separate persistence probe is never distributed.
 
 Local `package.ps1 -QtRoot ...` retains the existing unsigned developer-package
@@ -70,7 +70,7 @@ signature verification to the existing package tests.
 
 ## Evidence and physical acceptance
 
-The signed workflow uploads `OpenECE-v1.0.1-windows-x86_64` containing the inner ZIP
+The signed workflow uploads `OpenECE-v1.1.0-windows-x86_64` containing the inner ZIP
 and its SHA-256 sidecar, plus a separate `windows-signature-verification` artifact
 with before/after inventories, public certificate subjects/thumbprints and hashes.
 The fresh-runner logs include signature verification. Test seams use ephemeral
@@ -98,9 +98,12 @@ or re-sign the artifact after physical acceptance and call it the same candidate
 
 Physical Windows 11 acceptance uses the exact final ZIP with **Smart App Control
 enabled**, in a normal user context without development paths: verify the ZIP
-hash, freshly extract under a Unicode/space path, launch, inspect About 1.0.1,
-run the sine example, save/reopen a project inertly, and exit normally. Also
-inspect the executable/window icon. Windows Server CI is not evidence of desktop
+hash, freshly extract under a Unicode/space path, launch, inspect About 1.1.0,
+and run the transient RC/RL/RLC and source-breakpoint examples. Check Step,
+Pause/Resume, terminal Cancel, ordered before/after samples, current signs, mixed
+probe ordering and live splitter/scrolling. Import a schema-1 file, check upgrade
+protection and Save As schema 2; reopen inertly. Run a short existing-domain smoke
+and exit normally. Also inspect the executable/window icon. Windows Server CI is not evidence of desktop
 Smart App Control acceptance. Signing does not override a malware verdict or
 guarantee every SmartScreen/enterprise-policy decision. Do not disable SAC,
 install a private root, or remove download security markings as a release fix.

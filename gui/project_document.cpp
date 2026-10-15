@@ -38,7 +38,8 @@ void ProjectDocument::bind(ProjectWorkspace* workspace) {
 ProjectResult<PreparedProject> ProjectDocument::prepare(project::ProjectSnapshot snapshot,
                                                         QString path,
                                                         std::vector<std::string> ignored,
-                                                        DocumentState state, bool from_file) const {
+                                                        DocumentState state, bool from_file,
+                                                        int source_schema_version) const {
     try {
         project::validate_structure(snapshot);
     } catch (const project::Error& e) {
@@ -59,6 +60,7 @@ ProjectResult<PreparedProject> ProjectDocument::prepare(project::ProjectSnapshot
         result.ignored_ = std::move(ignored);
         result.state_ = state;
         result.from_file_ = from_file;
+        result.source_schema_version_ = source_schema_version;
         result.owner_ = owner_;
         result.save_token_ = save_token_;
         return result;
@@ -72,7 +74,8 @@ ProjectResult<PreparedProject> ProjectDocument::prepare_open(const QString& path
         return *error;
     auto& decoded = std::get<project::DecodedProject>(loaded);
     return prepare(std::move(decoded.snapshot), absolute_project_path(path),
-                   std::move(decoded.ignored_fields), DocumentState::clean, true);
+                   std::move(decoded.ignored_fields), DocumentState::clean, true,
+                   decoded.source_schema_version);
 }
 ProjectResult<PreparedProject> ProjectDocument::prepare_new(project::ProjectSnapshot snapshot,
                                                             DocumentState state) const {
@@ -104,6 +107,7 @@ ProjectStatus ProjectDocument::install(PreparedProject candidate) {
     workspace_.swap(candidate.workspace_);
     path_.swap(candidate.path_);
     ignored_.swap(candidate.ignored_);
+    source_schema_version_ = candidate.source_schema_version_;
     revision_ = candidate.state_ == DocumentState::dirty ? 1 : 0;
     saved_revision_ = 0;
     dirty_ = candidate.state_ == DocumentState::dirty;
@@ -111,6 +115,9 @@ ProjectStatus ProjectDocument::install(PreparedProject candidate) {
     Q_EMIT workspaceReplaced(candidate.workspace_.get(), workspace_.get());
     Q_EMIT stateChanged();
     return std::monostate{};
+}
+bool ProjectDocument::requires_schema_upgrade(const QString& destination) const {
+    return source_schema_version_ == 1 && equivalent_project_paths(path_, destination);
 }
 ProjectResult<SaveStatus> ProjectDocument::save() { return save_to(path_); }
 ProjectResult<SaveStatus> ProjectDocument::save_as(const std::optional<QString>& destination) {
@@ -147,6 +154,7 @@ ProjectResult<SaveStatus> ProjectDocument::save_to(const QString& destination) {
     saved_revision_ = captured_revision;
     dirty_ = revision_ != captured_revision;
     ignored_.clear();
+    source_schema_version_ = 2;
     Q_EMIT stateChanged();
     return SaveStatus::saved;
 }

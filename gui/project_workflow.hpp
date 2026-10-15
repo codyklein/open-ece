@@ -3,6 +3,7 @@
 #include <QSettings>
 #include <QStringList>
 namespace openece::gui {
+enum class SchemaUpgradeChoice { overwrite, save_as, cancel };
 enum class UnsavedChoice { save, discard, cancel };
 // Dialogs make decisions only; document mutations remain in ProjectWorkflow/ProjectDocument.
 class ProjectDialogs {
@@ -11,6 +12,10 @@ class ProjectDialogs {
     virtual std::optional<QString> choose_open(const QString& current) = 0;
     virtual std::optional<QString> choose_save(const QString& current) = 0;
     virtual bool overwrite(const QString& destination) = 0;
+    // Noninteractive clients must explicitly opt in to an in-place schema upgrade.
+    virtual SchemaUpgradeChoice schema_upgrade(const QString&) {
+        return SchemaUpgradeChoice::cancel;
+    }
     virtual UnsavedChoice unsaved(const QString& name) = 0;
     virtual void error(const ProjectFailure&) = 0;
     virtual void information(const QString& title, const QString& message) = 0;

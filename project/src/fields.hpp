@@ -134,10 +134,58 @@ template <class A, class T> void fields(A& a, T& v, Rule context = {}) {
             a.field("selected_tab", v.selected_tab, choices("editor|single|sweep|help"));
         } else
             a.field("selected_tab", v.selected_tab, choices("editor|help"));
+    } else if constexpr (std::is_same_v<V, TransientSourcePoint>) {
+        a.field("time", v.time, quantity("s|ms|us|ns"));
+        a.field("value_text", v.value_text, text(128));
+    } else if constexpr (std::is_same_v<V, TransientSource>) {
+        a.field("mode", v.mode, choices("constant|hold|linear"));
+        a.field("points", v.points, rows(limits::transient_source_points));
+    } else if constexpr (std::is_same_v<V, TransientComponent>) {
+        a.field("id", v.id);
+        a.field("name", v.name);
+        a.field("kind", v.kind,
+                choices("resistor|capacitor|inductor|voltage_source|current_source"));
+        a.field("positive", v.positive);
+        a.field("negative", v.negative);
+        auto units = v.kind == "capacitor"        ? "F|mF|uF|nF|pF"
+                     : v.kind == "inductor"       ? "H|mH|uH"
+                     : v.kind == "voltage_source" ? "V|mV|uV"
+                     : v.kind == "current_source" ? "A|mA|uA"
+                                                  : "ohm|kohm|Mohm";
+        a.field("value", v.value, quantity(units));
+        a.field("source", v.source);
+    } else if constexpr (std::is_same_v<V, TransientInitialCondition>) {
+        a.field("component", v.component);
+        a.field("kind", v.kind, choices("capacitor_voltage|inductor_current"));
+        a.field("value", v.value, quantity(v.kind == "capacitor_voltage" ? "V|mV|uV" : "A|mA|uA"));
+    } else if constexpr (std::is_same_v<V, TransientProbe>) {
+        a.field("name", v.name);
+        a.field("kind", v.kind, choices("voltage|current"));
+        a.field("positive", v.positive);
+        a.field("negative", v.negative);
+        a.field("component", v.component);
+    } else if constexpr (std::is_same_v<V, TransientDraft>) {
+        a.field("next_node", v.next_node);
+        a.field("next_component", v.next_component);
+        a.field("nodes", v.nodes, rows(limits::circuit_nodes));
+        a.field("components", v.components, rows(limits::circuit_components));
+        a.field("ground", v.ground);
+        a.field("stop", v.stop, quantity("s|ms|us|ns"));
+        a.field("maximum_step", v.maximum_step, quantity("s|ms|us|ns"));
+        a.field("initialization", v.initialization, choices("operating_point|specified_storage"));
+        a.field("initial_conditions", v.initial_conditions,
+                rows(limits::transient_initial_conditions));
+        a.field("probes", v.probes, rows(limits::transient_probes));
+        a.field("display_time_unit", v.display_time_unit, choices("s|ms|us|ns"));
+        a.field("selected_tab", v.selected_tab,
+                choices("editor|sources|initial_conditions|probes|help"));
     } else if constexpr (std::is_same_v<V, CircuitsDraft>) {
         a.field("dc", v.dc);
         a.field("ac", v.ac);
-        a.field("selected_tab", v.selected_tab, choices("dc|ac"));
+        if (a.schema_version >= 2)
+            a.field("transient", v.transient);
+        a.field("selected_tab", v.selected_tab,
+                choices(a.schema_version == 1 ? "dc|ac" : "dc|ac|transient"));
     } else if constexpr (std::is_same_v<V, CommunicationsDraft>) {
         a.field("modulation", v.modulation, choices("bpsk|qpsk"));
         a.field("source_mode", v.source_mode, choices("random|manual"));

@@ -1,5 +1,6 @@
 #include "main_window.hpp"
 #include "project_workspace.hpp"
+#include "transient_view.hpp"
 #include <QAction>
 #include <QCryptographicHash>
 #include <QDir>
@@ -52,7 +53,8 @@ class ExampleGuiTest : public QObject {
         QTest::addColumn<QString>("name");
         for (auto name :
              {"sine-fft-fir", "half-adder", "dff-timing", "dc-divider", "rc-lowpass", "series-rlc",
-              "bpsk-link-ber", "qpsk-link-ber", "intentionally-incomplete"})
+              "bpsk-link-ber", "qpsk-link-ber", "intentionally-incomplete", "transient-rc-step",
+              "transient-rl-response", "transient-rlc-damping", "transient-source-breakpoints"})
             QTest::newRow(name) << QString(name);
     }
     void examples() {
@@ -76,7 +78,42 @@ class ExampleGuiTest : public QObject {
             QVERIFY(restored.capture() == p);
             inert(restored);
         }
-        if (name == "sine-fft-fir") {
+        if (name.startsWith("transient-")) {
+            auto* view = get<TransientView>(w, "transient_view");
+            QVERIFY(!view->result());
+            click(w, "transient_run");
+            QTRY_VERIFY_WITH_TIMEOUT(view->result() && view->result()->status ==
+                                                           circuits::transient::Status::complete,
+                                     20000);
+            const auto r = view->result();
+            QCOMPARE(r->current_time_seconds, name == "transient-rl-response"   ? .0005
+                                              : name == "transient-rlc-damping" ? .0015
+                                                                                : .005);
+            if (name != "transient-source-breakpoints")
+                QVERIFY(r->currents[0].back() < 0);
+            if (name == "transient-rc-step")
+                QVERIFY(std::abs(r->voltages[0].back() - 10 * (1 - std::exp(-5.))) < .005);
+            if (name == "transient-rl-response")
+                QVERIFY(std::abs(r->currents[1].back() - .01 * (1 - std::exp(-5.))) < .000005);
+            if (name == "transient-rlc-damping") {
+                const auto peak = *std::max_element(r->voltages[0].begin(), r->voltages[0].end());
+                QVERIFY(std::abs(peak - 1.72925) < .002);
+            }
+            if (name == "transient-source-breakpoints") {
+                for (auto t : {.001, .003}) {
+                    auto it = std::find_if(r->times.begin(), r->times.end(),
+                                           [&](auto point) { return point.seconds == t; });
+                    QVERIFY(it != r->times.end());
+                    const auto i = static_cast<std::size_t>(it - r->times.begin());
+                    QCOMPARE(r->times[i + 1].seconds, t);
+                    QCOMPARE(r->times[i].side, circuits::transient::SampleSide::before_breakpoint);
+                    QCOMPARE(r->times[i + 1].side,
+                             circuits::transient::SampleSide::after_breakpoint);
+                    QCOMPARE(r->voltages[0][i], r->voltages[0][i + 1]);
+                    QVERIFY(r->voltages[1][i] != r->voltages[1][i + 1]);
+                }
+            }
+        } else if (name == "sine-fft-fir") {
             click(w, "generate");
             QVERIFY2(!status(w, "status").contains("Failed"), qPrintable(status(w, "status")));
             auto curves = get<QwtPlot>(w, "time_plot")->itemList(QwtPlotItem::Rtti_PlotCurve);

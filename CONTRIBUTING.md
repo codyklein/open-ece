@@ -99,7 +99,7 @@ The project currently separates major domains into independent libraries, includ
 
 - Signals / DSP
 - Combinational Digital Logic and Timing/Sequential Logic
-- DC and AC Circuit Analysis
+- DC, AC and linear transient Circuit Analysis
 - Digital Communications
 - Project Persistence (editable state and a private JSON codec)
 
@@ -127,7 +127,7 @@ Changes affecting:
 
 should be validated carefully across supported platforms.
 
-GitHub Actions runs Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan desktop/headless, Windows MSVC 2022 / Qt 6.8.3 Debug/Release, and fresh packaged startup/persistence. Preserve all tests and numerical tolerances. Hosted/offscreen testing does not replace physical platform, keyboard, screen-reader and mixed-DPI review.
+GitHub Actions runs Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan desktop/headless, Windows MSVC 2022 / Qt 6.8.3 Debug/Release, and fresh packaged startup/persistence/examples. Preserve all tests and numerical tolerances. Hosted/offscreen testing does not replace physical platform, keyboard, screen-reader and mixed-DPI review.
 
 ## Formatting and Code Style
 

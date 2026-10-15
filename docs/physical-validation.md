@@ -432,3 +432,21 @@ it does not establish Windows 10, mixed-monitor DPI or screen-reader evidence.
 The subsequent 1.0.1 branding package needs its own exact hash and bounded
 physical review. Use [branding candidate checks](branding.md); no 1.0.1 physical
 acceptance is claimed by the historical v1.0 records here.
+
+
+## Final 1.0.1 acceptance and publication
+
+The user reported acceptance of the exact signed candidate at
+`287972ae8b41a088b2c7cd27edfba66f9edbf992` on physical Windows 11.
+Inner ZIP SHA-256: `b39814c2217920a2bbb8363f1f36e16d4889416321015b72ead2e1db049e9068`.
+Smart App Control remained enabled and allowed launch without warnings. Icons,
+About 1.0.1, sine/FIR generation, Unicode-path Save/reopen and inert loading passed.
+Additional manual Fedora testing was explicitly waived; automated Fedora validation
+passed. No new Windows 10, mixed-monitor or screen-reader evidence is claimed.
+
+All nine accepted-candidate jobs passed in run 37521125062, including signature
+verification for all 24 EXE/DLL files and unchanged vendor binaries. PR #19 merged
+at `476786917acb988f5bbdafbc31c9f184b12ae20f`; post-merge run 37713805294 passed.
+The exact ZIP was published unchanged as v1.0.1 and independently re-downloaded
+and hash-verified. This closes the earlier 1.0.1 pending statements without
+erasing their chronology. Published 1.0.0 and 1.0.1 artifacts remain immutable.
