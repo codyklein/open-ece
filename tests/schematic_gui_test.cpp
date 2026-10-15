@@ -41,6 +41,16 @@ std::array<QColor, 4> borderSamples(QWidget* widget) {
     }
     return colors;
 }
+std::array<QColor, 4> dropdownBorderSamples(QComboBox* chooser) {
+    // A native combo paints its arrow too. Capture its complete paint surface,
+    // then sample the border, rather than rendering native subcontrols into strips.
+    const auto image = chooser->grab().toImage();
+    const auto inset = qRound(image.devicePixelRatio());
+    return {image.pixelColor(image.width() / 2, inset),
+            image.pixelColor(image.width() / 2, image.height() - 1 - inset),
+            image.pixelColor(inset, image.height() / 2),
+            image.pixelColor(image.width() - 1 - inset, image.height() / 2)};
+}
 } // namespace
 class SchematicGuiTest final : public QObject {
     Q_OBJECT
@@ -511,7 +521,7 @@ class SchematicGuiTest final : public QObject {
             if (expected != chooser)
                 QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
             QTRY_COMPARE(QApplication::focusWidget(), expected);
-            for (const auto& color : borderSamples(chooser))
+            for (const auto& color : dropdownBorderSamples(chooser))
                 QCOMPARE(color, QColor(expected == chooser ? "#96aef2" : "#46505e"));
             QCOMPARE(chooser->geometry(), bounds);
             QCOMPARE(chooser->sizeHint(), hint);
@@ -536,7 +546,7 @@ class SchematicGuiTest final : public QObject {
                        .valid();
         };
         QVERIFY(matchesFixture());
-        for (const auto& color : borderSamples(chooser))
+        for (const auto& color : dropdownBorderSamples(chooser))
             QCOMPARE(color, QColor("#96aef2"));
         QTest::keyClick(chooser, Qt::Key_Up);
         QCOMPARE(chooser->currentIndex(), 0);
@@ -549,9 +559,17 @@ class SchematicGuiTest final : public QObject {
                                                             QStyle::SC_ComboBoxArrow, chooser);
         QVERIFY(!arrow.isEmpty());
         QVERIFY(chooser->rect().contains(arrow.center()));
+        auto movePointer = [](QWidget* target, QPoint position) {
+            // The QWidget overload relies on OS cursor movement. QWindow sends a
+            // deterministic Qt mouse event, including on native Windows runners.
+            auto* window = target->window();
+            QTest::mouseMove(window->windowHandle(), target->mapTo(window, position));
+        };
         // Open using the real arrow hit area; Escape must restore usable keyboard focus.
+        movePointer(chooser, arrow.center());
         QTest::mouseClick(chooser, Qt::LeftButton, Qt::NoModifier, arrow.center());
         QTRY_VERIFY(chooser->view()->isVisible());
+        QVERIFY(QTest::qWaitForWindowExposed(chooser->view()->window()));
         QTest::keyClick(chooser->view(), Qt::Key_Escape);
         QTRY_VERIFY(!chooser->view()->isVisible());
         QVERIFY(QTest::qWaitForWindowActive(&host));
@@ -562,17 +580,23 @@ class SchematicGuiTest final : public QObject {
         QTRY_COMPARE(QApplication::focusWidget(), chooser);
 
         // Mouse selection must still replace the fixture through the preview's callback.
+        movePointer(chooser, arrow.center());
         QTest::mouseClick(chooser, Qt::LeftButton, Qt::NoModifier, arrow.center());
         QTRY_VERIFY(chooser->view()->isVisible());
+        QVERIFY(QTest::qWaitForWindowExposed(chooser->view()->window()));
         const auto index = chooser->model()->index(4, chooser->modelColumn());
         chooser->view()->scrollTo(index);
         const auto row = chooser->view()->visualRect(index);
         QVERIFY(!row.isEmpty());
         // Follow the real pointer path from arrow to row. Qt guards against the
         // opening click's release selecting an item before that movement occurs.
-        QTest::mouseMove(chooser->view()->viewport(), row.center());
-        QTest::mouseClick(chooser->view()->viewport(), Qt::LeftButton, Qt::NoModifier,
+        movePointer(chooser->view()->viewport(), row.center());
+        QApplication::processEvents();
+        QTest::mousePress(chooser->view()->viewport(), Qt::LeftButton, Qt::NoModifier,
                           row.center());
+        QTRY_COMPARE(chooser->view()->currentIndex(), index);
+        QTest::mouseRelease(chooser->view()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                            row.center());
         QTRY_COMPARE(chooser->currentIndex(), 4);
         QTRY_VERIFY(!chooser->view()->isVisible());
         QVERIFY(QTest::qWaitForWindowActive(&host));
@@ -582,12 +606,12 @@ class SchematicGuiTest final : public QObject {
         QApplication::processEvents();
         const auto resizedBounds = chooser->geometry();
         canvas->view()->setFocus();
-        for (const auto& color : borderSamples(chooser))
+        for (const auto& color : dropdownBorderSamples(chooser))
             QCOMPARE(color, QColor("#46505e"));
         QTest::keyClick(canvas->view(), Qt::Key_R, Qt::AltModifier);
         QTRY_COMPARE(QApplication::focusWidget(), chooser); // Existing label-buddy shortcut.
         QCOMPARE(chooser->geometry(), resizedBounds);
-        for (const auto& color : borderSamples(chooser))
+        for (const auto& color : dropdownBorderSamples(chooser))
             QCOMPARE(color, QColor("#96aef2"));
         option.initFrom(chooser);
         option.currentText = chooser->currentText();
