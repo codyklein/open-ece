@@ -1,4 +1,5 @@
 #include "canvas.hpp"
+#include "preview_controls.hpp"
 #include "schematic_preview_cases.hpp"
 #include <QApplication>
 #include <QComboBox>
@@ -16,7 +17,7 @@ int main(int argc, char** argv) {
     window.setWindowTitle(
         "OpenECE — read-only schematic developer preview (not a product workspace)");
     auto* layout = new QVBoxLayout(&window);
-    auto* chooser = new QComboBox(&window);
+    auto* chooser = openece::schematic::qt::make_preview_fixture_chooser(&window);
     auto* label = new QLabel("&Review fixture:", &window);
     label->setBuddy(chooser);
     layout->addWidget(label);

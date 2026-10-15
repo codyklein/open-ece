@@ -1,5 +1,6 @@
 #include "schematic_layout_cases.hpp"
 #include "schematic_preview_cases.hpp"
+#include <QAbstractItemView>
 #include <QAbstractScrollArea>
 #include <QApplication>
 #include <QComboBox>
@@ -9,17 +10,21 @@
 #include <QGraphicsSimpleTextItem>
 #include <QGraphicsView>
 #include <QImage>
+#include <QLabel>
 #include <QPainter>
 #include <QPainterPathStroker>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScreen>
 #include <QScrollBar>
+#include <QStyleOptionComboBox>
 #include <QTest>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWheelEvent>
 #include <array>
 #include <schematic/qt/canvas.hpp>
+#include <schematic/qt/preview_controls.hpp>
 namespace s = openece::schematic;
 namespace q = s::qt;
 namespace {
@@ -460,6 +465,142 @@ class SchematicGuiTest final : public QObject {
             verifyDecoration(outside);
             if (QTest::currentTestFailed())
                 return;
+        }
+    }
+    void previewDropdownFocusAndSelection() {
+        QWidget host;
+        auto* layout = new QVBoxLayout(&host);
+        auto* chooser = q::make_preview_fixture_chooser(&host);
+        auto* label = new QLabel("&Review fixture:", &host);
+        label->setBuddy(chooser);
+        layout->addWidget(label);
+        layout->addWidget(chooser);
+        auto* canvas = new q::SchematicCanvas(&host);
+        layout->addWidget(canvas);
+        const auto cases = q::preview_cases();
+        for (const auto& example : cases)
+            chooser->addItem(example.name);
+        connect(chooser, &QComboBox::currentIndexChanged, canvas, [canvas, cases](int index) {
+            if (index >= 0)
+                canvas->setGraph(cases.at(static_cast<std::size_t>(index)).graph);
+        });
+        QVERIFY(canvas->setGraph(cases.front().graph));
+        const auto available = host.screen()->availableGeometry().size() - QSize(40, 60);
+        host.resize(QSize(900, 700).boundedTo(available).expandedTo(host.minimumSizeHint()));
+        host.show();
+        host.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&host));
+        auto* tree = canvas->findChild<QTreeWidget*>();
+        auto* inspector = canvas->findChild<QPlainTextEdit*>();
+        QVERIFY(tree);
+        QVERIFY(inspector);
+        std::vector<QWidget*> order{chooser};
+        for (auto* button : canvas->findChildren<QPushButton*>())
+            order.push_back(button);
+        order.insert(order.end(), {canvas->view(), tree, inspector});
+        QCOMPARE(order.size(), std::size_t(7));
+        QCOMPARE(label->buddy(), chooser);
+        QCOMPARE(label->text(), QString("&Review fixture:"));
+        QCOMPARE(chooser->accessibleName(), QString("Review fixture"));
+        chooser->setFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), chooser);
+        const auto bounds = chooser->geometry();
+        const auto hint = chooser->sizeHint();
+        const auto diagram = *canvas->diagram();
+        for (auto* expected : order) {
+            if (expected != chooser)
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTRY_COMPARE(QApplication::focusWidget(), expected);
+            for (const auto& color : borderSamples(chooser))
+                QCOMPARE(color, QColor(expected == chooser ? "#96aef2" : "#46505e"));
+            QCOMPARE(chooser->geometry(), bounds);
+            QCOMPARE(chooser->sizeHint(), hint);
+            QVERIFY(*canvas->diagram() == diagram);
+        }
+        QTest::keyClick(inspector, Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), chooser);
+        QTest::keyClick(chooser, Qt::Key_Tab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), inspector);
+        for (auto it = order.rbegin(); it != order.rend(); ++it) {
+            if (it != order.rbegin())
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+            QTRY_COMPARE(QApplication::focusWidget(), *it);
+        }
+        QTest::keyClick(chooser, Qt::Key_Down);
+        QCOMPARE(chooser->currentIndex(), 1);
+        auto matchesFixture = [&] {
+            const auto& graph = cases.at(static_cast<std::size_t>(chooser->currentIndex())).graph;
+            return canvas->diagram() &&
+                   s::verify_layout(graph, *canvas->diagram(),
+                                    q::measure_labels(graph, canvas->font()).metrics)
+                       .valid();
+        };
+        QVERIFY(matchesFixture());
+        for (const auto& color : borderSamples(chooser))
+            QCOMPARE(color, QColor("#96aef2"));
+        QTest::keyClick(chooser, Qt::Key_Up);
+        QCOMPARE(chooser->currentIndex(), 0);
+        QVERIFY(matchesFixture());
+
+        QStyleOptionComboBox option;
+        option.initFrom(chooser);
+        option.currentText = chooser->currentText();
+        const auto arrow = chooser->style()->subControlRect(QStyle::CC_ComboBox, &option,
+                                                            QStyle::SC_ComboBoxArrow, chooser);
+        QVERIFY(!arrow.isEmpty());
+        QVERIFY(chooser->rect().contains(arrow.center()));
+        // Open using the real arrow hit area; Escape must restore usable keyboard focus.
+        QTest::mouseClick(chooser, Qt::LeftButton, Qt::NoModifier, arrow.center());
+        QTRY_VERIFY(chooser->view()->isVisible());
+        QTest::keyClick(chooser->view(), Qt::Key_Escape);
+        QTRY_VERIFY(!chooser->view()->isVisible());
+        QVERIFY(QTest::qWaitForWindowActive(&host));
+        QTRY_COMPARE(QApplication::focusWidget(), chooser);
+        QTest::keyClick(chooser, Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), order[1]);
+        QTest::keyClick(order[1], Qt::Key_Tab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), chooser);
+
+        // Mouse selection must still replace the fixture through the preview's callback.
+        QTest::mouseClick(chooser, Qt::LeftButton, Qt::NoModifier, arrow.center());
+        QTRY_VERIFY(chooser->view()->isVisible());
+        const auto index = chooser->model()->index(4, chooser->modelColumn());
+        chooser->view()->scrollTo(index);
+        const auto row = chooser->view()->visualRect(index);
+        QVERIFY(!row.isEmpty());
+        // Follow the real pointer path from arrow to row. Qt guards against the
+        // opening click's release selecting an item before that movement occurs.
+        QTest::mouseMove(chooser->view()->viewport(), row.center());
+        QTest::mouseClick(chooser->view()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          row.center());
+        QTRY_COMPARE(chooser->currentIndex(), 4);
+        QTRY_VERIFY(!chooser->view()->isVisible());
+        QVERIFY(QTest::qWaitForWindowActive(&host));
+        QVERIFY(matchesFixture());
+        host.resize(
+            QSize(host.width() - 60, host.height() - 30).expandedTo(host.minimumSizeHint()));
+        QApplication::processEvents();
+        const auto resizedBounds = chooser->geometry();
+        canvas->view()->setFocus();
+        for (const auto& color : borderSamples(chooser))
+            QCOMPARE(color, QColor("#46505e"));
+        QTest::keyClick(canvas->view(), Qt::Key_R, Qt::AltModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), chooser); // Existing label-buddy shortcut.
+        QCOMPARE(chooser->geometry(), resizedBounds);
+        for (const auto& color : borderSamples(chooser))
+            QCOMPARE(color, QColor("#96aef2"));
+        option.initFrom(chooser);
+        option.currentText = chooser->currentText();
+        const auto text = chooser->style()->subControlRect(QStyle::CC_ComboBox, &option,
+                                                           QStyle::SC_ComboBoxEditField, chooser);
+        QVERIFY(text.width() >=
+                QFontMetrics(chooser->font()).horizontalAdvance(option.currentText));
+        QVERIFY(text.height() >= QFontMetrics(chooser->font()).height());
+        QVERIFY(chooser->rect().contains(text));
+        const auto directory = qEnvironmentVariable("OPENECE_SCHEMATIC_SCREENSHOTS");
+        if (!directory.isEmpty()) {
+            QDir().mkpath(directory);
+            QVERIFY(host.grab().save(directory + "/preview-dropdown-focused.png"));
         }
     }
     void inspectorKeyboardScrolling() {

@@ -154,6 +154,15 @@ in. The chooser provides divider, RC, RL, RLC, Wheatstone, disconnected, incompl
 (long Unicode/markup-like names) and maximum-density fixtures. All use the actual
 reusable canvas. `--smoke` constructs and paints all eight fixtures then exits.
 
+In the preview, Tab cycles through **Review fixture → Fit to View → Zoom In →
+Zoom Out → viewport → entity list → inspector**, then back to Review fixture.
+Shift+Tab reverses that order. The preview-only dropdown uses the same fixed-width
+neutral/blue focus border as the canvas panels. It retains its native arrow, text,
+popup, Up/Down selection and **Alt+R** label-buddy shortcut. The shared developer
+control in `preview_controls.hpp` is tested directly; it is not a canvas or
+workbench API. Switching fixtures is read-only navigation. Focus does not change
+the selected fixture.
+
 CI also uploads `OpenECE-schematic-developer-preview`, containing the **unsigned
 non-shipping preview EXE**. To review without a Qt SDK, extract the ordinary unsigned
 Windows CI package from the **same run** into a separate developer review directory,
