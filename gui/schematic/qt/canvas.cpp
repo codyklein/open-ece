@@ -24,6 +24,14 @@ namespace {
 const QColor background("#1d2229"), foreground("#e3e8f0"), wireColor("#aebfce"),
     highlight("#96aef2"), warning("#f2bb72");
 QString literalTooltip(const QString& s) { return "<pre>" + s.toHtmlEscaped() + "</pre>"; }
+void setPanelFocusBorder(QWidget* panel, const char* name) {
+    panel->setObjectName(name);
+    // Reserve the same frame width in both states: focus never resizes the viewport.
+    // Target only this scroll-area frame, not its content, header or scrollbars.
+    panel->setStyleSheet(QString("QAbstractScrollArea#%1 { border: 3px solid #46505e; }"
+                                 "QAbstractScrollArea#%1:focus { border-color: %2; }")
+                             .arg(panel->objectName(), highlight.name()));
+}
 class NavigationView final : public QGraphicsView {
   public:
     using QGraphicsView::QGraphicsView;
@@ -147,7 +155,9 @@ SchematicCanvas::SchematicCanvas(QWidget* parent)
     split->setStretchFactor(1, 1);
     split->setSizes({850, 300});
     layout->addWidget(split, 1);
-    view_->setObjectName("schematicViewport");
+    setPanelFocusBorder(view_, "schematicViewport");
+    setPanelFocusBorder(entities_, "schematicEntities");
+    setPanelFocusBorder(inspector_, "schematicInspector");
     view_->setAccessibleName("Read-only circuit schematic");
     view_->setAccessibleDescription(
         "Ctrl+wheel or plus/minus to zoom; F to fit; drag background to pan. Arrow keys scroll. "

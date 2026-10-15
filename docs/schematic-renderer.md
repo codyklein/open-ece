@@ -109,6 +109,17 @@ next replacement/font change or widget destruction.
   adds more controls. Tab leaves the inspector rather than inserting text.
 - Entity list: arrows select components/nets for textual inspection and highlighting.
 
+The viewport, entity list and read-only inspector each reserve a three-logical-pixel
+frame. The frame is neutral (`#46505e`) when unfocused and accent blue (`#96aef2`)
+when focused, including keyboard focus. The outline surrounds the entire control;
+electrical selection remains inside it as a row highlight or selected diagram paths.
+Moving focus does not create, clear or change an electrical selection. Local,
+object-scoped Qt `:focus` styling follows the scroll-area owner's focus (its viewport
+delegates focus to that owner). Constant frame width prevents focus-induced layout,
+scrollbar or transform changes. No scene items, global styles or focus filters are
+involved. Rendered edge-color tests check all three outlines and their removal
+with no/component/net selection, fixture replacement, resizing and four Qt scales.
+
 The entity list provides an ordinary Qt keyboard/textual alternative to interpreting
 plot pixels. Primary controls and views have accessible names/descriptions. This is
 not a claim of native screen-reader certification. Fit is explicit and initial;
@@ -202,7 +213,10 @@ On Fedora and Windows:
    cross, missing ground, invalid `1e-`, Unicode, literal markup and full long names.
    Tooltips/inspector must expose original data, not an elided replacement.
 5. Keyboard: Tab/Shift+Tab, toolbar activation, F/+/- and arrows; use entity-list
-   selection and inspector without a mouse. Check visible native focus/no traps.
+   selection and inspector without a mouse. Confirm the blue perimeter moves between
+   viewport, entity list and inspector, disappears from the previous panel, and stays
+   distinct from the retained selected row/net. Repeat after replacement/resizing;
+   check inspector scrolling, visible toolbar focus and no traps.
 6. Resize normally and small; test 100/125/150/200% and enlarged text as practical.
    Confirm usable scrolling, non-overlapping labels and visible crossing convention
    at normal zoom. True mixed-monitor DPI remains separate physical evidence.

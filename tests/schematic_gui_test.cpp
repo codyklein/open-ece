@@ -1,5 +1,6 @@
 #include "schematic_layout_cases.hpp"
 #include "schematic_preview_cases.hpp"
+#include <QAbstractScrollArea>
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
@@ -21,6 +22,21 @@
 #include <schematic/qt/canvas.hpp>
 namespace s = openece::schematic;
 namespace q = s::qt;
+namespace {
+// Inspect the actual frame paint at all four edges, independent of scene pixels,
+// native-theme content, widget size and device-pixel ratio. No screenshot golden.
+std::array<QColor, 4> borderSamples(QWidget* widget) {
+    const auto w = widget->width(), h = widget->height();
+    const std::array<QRect, 4> edges{QRect(0, 0, w, 3), QRect(0, h - 3, w, 3), QRect(0, 0, 3, h),
+                                     QRect(w - 3, 0, 3, h)};
+    std::array<QColor, 4> colors;
+    for (std::size_t i = 0; i < edges.size(); ++i) {
+        const auto image = widget->grab(edges[i]).toImage();
+        colors[i] = image.pixelColor(image.width() / 2, image.height() / 2);
+    }
+    return colors;
+}
+} // namespace
 class SchematicGuiTest final : public QObject {
     Q_OBJECT
   private Q_SLOTS:
@@ -331,6 +347,119 @@ class SchematicGuiTest final : public QObject {
             QTest::keyClick(tree, Qt::Key_Up);
             QCOMPARE(tree->currentItem(), first);
             QCOMPARE(canvas->selection(), selected);
+        }
+    }
+    void visibleFocusDecoration_data() {
+        QTest::addColumn<int>("selectionKind");
+        QTest::newRow("unselected") << 0;
+        QTest::newRow("component-selected") << 1;
+        QTest::newRow("net-selected") << 2;
+    }
+    void visibleFocusDecoration() {
+        QFETCH(int, selectionKind);
+        QWidget host;
+        auto palette = host.palette();
+        palette.setColor(QPalette::Window, QColor("#1d2229"));
+        palette.setColor(QPalette::Base, QColor("#1d2229"));
+        palette.setColor(QPalette::Text, QColor("#e3e8f0"));
+        host.setPalette(palette);
+        auto* layout = new QVBoxLayout(&host);
+        auto* outside = new QPushButton("Host control", &host);
+        layout->addWidget(outside);
+        auto* canvas = new q::SchematicCanvas(&host);
+        layout->addWidget(canvas);
+        auto* tree = canvas->findChild<QTreeWidget*>();
+        auto* inspector = canvas->findChild<QPlainTextEdit*>();
+        QVERIFY(tree);
+        QVERIFY(inspector);
+        const std::array<QAbstractScrollArea*, 3> panels{canvas->view(), tree, inspector};
+        std::vector<QWidget*> order;
+        for (auto* button : canvas->findChildren<QPushButton*>())
+            order.push_back(button);
+        QCOMPARE(order.size(), std::size_t(3));
+        order.insert(order.end(), panels.begin(), panels.end());
+        host.resize(1200, 850);
+        host.show();
+        host.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&host));
+        const auto cases = q::preview_cases();
+        for (const auto fixture : {0, 6}) {
+            QVERIFY(canvas->setGraph(cases.at(static_cast<std::size_t>(fixture)).graph));
+            // Exercise replacement plus reduced-window layout without changing the model.
+            host.resize(fixture == 0 ? QSize(1200, 850) : QSize(760, 520));
+            QApplication::processEvents();
+            if (selectionKind == 1)
+                QVERIFY(canvas->select(canvas->diagram()->components.front().source.key));
+            else if (selectionKind == 2)
+                QVERIFY(canvas->select(canvas->diagram()->nets.front().source.key));
+            const auto selected = canvas->selection();
+            const auto text = canvas->inspection();
+            const auto diagram = *canvas->diagram();
+            canvas->zoomIn();
+            canvas->zoomIn();
+            canvas->view()->horizontalScrollBar()->setValue(
+                canvas->view()->horizontalScrollBar()->maximum() / 2);
+            canvas->view()->verticalScrollBar()->setValue(
+                canvas->view()->verticalScrollBar()->maximum() / 2);
+            outside->setFocus();
+            QApplication::processEvents();
+            const auto transform = canvas->view()->transform();
+            const QPoint scroll(canvas->view()->horizontalScrollBar()->value(),
+                                canvas->view()->verticalScrollBar()->value());
+            std::array<QRect, 3> bounds, viewports;
+            for (std::size_t i = 0; i < panels.size(); ++i) {
+                bounds[i] = panels[i]->geometry();
+                viewports[i] = panels[i]->viewport()->geometry();
+            }
+            auto verifyDecoration = [&](QWidget* expected) {
+                QTRY_COMPARE(QApplication::focusWidget(), expected);
+                for (std::size_t i = 0; i < panels.size(); ++i) {
+                    const auto colors = borderSamples(panels[i]);
+                    for (const auto& color : colors) {
+                        if (panels[i] == expected)
+                            QCOMPARE(color, QColor("#96aef2"));
+                        else
+                            QVERIFY(color != QColor("#96aef2"));
+                    }
+                    QCOMPARE(panels[i]->geometry(), bounds[i]);
+                    QCOMPARE(panels[i]->viewport()->geometry(), viewports[i]);
+                }
+                QCOMPARE(canvas->view()->transform(), transform);
+                QCOMPARE(QPoint(canvas->view()->horizontalScrollBar()->value(),
+                                canvas->view()->verticalScrollBar()->value()),
+                         scroll);
+                QCOMPARE(canvas->selection(), selected);
+                QCOMPARE(canvas->inspection(), text);
+                QVERIFY(*canvas->diagram() == diagram);
+                QVERIFY(inspector->isReadOnly());
+                const auto directory = qEnvironmentVariable("OPENECE_SCHEMATIC_SCREENSHOTS");
+                if (!directory.isEmpty() && selectionKind == 1 && fixture == 0 &&
+                    std::find(panels.begin(), panels.end(), expected) != panels.end()) {
+                    QDir().mkpath(directory);
+                    QVERIFY(
+                        host.grab().save(directory + "/focus-" + expected->objectName() + ".png"));
+                }
+            };
+            for (auto* expected : order) {
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+                verifyDecoration(expected);
+                if (QTest::currentTestFailed())
+                    return;
+            }
+            QTest::keyClick(inspector, Qt::Key_Tab);
+            verifyDecoration(outside); // No panel keeps a stale focus outline.
+            if (QTest::currentTestFailed())
+                return;
+            for (auto it = order.rbegin(); it != order.rend(); ++it) {
+                QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+                verifyDecoration(*it);
+                if (QTest::currentTestFailed())
+                    return;
+            }
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+            verifyDecoration(outside);
+            if (QTest::currentTestFailed())
+                return;
         }
     }
     void inspectorKeyboardScrolling() {
