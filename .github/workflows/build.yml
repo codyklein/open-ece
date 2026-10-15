@@ -49,6 +49,7 @@ jobs:
         run: |
           cmake -S . -B build/render-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENECE_BUILD_GUI=ON -DCMAKE_CXX_COMPILER=g++
           cmake --build build/render-release --target openece_schematic_preview openece_schematic_render_benchmark --parallel 4
+          build/render-release/gui/openece_schematic_preview --smoke
           build/render-release/tests/openece_schematic_render_benchmark > build/ci/schematic-render-benchmark.log
           cat build/ci/schematic-render-benchmark.log
       - name: Benchmark schematic layout (Release, headless)
@@ -126,6 +127,20 @@ jobs:
           key: ${{ steps.dependencies.outputs.cache-primary-key }}
       - name: Configure
         run: cmake --preset windows
+      - name: Benchmark and build schematic developer preview (Release, Qt)
+        shell: pwsh
+        run: |
+          cmake --build build/windows --config Release --target openece_schematic_preview openece_schematic_render_benchmark --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $oldPath = $env:PATH
+          try {
+            $env:PATH = "$env:QT_ROOT/bin;$oldPath"
+            $env:QT_QPA_PLATFORM = 'windows'
+            ./build/windows/tests/Release/openece_schematic_render_benchmark.exe | Tee-Object build/windows/schematic-render-benchmark.log
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            ./build/windows/gui/Release/openece_schematic_preview.exe --smoke
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          } finally { $env:PATH = $oldPath }
       - name: Build and test Debug
         shell: pwsh
         run: |
@@ -174,18 +189,6 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ./build/windows/tests/Release/openece_schematic_benchmark.exe | Tee-Object build/windows/schematic-layout-benchmark.log
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Benchmark and build schematic developer preview (Release, Qt)
-        shell: pwsh
-        run: |
-          cmake --build build/windows --config Release --target openece_schematic_preview openece_schematic_render_benchmark --parallel 4
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $oldPath = $env:PATH
-          try {
-            $env:PATH = "$env:QT_ROOT/bin;$oldPath"
-            $env:QT_QPA_PLATFORM = 'windows'
-            ./build/windows/tests/Release/openece_schematic_render_benchmark.exe | Tee-Object build/windows/schematic-render-benchmark.log
-            if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          } finally { $env:PATH = $oldPath }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: OpenECE-schematic-developer-preview
