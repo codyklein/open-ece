@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/schematic-preview">
+    <file alias="dc-divider.openece">../../../examples/dc-divider.openece</file>
+    <file alias="transient-rc-step.openece">../../../examples/transient-rc-step.openece</file>
+    <file alias="transient-rl-response.openece">../../../examples/transient-rl-response.openece</file>
+    <file alias="series-rlc.openece">../../../examples/series-rlc.openece</file>
+  </qresource>
+</RCC>

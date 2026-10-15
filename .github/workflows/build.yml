@@ -42,6 +42,15 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git ls-files '*.cpp' '*.hpp' | xargs clang-format --dry-run --Werror
           git diff --check
+      - name: Benchmark and build schematic developer preview (Release, Qt)
+        if: matrix.compiler == 'g++' && matrix.gui == 'ON' && matrix.sanitize == 'OFF'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          cmake -S . -B build/render-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENECE_BUILD_GUI=ON -DCMAKE_CXX_COMPILER=g++
+          cmake --build build/render-release --target openece_schematic_preview openece_schematic_render_benchmark --parallel 4
+          build/render-release/tests/openece_schematic_render_benchmark > build/ci/schematic-render-benchmark.log
+          cat build/ci/schematic-render-benchmark.log
       - name: Benchmark schematic layout (Release, headless)
         if: matrix.compiler == 'g++' && matrix.gui == 'OFF' && matrix.sanitize == 'OFF'
         run: |
@@ -57,6 +66,8 @@ jobs:
             build/ci/Testing/
             build/ci/results.xml
             build/ci/schematic-layout-benchmark.log
+            build/ci/schematic-render-benchmark.log
+            build/ci/tests/schematic-render-*.log
             build/ci/example-*.log
             build/ci/compatibility-*.log
             build/ci/branding-*.log
@@ -163,6 +174,23 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ./build/windows/tests/Release/openece_schematic_benchmark.exe | Tee-Object build/windows/schematic-layout-benchmark.log
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Benchmark and build schematic developer preview (Release, Qt)
+        shell: pwsh
+        run: |
+          cmake --build build/windows --config Release --target openece_schematic_preview openece_schematic_render_benchmark --parallel 4
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $oldPath = $env:PATH
+          try {
+            $env:PATH = "$env:QT_ROOT/bin;$oldPath"
+            $env:QT_QPA_PLATFORM = 'offscreen'
+            ./build/windows/tests/Release/openece_schematic_render_benchmark.exe | Tee-Object build/windows/schematic-render-benchmark.log
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          } finally { $env:PATH = $oldPath }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: OpenECE-schematic-developer-preview
+          path: build/windows/gui/Release/openece_schematic_preview.exe
+          if-no-files-found: error
       - name: Package Release
         id: package
         shell: pwsh
@@ -196,6 +224,8 @@ jobs:
             build/windows/branding-*.log
             build/windows/communications-benchmark.log
             build/windows/schematic-layout-benchmark.log
+            build/windows/schematic-render-benchmark.log
+            build/windows/tests/schematic-render-*.log
             build/windows/transient-benchmark-*.log
             build/windows/tests/transient-execution-*.log
             build/windows/tests/transient-editor-*.log

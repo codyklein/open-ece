@@ -36,3 +36,15 @@ if(WIN32)
 endif()
 
 set_target_properties(openece_workbench PROPERTIES AUTOMOC ON AUTORCC ON)
+
+# Reusable read-only renderer; intentionally not linked into the workbench yet.
+add_library(openece_schematic_view STATIC schematic/qt/render_geometry.cpp schematic/qt/canvas.cpp)
+target_include_directories(openece_schematic_view PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(openece_schematic_view PUBLIC openece_schematic_model Qt6::Widgets PRIVATE openece_options)
+target_compile_definitions(openece_schematic_view PUBLIC QT_NO_KEYWORDS)
+# Developer-only diagnostic tool: no install rule, never included by package.ps1.
+add_executable(openece_schematic_preview EXCLUDE_FROM_ALL schematic/qt/preview.cpp schematic/qt/preview.qrc)
+set_target_properties(openece_schematic_preview PROPERTIES AUTORCC ON)
+target_include_directories(openece_schematic_preview PRIVATE "${PROJECT_SOURCE_DIR}/tests")
+target_compile_definitions(openece_schematic_preview PRIVATE OPENECE_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+target_link_libraries(openece_schematic_preview PRIVATE openece_schematic_view OpenECE::project openece_options)
