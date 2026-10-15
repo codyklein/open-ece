@@ -157,7 +157,9 @@ reusable canvas. `--smoke` constructs and paints all eight fixtures then exits.
 In the preview, Tab cycles through **Review fixture → Fit to View → Zoom In →
 Zoom Out → viewport → entity list → inspector**, then back to Review fixture.
 Shift+Tab reverses that order. The preview-only dropdown uses the same fixed-width
-neutral/blue focus border as the canvas panels. It retains its native arrow, text,
+neutral/blue focus border as the canvas panels. A small preview-only QComboBox
+subclass paints that frame after native painting, without a stylesheet overriding
+complex-control subparts or changing their geometry. It retains its native arrow, text,
 popup, Up/Down selection and **Alt+R** label-buddy shortcut. The shared developer
 control in `preview_controls.hpp` is tested directly; it is not a canvas or
 workbench API. Switching fixtures is read-only navigation. Focus does not change
