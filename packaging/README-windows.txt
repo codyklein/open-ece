@@ -1,4 +1,4 @@
-OpenECE v1.1.0 - Windows x86_64
+OpenECE v1.2.0 - Windows x86_64
 
 Extract this entire folder, then double-click openece.exe. Keep the DLLs,
 qt.conf, platforms directory and other plugin directories alongside it.
@@ -11,7 +11,11 @@ Windows 11 x86_64 acceptance, including transient analysis. The signed Windows
 ZIP passed with Smart App Control enabled. Every new candidate requires its own
 physical acceptance; CI is not physical desktop evidence.
 https://github.com/codyklein/open-ece/releases/tag/v1.1.0
-Windows 10 and MinGW may work but are not validated or claimed supported for v1.1.
+The 1.2.0 candidate adds read-only DC/AC/Transient schematics. Development
+checkpoints passed Fedora 44/Windows 11 review; this exact candidate still needs
+separate acceptance. Ordinary CI packages are unsigned, not SAC-approved releases.
+Do not disable or bypass OS security protections to launch an unsigned candidate.
+Windows 10 and MinGW are not validated or claimed supported for this candidate.
 Build: Visual Studio 2022, Qt 6.8.3, Qwt 6.3.0, Eigen 5.0.0 and nlohmann/json 3.12.0 (header-only).
 See THIRD-PARTY-NOTICES.txt and licenses/ for dependency notices.
 This is a portable application, not an installer. Signed distribution candidates
@@ -58,8 +62,17 @@ Failed frequencies remain visible as diagnostics and plot gaps. Cancel retains
 completed points and explicitly marks unevaluated frequencies. Start with the
 RC low-pass (output across C) or series RLC (output across R) examples.
 This AC tab is steady-state only. Transient analysis is available separately in
-Circuits > Transient. No nonlinear, schematic or undo features are included.
+Circuits > Transient. No nonlinear, schematic-editing or undo features are included.
 See docs/ac-analysis.md in source for phasor signs, limits and numerical policy.
+
+Read-only schematics: inside each DC, AC and Transient Circuit page, choose
+Circuit view: Tables / Schematic. Edit only in Tables. Inspect components and nets,
+Fit (F), zoom (+/- or Ctrl+wheel), scroll or drag empty background to pan. Tab and
+Shift+Tab enter/leave the canvas controls. Incomplete values and missing references
+remain visible; this is current draft configuration, not solved/live values.
+Complex circuits use labeled Connectivity layouts. Viewing does not dirty or run
+anything. Schematic selection/positions/zoom are not saved; reopening starts in
+Tables. See docs/schematic-workspaces.md and docs/v1.2-candidate.md.
 
 Communications adds an ideal coherent complex-baseband BPSK/QPSK link. Use seeded
 or manual bits, view transmitted/received I/Q and labelled constellations, or run

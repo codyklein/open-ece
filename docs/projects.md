@@ -135,7 +135,7 @@ Server 2022. Physical Fedora 44 and Windows 11 acceptance passed for the
 [published 1.1.0 release](https://github.com/codyklein/open-ece/releases/tag/v1.1.0),
 including transient controls, splitter scrolling, persistence and inert loading.
 True mixed-DPI and native screen-reader behavior remain unvalidated.
-Windows 10 and MinGW may work but are not validated or claimed supported for v1.1.
+Windows 10 and MinGW may work but are not validated or claimed supported for the 1.2 candidate.
 The published 1.1.0 Windows package uses verified signatures; ordinary development
 artifacts may be unsigned. There is no installer/updater.
 See the [physical validation record](physical-validation.md).
@@ -161,3 +161,16 @@ Transient workspace is empty. Save As retains the old file; upgrading that origi
 requires confirmation. There is no schema-1 exporter, arbitrary migration, ABI or
 plugin compatibility promise. Unknown optional fields are still discarded on save
 with a warning. Results and execution state are never persisted.
+
+## v1.2 compatibility
+
+OpenECE 1.2 retains the same schema-1 import and schema-2 save contracts as 1.1.
+Existing 1.1 schema-2 projects, supported v0.9/1.0.x schema-1 editable state,
+invalid text, dangling references, IDs/allocators, units and selections retain
+their established meanings. Release-pinned fixture bytes remain unchanged.
+The schema-1 upgrade warning still applies; 1.0.x cannot read schema 2.
+
+Read-only schematic view choice, positions, selection, zoom, pan and diagnostics
+are not project content. Opening defaults to Tables with empty numerical results
+and no automatic execution. View navigation does not dirty a clean project; actual
+input edits do. This adds no schema, ABI, plugin or arbitrary-migration promise.

@@ -29,9 +29,12 @@ Fedora 44 transient and GUI acceptance also passed. See the published release
 notes, [numerical conventions](docs/transient-analysis.md) and
 [execution workflow](docs/transient-execution.md).
 
-Development on `feature/v1.2.0` adds [read-only circuit schematics](docs/schematic-workspaces.md)
-to the DC, AC and Transient workspaces. This integration awaits physical review;
-it is not part of the published 1.1.0 package.
+The **1.2.0 candidate** adds [read-only circuit schematics](docs/schematic-workspaces.md).
+Inside the DC, AC and Transient Circuit pages, switch **Tables / Schematic** to
+view the same circuit draft and inspect components and electrical nets. Editing
+stays in Tables; schematics are not saved as editable drawings. The development
+checkpoints passed physical Fedora 44/Windows 11 review; the exact 1.2.0 candidate
+still requires separate acceptance. See [candidate notes](docs/release-notes-v1.2.md).
 
 ## Try it
 
@@ -59,22 +62,22 @@ CI covers Fedora 44 GCC/Clang desktop/headless, Clang ASan/UBSan, Windows MSVC
 Debug/Release, and a fresh Windows packaged-runtime test. Physically validated
 platforms are Fedora 44 and Windows 11 x86_64; see the recorded physical scope
 below. Windows 10 and MinGW may work but are not validated or claimed supported
-for v1.1. Hosted Windows Server tests do not establish desktop, mixed-DPI or
+for this candidate. Hosted Windows Server tests do not establish desktop, mixed-DPI or
 screen-reader validation. See the [physical validation record and checklist](docs/physical-validation.md).
 
 ## Documentation
 
 - [First session](docs/first-session.md), [examples and expected results](examples/README.md),
-  [current screenshots](docs/screenshots.md)
+  [screenshots and capture guide](docs/screenshots.md)
 - [Saving projects](docs/projects.md), [schema 1](docs/project-format.md), [schema 2 / transient drafts](docs/transient-project-format.md),
   [ownership and transactions](docs/project-transactions.md)
 - [Signals/DSP conventions](docs/numerics.md), [Digital Logic](docs/digital-logic.md),
   [Timing](docs/digital-timing.md), [DC](docs/circuit-analysis.md),
   [AC](docs/ac-analysis.md), [Transient](docs/transient-analysis.md),
-  [Communications](docs/communications.md)
+  [Communications](docs/communications.md), [read-only schematics](docs/schematic-workspaces.md)
 - [Architecture](docs/architecture.md), [development](docs/development.md),
   [contributing](CONTRIBUTING.md), [release procedure](docs/releasing.md),
-  [1.1 release notes](docs/release-notes-v1.1.md), [1.0 release notes](docs/release-notes-v1.0.md),
+  [1.2 candidate notes](docs/release-notes-v1.2.md), [1.1 release notes](docs/release-notes-v1.1.md), [1.0 release notes](docs/release-notes-v1.0.md),
   [1.0.1 branding and acceptance](docs/branding.md)
 
 The source tree separates `core/`, `signals/`, `dsp/`, `digital/`, `circuits/`,
@@ -84,7 +87,7 @@ not depend on Qt, and persistence does not turn them into serialization models.
 
 OpenECE v1.0 supports schema-version-1 .openece project files produced by v0.9 and preserves their supported editable project state.
 
-OpenECE 1.1 imports supported schema-1 editable state, including incomplete drafts,
+OpenECE 1.1 and the 1.2 candidate import supported schema-1 editable state, including incomplete drafts,
 and saves schema 2. OpenECE 1.0.x cannot read schema-2 files; use Save As to retain
 an older original. This promises neither a stable C++/plugin ABI nor future-schema
 compatibility. See [compatibility limits](docs/projects.md). There is no undo/redo,

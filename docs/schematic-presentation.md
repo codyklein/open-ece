@@ -1,9 +1,11 @@
 # Schematic presentation model — checkpoint 1
 
 The internal `openece_schematic_model` target holds Qt-independent, owned circuit
-presentation data. It is built and tested in headless configurations. It is not
-linked into the workbench yet: there is no schematic UI, layout or rendering in
-this checkpoint. Existing numerical APIs, project schemas and version stay unchanged.
+presentation data. It is built and tested in headless configurations. This document
+records the checkpoint-1 model contract. The 1.2.0 candidate consumes this same model
+through [verified layout](schematic-layout.md), the [Qt renderer](schematic-renderer.md)
+and [read-only workspace views](schematic-workspaces.md). Numerical APIs and project
+schemas remain unchanged.
 
 `openece::schematic::project_schematic()` accepts a const DC, AC or Transient project
 draft and returns a `SchematicGraph` with const access to its owned node/component
@@ -40,7 +42,7 @@ kind/unit/mode tokens are retained, not interpreted. Project-file acceptance sti
 belongs to the existing codec. Numerical ranges and solvability remain solver concerns.
 
 The graph deliberately has no positions, wire segments, graphics objects, selection,
-editing commands or persisted schematic fields. Later layout/rendering can derive
+editing commands or persisted schematic fields. Layout/rendering derive
 those from explicit terminal keys without changing the electrical draft.
 
 Checkpoint 2 adds a **separate**, Qt-independent layout layer consuming this unchanged

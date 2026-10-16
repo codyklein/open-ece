@@ -557,7 +557,7 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         "physical kinds are fixed at creation. Add a separate component to change dimension "
         "without reinterpreting retained values. Same-dimension unit conversion is all-or-nothing, "
         "including inactive source amplitudes.\n\nIncomplete text and dangling connections remain "
-        "savable. Schema-2 files require this version of OpenECE; older 1.0.x readers reject "
+        "savable. Schema-2 files require OpenECE 1.1 or later; older 1.0.x readers reject "
         "them.");
     help->addWidget(help_text);
     status_ = new QLabel("Ready — no simulation results.", this);

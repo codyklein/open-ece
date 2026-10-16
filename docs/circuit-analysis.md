@@ -163,7 +163,9 @@ explains signs and failure behavior. Load voltage divider restores the example.
 ## Scope and remaining work
 
 The DC model is linear DC only: no capacitors, inductors, AC, transients, dependent sources,
-nonlinear devices, SPICE, graphical schematics, or cross-domain coupling. Raw named
+nonlinear devices, SPICE or cross-domain coupling. The 1.2.0 candidate adds a
+read-only [schematic view](schematic-workspaces.md) outside the numerical model;
+graphical editing is not included. Raw named
 SI doubles avoid a general units framework. Dense bounded solves,
 no undo and no exhaustive multi-error report remain deliberate limits. v0.9 saves
 editable drafts via the project layer without changing the DC API or saving solutions.

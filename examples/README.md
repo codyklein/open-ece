@@ -66,3 +66,14 @@ active input makes old results **Stale** and removes resumability. Invalid inact
 fields are preserved without affecting execution. Failed simulations retain the
 accepted prefix and show attempted failure time separately from last accepted time.
 See [workflow and limits](../docs/transient-execution.md) and [numerics](../docs/transient-analysis.md).
+
+## Read-only schematics in the 1.2.0 candidate
+
+The same ordinary example files also feed the schematic viewer; no special example
+format, saved diagram coordinates or new files are required. In the DC, AC or
+Transient Circuit page choose **Circuit view: Schematic**. Inspect components and
+electrical nets, then return to Tables to edit. The viewer reflects the current
+raw draft, not solved quantities; incomplete circuits can be displayed too.
+Opening still defaults to Tables and never computes. See the
+[schematic guide](../docs/schematic-workspaces.md) for keyboard/mouse navigation,
+missing-reference markers, connectivity fallback and persistence behavior.

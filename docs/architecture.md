@@ -15,6 +15,9 @@ flowchart TD
     Circuits --> Eigen[Eigen: private dense linear algebra]
     CircuitTests[Independent DC / AC / transient tests] --> Circuits
     UI --> Project[project: owned editable drafts and codec]
+    UI --> Viewer[Internal Qt schematic renderer]
+    Viewer --> Schematic[Qt-independent projection / verified layout]
+    Schematic --> Project
     Project --> JSON[nlohmann/json: private headers]
     ProjectTests[Codec / allocator / round-trip tests] --> Project
     UI --> Qt[Qt Widgets and Qwt]
@@ -299,8 +302,9 @@ so failed frequencies and undefined/wrapped phase never get joined accidentally.
 Tradeoffs are bounded dense factorization per frequency, repeated topology checks,
 separate DC/AC numerical paths and no cancellation inside one solve.
 The editors now borrow project drafts and share row bindings. v0.9 saves editable
-state without saving solutions. There is no undo, schematic canvas,
-transient/nonlinear/dependent-source model, or cross-domain coupling. See [AC contracts](ac-analysis.md).
+state without saving solutions. The separate Transient model and 1.2 read-only
+schematic viewer do not change these AC APIs. There is no undo, graphical editing,
+nonlinear/dependent-source model or cross-domain coupling. See [AC contracts](ac-analysis.md).
 
 ## Digital Communications (v0.8)
 
@@ -431,8 +435,36 @@ current arrays back into mixed draft order. All execution objects are stopped
 before workspace destruction. Document
 provenance remains outside editable state; in-place schema upgrades are explained
 before saving. See [transient-project-format.md](transient-project-format.md).
-Execution controls and plots remain a separate review. Release-pinned fixtures
-are unchanged.
+Execution controls and plots are implemented and physically accepted in 1.1.0.
+Release-pinned fixtures are unchanged.
 
 See [transient execution](transient-execution.md) for measured scheduling, trace
 publication/decimation, resource budgets and lifecycle contracts.
+
+## v1.2 derived schematic presentation
+
+The production path is `Project draft → owned SchematicGraph → verified
+LayoutDiagram → SchematicCanvas`. The internal `openece_schematic_model` target
+contains projection/layout/verification only and remains built/tested without
+Qt/Qwt. The `openece_schematic_view` target depends on that model and Qt Widgets;
+the workbench and non-shipping developer preview share it. Neither target is a
+new public numerical API or serialization model.
+
+Each DC/AC/Transient view lends its authoritative subdraft through a projection
+callback owned by its child `CircuitPresentation`. Existing table widgets are
+retained. Switching synchronizes exact raw pending text before projection, with
+no numerical parsing, unit conversion or execution. The canvas owns the projected
+metadata and layout; scene items never borrow draft/vector storage.
+
+Visible draft edits queue one context-bound refresh. Equal graphs skip rebuilding;
+changed graphs install verified geometry and retain only valid typed selection.
+Failure clears old presentation. QObject destruction cancels pending refreshes;
+workspace replacement destroys old scenes before draft storage. Presentation adds
+no execution timer and never controls AC or Transient execution. Qt parents own
+widgets/scenes, the scene owns items, and signal guards prevent teardown callbacks
+from accessing destroyed lookup data.
+
+View/zoom/pan/selection state is transient, not dirty or serialized. There are no
+graphical editing commands, persisted positions or solved-value overlays. See
+[projection](schematic-presentation.md), [layout and limits](schematic-layout.md),
+[rendering](schematic-renderer.md) and [workspace lifecycle](schematic-workspaces.md).

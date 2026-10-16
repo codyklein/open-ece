@@ -450,3 +450,33 @@ at `476786917acb988f5bbdafbc31c9f184b12ae20f`; post-merge run 37713805294 passed
 The exact ZIP was published unchanged as v1.0.1 and independently re-downloaded
 and hash-verified. This closes the earlier 1.0.1 pending statements without
 erasing their chronology. Published 1.0.0 and 1.0.1 artifacts remain immutable.
+
+## v1.2.0 schematic development acceptance
+
+Recorded from the user's checkpoint-5 authorization on 2026-10-16. The physical
+test dates, OS builds, Qt versions, monitor configuration and exact scaling factors
+were not supplied for these confirmations; do not infer them from older records.
+
+| Stage | Source baseline | Reported physical evidence |
+| --- | --- | --- |
+| Checkpoint 3, standalone preview including final focus correction | `78b09b806113c1399d7e295fbe7f47d27f66531c` | Fedora 44 and Windows 11 accepted all eight fixtures, symbols/junctions/crossings, invalid and dense layouts, selection/inspection, zoom/pan, resizing, keyboard traversal and visible focus. |
+| Checkpoint 4, production integration | `c799175b6744b0dbe674d68d68ca4d8c36c5c909` | Fedora 44 and Windows 11 accepted DC/AC/Transient rendering, Tables/Schematic switching, live draft refresh, pending text/identities, focus/navigation, isolation from solvers/execution and existing project editing/saving/dirty behavior. |
+
+Checkpoint-4 automated evidence is [run 38849050218](https://github.com/codyklein/open-ece/actions/runs/38849050218),
+all eight required jobs passed, desktop 388/388 and headless 345/345 as applicable.
+That CI evidence is separate from the user's physical report. The physical
+confirmation did not separately restate an inner-ZIP hash, screenshot set or
+security-policy checklist; none is invented here. Mixed-monitor DPI, native
+screen-reader certification and Windows 10/MinGW acceptance are not implied.
+
+### Exact 1.2.0 candidate acceptance — pending
+
+Checkpoint 5 updates version metadata and produces a new unsigned artifact. Its
+physical acceptance on Fedora 44 and Windows 11 remains pending, even though the
+development functionality was accepted. Record commit/workflow/inner-ZIP hash and
+actual environment/checklist results using [the candidate procedure](v1.2-candidate.md).
+Record any unsigned-Windows security-policy restriction; do not disable SAC or
+bypass protections. Unsigned testing cannot establish acceptance of a future
+signed distribution. Protected signing requires separate authorization, followed
+by physical Windows 11 testing of the exact signed ZIP with SAC enabled. No merge,
+tag, publication or modification of older released assets is authorized here.

@@ -7,8 +7,13 @@ uses Visual Studio 2022 / MSVC and **Qt 6.8.3**, with **Qwt 6.3.0**,
 **GoogleTest 1.17.0**, **Eigen 5.0.0**, and **nlohmann/json 3.12.0**. CI uses a
 Windows Server 2022 GitHub runner with VS 2022; that runtime validation is separate
 from physical desktop acceptance. Windows 10 and MinGW may work but are not
-validated or claimed supported for v1.1. True mixed-monitor DPI and native
+validated or claimed supported for this candidate. True mixed-monitor DPI and native
 screen-reader behavior remain unvalidated.
+
+This branch prepares the unsigned **1.2.0 candidate**; the commands/package names
+below refer to that candidate, not the published 1.1.0 ZIP. Development schematics
+passed Fedora 44/Windows 11 review, but exact-candidate physical acceptance is
+pending. Use the [candidate checklist](v1.2-candidate.md).
 
 ## Prerequisites
 
@@ -62,7 +67,8 @@ $env:PATH = "$env:QT_ROOT/bin;$PWD/build/windows-deps/qwt/lib/Debug;$env:PATH"
 ```
 
 For Release, use `lib/Release` and `gui/Release/openece.exe`. CTest adds the
-correct Qt and Qwt paths automatically and runs the existing workflow offscreen.
+correct Qt and Qwt paths automatically. Most workflow tests run offscreen;
+schematic/font/paint and packaged-persistence tests use native Windows Qt.
 The package described below needs none of these development environment settings.
 
 ## Dependency bootstrap
@@ -111,7 +117,7 @@ From the configured developer shell:
 
 ```powershell
 ./scripts/windows/package.ps1 -QtRoot $env:QT_ROOT
-./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.1.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
+./scripts/windows/test-package.ps1 -Archive ./build/packages/OpenECE-v1.2.0-windows-x86_64.zip -PersistenceProbe ./build/windows/tests/Release/openece_packaged_persistence.exe
 ```
 
 The script builds and installs **Release only** into a fresh staging directory,
@@ -126,7 +132,7 @@ file; no installer run or elevation is needed to launch with the app-local DLLs.
 The package has one root folder:
 
 ```text
-OpenECE-v1.1.0-windows-x86_64/
+OpenECE-v1.2.0-windows-x86_64/
     openece.exe
     <Release Qwt DLL>
     Qt6Core.dll, Qt6Gui.dll, Qt6Widgets.dll, <supporting Qt Base DLLs>
@@ -167,7 +173,7 @@ python scripts/windows/generate-qt-notices.py path/to/qtbase-everywhere-src-6.8.
 The source URL and checksum are recorded in the generator and the notice file.
 This utility is not required for normal Windows builds or packaging.
 
-CI uploads `OpenECE-v1.1.0-windows-x86_64` containing the runnable ZIP. A separate
+CI uploads `OpenECE-v1.2.0-windows-x86_64` containing the runnable ZIP. A separate
 fresh Windows runner downloads it, extracts into a path with spaces and π,
 removes development and Qt plugin paths, launches from outside the package,
 requires a native OpenECE window, verifies loaded Qt/Qwt/CRT modules come from the
@@ -184,7 +190,10 @@ modifies and atomically overwrites, checks recent preferences cannot alter proje
 bytes, and closes normally. It is removed afterward; it is **not in the release ZIP**.
 The original ZIP is unchanged and is the release candidate. Running the command
 without `-PersistenceProbe` performs only startup/manifest verification. CI requires
-both checks. The test script verifies every manifest hash and rejects development
+both checks. The probe also opens all three read-only schematic views, verifies
+geometry against the drafts, and checks clean/inert navigation. Painter diagnostics
+in that production probe fail validation. The test script verifies every manifest
+hash, rejects unexpected executable tools, and rejects development
 artifacts before launch. No GitHub Release
 is published automatically. CTest, configure and plugin-loader diagnostics are
 retained as separate CI artifacts even after failures.
@@ -220,14 +229,17 @@ Packages include `examples/` and offline `docs/`, including
 [first-session guidance](first-session.md). Open examples through the normal File
 menu; restoration is inert. The fresh Windows package probe stages, restores and
 round-trips all packaged examples, in addition to its existing persistence test.
-The 1.1.0 release contains thirteen examples: nine schema-1 projects and four
+The 1.2.0 candidate retains thirteen examples: nine schema-1 projects and four
 schema-2 transient projects. The runtime probe explicitly executes the transient
 examples only after checking inert restoration.
 The package manifest covers the examples, guide and screenshots as well as runtime
 files and licenses. Source/test links in developer docs refer to the repository.
 
-Version 1.1.0 filenames above match the latest stable release. Its exact signed
-ZIP passed physical acceptance and was independently verified after publication.
+Version 1.2.0 filenames above identify the candidate. About and PE versions derive
+from CMake, and workflow package paths/guards are checked against that version.
+The latest published 1.1.0 signed ZIP remains unchanged and independently verified.
+The new candidate must pass its own physical review; do not infer SAC acceptance
+from the unsigned CI package. The final candidate report supplies its exact hash.
 Published 1.0.0, 1.0.1 and 1.1.0 tags and assets are immutable; new builds do not
 replace them. The fresh package probe additionally
 checks application/About branding and compares all ten executable-icon frames

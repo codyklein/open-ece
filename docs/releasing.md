@@ -8,11 +8,15 @@ Future releases require their own exact-artifact acceptance and authorization.
 Published tags and assets are immutable.
 
 1. Review scope, warnings, sanitizer logs, current documentation, shipped example
-   expectations, schema-1 fixture compatibility and schema-2 round trips. Do not
+   expectations, schema-1 fixture compatibility, schema-2 round trips and read-only schematic
+   draft/navigation invariants. Review known painter/geometry warnings using
+   [the recorded risk assessment](v1.2-readiness.md). Do not
    update immutable compatibility fixtures to conceal a breaking change.
 2. At final candidate freeze, align the CMake project version, GitHub Actions
    artifact names/paths, Windows guide/runtime notes and candidate records. Current
-   branch/package metadata remains **1.1.0**, matching the latest stable release.
+   branch/package metadata is **1.2.0** for the unsigned candidate, while 1.1.0
+   remains the latest published release. The [1.2 review](v1.2-readiness.md) and
+   [exact-candidate checklist](v1.2-candidate.md) distinguish these states.
    Published release records remain unchanged. A version update alone is not
    signed-candidate acceptance or publication authorization.
    About uses the actual CMake version; no independent UI version string is maintained.
@@ -27,7 +31,7 @@ Published tags and assets are immutable.
    unsigned and never suffices for release distribution.
    Verify the complete SHA256SUMS manifest and absence of Debug/development
    artifacts. Test the **same ZIP** on the fresh packaged-runtime runner, including
-   startup, persistence and inert example round trips. Record its SHA-256, file and
+   startup, persistence, inert example round trips and production schematic checks. Record its SHA-256, file and
    manifest counts. Do not rebuild or recompress after validation.
 5. Physical acceptance passed for the exact signed 1.1.0 Windows ZIP and native
    Fedora 44 transient workflows, including compressed-editor scrolling and live

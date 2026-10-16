@@ -48,3 +48,19 @@ A future justified dependency update requires notice review, the full regression
 matrix and fresh exact-artifact physical checks. App-local DLLs do not update
 with the operating system; users must obtain a rebuilt package. This candidate
 keeps the physically tested pins rather than changing dependencies during freeze.
+
+## 1.2.0 candidate addendum
+
+Checkpoint-5 review retains the 1.1/1.0.1 Windows pins and notices listed above;
+no acquisition hash, action SHA or library version is changed. Qt Graphics View
+uses the existing Qt Widgets library. The schematic model/renderer are internal
+static libraries, not extra runtime DLLs. The preview and benchmark executables
+are non-shipping. No fonts, graph-layout library, QML or OpenGL requirement is added.
+
+Packaging must retain MIT, Qt, Qwt, Eigen MPL2, nlohmann/json/Hedley and Noto Sans
+OFL notices and the existing provenance notices. Verify all manifest entries and
+runtime files against the exact new unsigned package; do not transfer an old
+package's hash/counts. This addendum reviews dependency scope/licensing continuity,
+not a new security certification or a claim that Qt 6.8.3 contains all later fixes.
+The dated advisory assessment above remains historical. A justified pin update
+would require its own full regression and physical artifact validation.

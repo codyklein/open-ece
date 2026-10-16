@@ -10,7 +10,8 @@ Run **Build, test and package** on the reviewed candidate branch/commit with the
 `signed_candidate` workflow-dispatch input set to `true`. Push/PR runs and the
 default dispatch remain unsigned developer validation; they never receive Azure
 credentials or permission to request an OIDC token. Unsigned developer ZIPs are
-not release-distribution candidates.
+not signed release-distribution candidates. Checkpoint 5 prepares an unsigned
+1.2.0 review ZIP only; it does not authorize dispatching this protected workflow.
 
 The signing job waits for the complete Fedora matrix and Windows Debug/Release
 tests, then uses the reviewer-protected `windows-signing` GitHub environment.
@@ -70,7 +71,7 @@ signature verification to the existing package tests.
 
 ## Evidence and physical acceptance
 
-The signed workflow uploads `OpenECE-v1.1.0-windows-x86_64` containing the inner ZIP
+The signed workflow uploads `OpenECE-v1.2.0-windows-x86_64` containing the inner ZIP
 and its SHA-256 sidecar, plus a separate `windows-signature-verification` artifact
 with before/after inventories, public certificate subjects/thumbprints and hashes.
 The fresh-runner logs include signature verification. Test seams use ephemeral
@@ -98,8 +99,9 @@ or re-sign the artifact after physical acceptance and call it the same candidate
 
 Physical Windows 11 acceptance uses the exact final ZIP with **Smart App Control
 enabled**, in a normal user context without development paths: verify the ZIP
-hash, freshly extract under a Unicode/space path, launch, inspect About 1.1.0,
-and run the transient RC/RL/RLC and source-breakpoint examples. Check Step,
+hash, freshly extract under a Unicode/space path, launch, inspect About 1.2.0,
+and inspect the read-only DC/AC/Transient schematics before running the transient
+RC/RL/RLC and source-breakpoint examples. Check Step,
 Pause/Resume, terminal Cancel, ordered before/after samples, current signs, mixed
 probe ordering and live splitter/scrolling. Import a schema-1 file, check upgrade
 protection and Save As schema 2; reopen inertly. Run a short existing-domain smoke

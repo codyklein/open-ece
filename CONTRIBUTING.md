@@ -107,6 +107,15 @@ Do not force unrelated domains into a shared data model merely to reduce the num
 
 ProjectSnapshot owns persisted drafts; views borrow subdrafts. Exact pending editor text is synchronized without parsing before capture. Derived results and runtime objects are never serialized. Restoration must stay inert and loading/saving transactional. Preserve [schema-1 compatibility](tests/fixtures/v0.9/README.md), IDs, units and dangling references. Add semantic round-trip and expected-result tests for [examples](examples/README.md).
 
+Read-only [schematic presentation](docs/schematic-workspaces.md) derives owned data
+from those drafts. Keep projection/layout Qt-independent and verification enforced;
+use the existing Qt renderer, not a second editable model. View selection, zoom/pan
+and inspection are transient and must not dirty, serialize or control execution.
+Preserve typed analysis-scoped connectivity, invalid raw text, queued-callback
+lifetime safety and the headless/render/workspace tests. See the
+[candidate warning assessment](docs/v1.2-readiness.md); do not hide warnings or
+change numerical tolerances to pass CI.
+
 Qt-specific behavior belongs in the GUI layer unless there is a clear architectural reason otherwise.
 
 ## Cross-Platform Support

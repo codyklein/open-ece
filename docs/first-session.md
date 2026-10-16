@@ -9,6 +9,10 @@
 3. In **Circuits → DC**, press **Solve DC**. The 10 V supply and two 1 kΩ resistors
    give a 5 V midpoint and −5 mA voltage-source current. Current is positive from
    the source's positive terminal to its negative terminal; this source delivers power.
+   In the **1.2.0 candidate**, optionally choose **Circuit view: Schematic** first
+   to inspect components and nets, then return to Tables to edit. Fit (F), +/−,
+   Ctrl+wheel, wheel scrolling and background drag navigate without modifying
+   the project. The same switch is inside AC and Transient Circuit tabs.
 4. Edit the supply to 12 V. Results are cleared or marked **stale** until you solve
    again; the new midpoint is 6 V. **Failed** means the current operation was not
    accepted. **Complete** marks finished computation; partial, paused and cancelled

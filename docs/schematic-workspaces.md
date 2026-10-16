@@ -1,9 +1,12 @@
-# Read-only circuit schematics — v1.2 development, checkpoint 4
+# Read-only circuit schematics — 1.2.0 candidate
 
 This integration is on `feature/v1.2.0`. OpenECE 1.1.0 remains the published stable
 release. Checkpoint 3's standalone viewer was physically accepted on Fedora 44
 and Windows 11 at `78b09b806113c1399d7e295fbe7f47d27f66531c`.
-Physical acceptance of the integrated workspaces is **pending**.
+Checkpoint 4 at `c799175b6744b0dbe674d68d68ca4d8c36c5c909` was subsequently accepted
+on both platforms. This is development-checkpoint evidence, not physical acceptance
+of the new 1.2.0 unsigned candidate or a future signed ZIP. See the
+[physical record](physical-validation.md#v120-schematic-development-acceptance).
 
 ## Finding the viewer
 
@@ -118,12 +121,11 @@ cmake --build --preset dev --target openece -j 4
 ./build/dev/gui/openece
 ```
 
-For Windows integration review, use the ordinary unsigned CI application artifact
-for the checkpoint commit. Its ZIP still uses the unchanged **1.1.0** version
-metadata; identify this development build by its workflow commit and ZIP hash.
-It is not the published signed 1.1.0 release and excludes the developer preview.
-This checkpoint does not initiate signing or establish Smart App Control
-acceptance.
+For Windows candidate review, use `OpenECE-v1.2.0-windows-x86_64.zip` from the
+candidate report's CI run and verify its inner-ZIP hash. It is unsigned and excludes
+the developer preview. It is not the published signed 1.1.0 release. Neither
+automated tests nor accepted development checkpoints establish exact-candidate
+physical or Smart App Control acceptance. Follow the [candidate checklist](v1.2-candidate.md).
 
 `schematic_workspace_test.cpp` exercises real production views and project
 sessions, exact pending text, raw AC/source metadata, solver-result preservation,
@@ -138,7 +140,9 @@ the owned drafts, and checks inert execution and clean-state semantics. It remai
 a non-shipping test executable. Native Windows Qt supplies the font database for
 this probe, matching the fresh-extraction job.
 
-For physical acceptance on Fedora 44 and Windows 11:
+The following development-checkpoint review passed on Fedora 44 and Windows 11.
+Repeat the bounded [candidate checklist](v1.2-candidate.md) for the exact new build;
+use this longer checklist for any affected retests:
 
 1. Open the divider, RC low-pass and transient RC examples. Switch Tables/Schematic
    in each analysis; inspect source/ground polarity, identities and raw values.

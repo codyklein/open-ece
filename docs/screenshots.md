@@ -1,6 +1,6 @@
 # Workbench screenshots
 
-These are actual 1.0.1 workbench renders on Fedora 44, Qt 6.11.2, at 100%
+The retained images below are actual 1.0.1 workbench renders on Fedora 44, Qt 6.11.2, at 100%
 scaling, 1440×1320, using Qt's offscreen platform. They include the final v1 focus,
 Signals layout and BER legend/table fixes. They are not mockups or evidence
 of physical Windows/mixed-DPI validation. The test loads each example snapshot
@@ -30,6 +30,11 @@ zero true BER. Exact Gaussian rounding may vary across platform math libraries.
 
 All required actions and numerical expectations are available as text in the
 [first-session guide](first-session.md) and [example guide](../examples/README.md).
+
+They intentionally do not depict the later Transient or read-only Schematic
+workspaces. For current 1.2.0 controls use the [schematic guide](schematic-workspaces.md)
+and [exact-candidate checklist](v1.2-candidate.md). No new physical screenshots,
+DPI measurements or acceptance evidence are implied by these historical images.
 
 ## Reproduce or update
 

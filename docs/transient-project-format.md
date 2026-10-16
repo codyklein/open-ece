@@ -1,6 +1,6 @@
 # Transient project configuration — schema 2
 
-OpenECE 1.1 saves schema 2, which adds editable transient configuration. File loading/restoration never
+Schema 2 was introduced in OpenECE 1.1 and is unchanged in 1.2; it adds editable transient configuration. File loading/restoration never
 constructs a Simulation or runs numerical analysis. Explicit GUI execution is
 described in [the execution workflow](transient-execution.md); runtime results
 remain separate from persistence.

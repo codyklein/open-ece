@@ -178,6 +178,19 @@ post-merge CI passed. See the [published release](https://github.com/codyklein/o
 and [the numerical contract](docs/transient-analysis.md). No nonlinear devices,
 adaptive integration, schematic capture or unrelated domain expansion.
 
+## v1.2.0 — Read-only circuit schematics (candidate)
+
+- [x] Qt-independent owned projection of DC/AC/Transient editable drafts.
+- [x] Deterministic verified layout, recognizable symbols and explicit connectivity fallback.
+- [x] Reusable Qt Graphics View canvas with inspection, selection, keyboard/focus and zoom/pan.
+- [x] Tables / Schematic in existing circuit pages; exact pending text and execution isolation.
+- [x] Development-checkpoint physical review on Fedora 44 and Windows 11.
+- [ ] Exact 1.2.0 candidate physical review, separately authorized signing, signed-ZIP acceptance and publication.
+
+Latest published release remains 1.1.0. Schema 1 import/schema 2 saves are unchanged.
+No graphical editing, wiring, saved positions, export, overlays or undo/redo.
+See [candidate notes](docs/release-notes-v1.2.md) and [release gates](docs/v1.2-candidate.md).
+
 ## Later — Expand only through useful connections
 
 1. Add multiple signals and typed operation composition when the first few DSP

@@ -64,3 +64,16 @@ document the implemented v1.1 model, worker and resource policies.
 Every file in [examples](../examples/README.md) is an ordinary project: existing examples use schema 1, transient examples use schema 2. Tests load the files, exercise expected results, check inert restoration and semantic round trips. Add an example to the explicit test list when extending the collection. Screenshots are documentation, not pixel tests.
 
 [Release-pinned v0.9 fixtures](../tests/fixtures/v0.9/README.md) must not be regenerated from current defaults. A compatibility change requires an explicit schema decision, not updating the expected fixture to make a test pass. Keep project drafts authoritative, synchronize pending raw editor text without parsing, and derive numerical/runtime objects only on explicit execution. See [ownership and transactions](project-transactions.md).
+
+## Read-only schematics and candidate validation
+
+The [schematic model](schematic-presentation.md) and [verified layout](schematic-layout.md)
+are headless-testable. Qt [rendering](schematic-renderer.md) is shared between the
+production workspaces and the optional, non-shipping developer preview. Preserve
+the [workspace ownership/refresh contracts](schematic-workspaces.md): no parsing,
+second editable circuit, dirty notifications or execution control for viewing.
+Test native Windows Qt for font/paint checks and all four scale factors. Retain
+stress warnings in logs; settled rendering and production-workspace painter
+warnings fail their strict tests. See [warning/risk review](v1.2-readiness.md).
+The 1.2.0 candidate uses existing dependencies and schema contracts; normal
+configure remains offline. Signing is a separate protected, authorized operation.

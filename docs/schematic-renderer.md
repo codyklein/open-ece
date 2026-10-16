@@ -3,8 +3,9 @@
 This document records the accepted checkpoint-3 Qt Widgets renderer and standalone
 preview. Its physical review is complete on Fedora 44 and Windows 11.
 [Checkpoint-4 workspace integration](schematic-workspaces.md) now reuses the same
-canvas in DC, AC and Transient; that integration awaits separate physical review.
-Numerical libraries, project schemas and application version remain unchanged.
+canvas in DC, AC and Transient; its physical review also passed. Exact 1.2.0
+candidate acceptance remains separate. Numerical libraries and project schemas
+remain unchanged; candidate version metadata is now 1.2.0.
 
 ## Boundaries and APIs
 
@@ -218,8 +219,10 @@ review gate.
 Checkpoint 3, including the final focus correction at
 `78b09b806113c1399d7e295fbe7f47d27f66531c`, was accepted on Fedora 44 and Windows 11.
 The checklist below records its review coverage. Production workspace integration
-is a separate checkpoint; its physical acceptance is pending. See
+was accepted separately at `c799175b6744b0dbe674d68d68ca4d8c36c5c909`. See
 [workspace behavior and the checkpoint-4 checklist](schematic-workspaces.md).
+Neither confirmation substitutes for exact-candidate testing. Warning scope and
+performance comparisons are recorded in [candidate review](v1.2-readiness.md).
 
 Record branch commit, OS/Qt version, font, screen scale and monitor configuration.
 On Fedora and Windows:

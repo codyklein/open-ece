@@ -2,9 +2,10 @@
 
 This internal, headless facility derives a complete owned diagram from the approved
 `SchematicGraph`. It does not edit circuits, run a solver, introduce a second editable
-electrical model, or add saved fields. It is not yet linked into the workbench.
-There is no Qt renderer, canvas, interaction, product export or physical GUI acceptance
-in this checkpoint. Application version and project schemas remain unchanged.
+electrical model, or add saved fields. This document records the checkpoint-2
+contract. The 1.2.0 candidate links it through the accepted [Qt renderer](schematic-renderer.md)
+and [workspaces](schematic-workspaces.md). The layout target itself remains
+Qt-independent; project schemas and numerical APIs are unchanged.
 
 ## API and geometry
 
@@ -23,11 +24,11 @@ VerificationResult verify_layout(const SchematicGraph&, const LayoutDiagram&,
 The public boundary also translates allocation failure into a resource diagnostic.
 
 Coordinates are signed 64-bit **integer diagram units**, not physical pixels.
-Placement/routing is orthogonal and uses a caller-selected integer grid. The future
+Placement/routing is orthogonal and uses a caller-selected integer grid. The Qt
 renderer supplies its own view transform. Symbols carry their kind, center, body box,
 positive and negative anchors, and positive-to-negative direction. These semantic
 descriptors cover resistors, capacitors, inductors, independent voltage/current
-sources and generic components; electrical glyph strokes belong to the later renderer.
+sources and generic components; electrical glyph strokes belong to the Qt renderer.
 Ground has a separate body/anchor and an explicit net-tagged lead.
 
 Every placement retains owned original component or node metadata. AC quantities
@@ -93,8 +94,9 @@ Missing/dangling ground remains a diagnostic/reference, not an invented symbol.
 
 This is an unambiguous connectivity diagram, not necessarily a textbook schematic.
 The Wheatstone and K3,3 regression fixtures deliberately use this strategy. At maximum
-size it can be wide/tall and have thousands of crossings. Readability and later
-viewport/inspection behavior require review in checkpoint 3; no GUI is claimed here.
+size it can be wide/tall and have thousands of crossings. The accepted Qt canvas
+provides zoom/scroll and inspection; full-diagram Fit is an overview, not a
+textbook-readability guarantee. The layout itself remains headless.
 
 ## Wires, contacts and verification
 
@@ -107,7 +109,7 @@ Junction records give a declared net, location and exact sorted incident-wire in
 They include degree-two joins; later rendering may reserve visible dots for branch
 points without discarding contact metadata. Every perpendicular different-net crossing
 has a separate nonconnection record. Its second wire is designated to cross over the
-first in the future renderer. Crossings do not union nets. Collinear overlaps,
+first in the Qt renderer. Crossings do not union nets. Collinear overlaps,
 different-net endpoint touches, and self-intersections are rejected as unsupported or
 ambiguous rather than disguised by markers.
 
@@ -197,4 +199,5 @@ The developer-only `--dump` produces the review record in
 RLC and Wheatstone geometry. It is neither SVG/image export nor a product file format.
 There are no new persisted positions, project fields, runtime state, editing commands
 or renderer objects. Font measurement, literal/plain-text drawing, marker legibility,
-theme/DPI behavior and keyboard/inspection UX remain checkpoint-3 review responsibilities.
+theme/DPI behavior and keyboard/inspection UX are implemented by the accepted
+[Qt renderer](schematic-renderer.md); exact-candidate physical review remains separate.
