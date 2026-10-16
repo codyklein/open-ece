@@ -101,6 +101,7 @@ class LabelItem final : public QGraphicsSimpleTextItem {
             // outlines below 8 device pixels; do not hide text or filter warnings.
             // Display labels are single-line; addText uses the same font shaping.
             QPainterPath outline;
+            outline.setFillRule(Qt::WindingFill);
             outline.addText(QPointF(0, metrics.ascent()), font(), text());
             painter->fillPath(outline, brush());
         } else {
