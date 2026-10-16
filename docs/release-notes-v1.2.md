@@ -72,7 +72,8 @@ Development checkpoints passed physical Fedora 44 and Windows 11 review. The new
 candidate still requires [exact-build physical checks](v1.2-candidate.md).
 Windows 10, MinGW, true mixed-monitor DPI and native screen-reader certification
 are not newly claimed. The [readiness review](v1.2-readiness.md) records the known
-Windows stress-paint and virtual-monitor geometry warnings and their scope.
+resolved Windows tiny-text painting defect and remaining virtual-monitor geometry
+warnings, with reproduction evidence and strict regression gates.
 
 CI retains GCC/Clang desktop/headless, Clang ASan/UBSan, MSVC Debug/Release,
 four-scale GUI tests, compatibility fixtures, examples and fresh packaged-runtime

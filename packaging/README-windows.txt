@@ -101,7 +101,7 @@ preserved within storage limits. Files contain editable experiment state, NOT
 plots, numerical results, simulation state, sweep progress or BER results. Loading
 runs nothing: choose Generate/Evaluate/Solve/Simulate/Run explicitly afterward.
 
-OpenECE 1.1 reads UTF-8 JSON schemas 1 and 2 and saves schema 2.
+OpenECE 1.2 reads UTF-8 JSON schemas 1 and 2 and saves schema 2, unchanged from 1.1.
 Schema-1 imports preserve supported editable state and add an empty inert Transient
 draft. An in-place upgrade warns that OpenECE 1.0.x cannot read schema 2 and offers
 Save As. Circuits > Transient provides linear RC/RL/RLC backward-Euler simulation,

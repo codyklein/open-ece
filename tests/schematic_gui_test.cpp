@@ -19,6 +19,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QStyleOptionComboBox>
+#include <QStyleOptionGraphicsItem>
 #include <QTest>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -154,6 +155,46 @@ class SchematicGuiTest final : public QObject {
         QVERIFY(canvas.diagram());
         QVERIFY(s::verify_layout(graph, *canvas.diagram(), q::measure_labels(graph, font).metrics)
                     .valid());
+    }
+    void labelRenderingAtTinyScales() {
+        QTest::failOnWarning(QRegularExpression("^QPainter::"));
+        q::SchematicCanvas canvas;
+        QVERIFY(canvas.setGraph(q::preview_cases()[6].graph));
+        int labels = 0;
+        for (auto* item : canvas.scene()->items()) {
+            auto* text = dynamic_cast<QGraphicsSimpleTextItem*>(item);
+            if (!text || text->text().isEmpty())
+                continue;
+            ++labels;
+            const auto original = text->text();
+            const auto bounds = text->boundingRect();
+            for (const auto scale : {.0001, .025, .1, .25, 1.0, 2.0}) {
+                QImage image(qCeil(bounds.width() * scale) + 16,
+                             qCeil(bounds.height() * scale) + 16,
+                             QImage::Format_ARGB32_Premultiplied);
+                QVERIFY(!image.isNull());
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                QVERIFY(painter.isActive());
+                painter.setRenderHint(QPainter::Antialiasing);
+                painter.translate(8, 8);
+                painter.scale(scale, scale);
+                QStyleOptionGraphicsItem option;
+                text->paint(&painter, &option, nullptr);
+                QVERIFY(painter.end());
+                QVERIFY(!QTest::currentTestFailed());
+                if (scale >= .25) {
+                    bool ink = false;
+                    for (int y = 0; y < image.height(); ++y)
+                        for (int x = 0; x < image.width(); ++x)
+                            ink |= image.pixelColor(x, y).alpha() != 0;
+                    QVERIFY2(ink, qPrintable(original));
+                }
+                QCOMPARE(text->text(), original);
+                QCOMPARE(text->boundingRect(), bounds);
+            }
+        }
+        QCOMPARE(labels, static_cast<int>(canvas.diagram()->labels.size()));
     }
     void visibleNonconnectingCrossings() {
         const auto graph = s::project_schematic(schematic_cases::wheatstone());
@@ -706,6 +747,7 @@ class SchematicGuiTest final : public QObject {
         }
     }
     void replacementFailureAndDensity() {
+        QTest::failOnWarning(QRegularExpression("^QPainter::"));
         q::SchematicCanvas canvas;
         canvas.resize(1200, 800);
         canvas.show();
@@ -745,8 +787,8 @@ class SchematicGuiTest final : public QObject {
         QApplication::processEvents();
     }
     void settledViewportRendering() {
-        // Production-like visible/settled rendering is a strict gate. Keep the
-        // separate no-event-loop replacement stress test and its warnings intact.
+        // Production-like visible/settled rendering and the separate no-event-loop
+        // replacement stress are both strict gates, including the densest layout.
         QTest::failOnWarning(QRegularExpression("^QPainter::"));
         q::SchematicCanvas canvas;
         canvas.resize(1200, 800);

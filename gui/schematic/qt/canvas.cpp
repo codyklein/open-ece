@@ -1,5 +1,6 @@
 #include "canvas.hpp"
 #include <QEvent>
+#include <QFontMetricsF>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
@@ -14,6 +15,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
+#include <QStyleOptionGraphicsItem>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWheelEvent>
@@ -82,6 +84,29 @@ class PickPath final : public QGraphicsPathItem {
   private:
     std::function<void()> callback_;
     bool component_;
+};
+class LabelItem final : public QGraphicsSimpleTextItem {
+  public:
+    LabelItem(const QString& text, const QFont& font) : QGraphicsSimpleTextItem(text) {
+        setFont(font);
+    }
+    void paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
+               QWidget* widget) override {
+        const QFontMetricsF metrics(font());
+        const auto pixels = metrics.height() * QStyleOptionGraphicsItem::levelOfDetailFromTransform(
+                                                   painter->deviceTransform());
+        if (pixels < 8.0) {
+            // Qt 6.8.3's RGB glyph cache paints null images at tiny transforms
+            // (upstream qtbase 9ab79b4b). Keep drawing every label, using glyph
+            // outlines below 8 device pixels; do not hide text or filter warnings.
+            // Display labels are single-line; addText uses the same font shaping.
+            QPainterPath outline;
+            outline.addText(QPointF(0, metrics.ascent()), font(), text());
+            painter->fillPath(outline, brush());
+        } else {
+            QGraphicsSimpleTextItem::paint(painter, option, widget);
+        }
+    }
 };
 QString componentDetails(const Component& c) {
     QString text = QString("Component [%1] — %2\nKind: %3\nPositive terminal: %4\nNegative "
@@ -302,7 +327,8 @@ void SchematicCanvas::install(const SchematicGraph& graph, const LayoutDiagram& 
             std::find_if(measured.labels.begin(), measured.labels.end(), [&](const auto& m) {
                 return m.owner == label.owner && m.role == label.role;
             });
-        auto* text = scene_->addSimpleText(found->text, font());
+        auto* text = new LabelItem(found->text, font());
+        scene_->addItem(text);
         text->setBrush(foreground);
         const auto ink = text->boundingRect();
         text->setPos(point(label.bounds.origin) + QPointF(4 - std::min(0.0, ink.left()), 4));

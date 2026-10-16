@@ -255,3 +255,15 @@ pan and entity selection remain transient and do not dirty the project. The
 standalone preview remains a non-shipping review tool. See the
 [workspace integration contract](schematic-workspaces.md) for refresh, ownership,
 execution and persistence boundaries.
+
+## Tiny text at overview zoom
+
+The candidate review reproduced an empty-glyph-image painter failure in Windows
+Qt 6.8.3 at maximum-density Fit zoom. Labels now use Qt-shaped vector outlines
+below eight device pixels in transformed font height, retaining native simple-text
+painting at readable sizes. Text is not hidden; measurements, label bounds, elision,
+source metadata and inspection are unchanged. The device transform accounts for
+DPI and image-target scaling. This avoids the affected RGB glyph-cache path;
+[the evidence and upstream fix](v1.2-readiness.md) explain the scope. Automated
+rapid-replacement, settled and production-workspace painting fail on painter
+warnings. Exact-candidate physical review must still check overview/zoomed labels.
