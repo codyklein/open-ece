@@ -1,8 +1,10 @@
 # Read-only schematic renderer and developer preview — checkpoint 3
 
-This checkpoint adds an internal Qt Widgets renderer, not a workbench feature. The
-DC, AC and Transient pages, numerical libraries, persisted schemas, application
-version and release package contents are unchanged. Physical review is pending.
+This document records the accepted checkpoint-3 Qt Widgets renderer and standalone
+preview. Its physical review is complete on Fedora 44 and Windows 11.
+[Checkpoint-4 workspace integration](schematic-workspaces.md) now reuses the same
+canvas in DC, AC and Transient; that integration awaits separate physical review.
+Numerical libraries, project schemas and application version remain unchanged.
 
 ## Boundaries and APIs
 
@@ -15,8 +17,10 @@ Project draft → owned SchematicGraph → font measurements → verified Layout
 ```
 
 `openece_schematic_model` stays usable without Qt/Qwt. The separate internal
-`openece_schematic_view` target uses only Qt Widgets plus that model. It is not
-linked into `openece_workbench`. Headers are in `gui/schematic/qt/`:
+`openece_schematic_view` target uses only Qt Widgets plus that model. It is linked
+into `openece_workbench` for the read-only DC/AC/Transient workspace integration;
+the developer preview remains independently buildable. Headers are in
+`gui/schematic/qt/`:
 
 - `measure_labels(graph, font)` returns owned display strings and `LayoutMetrics`.
 - `symbol_geometry(placement)` returns vector strokes and polarity/arrow anchors.
@@ -209,7 +213,13 @@ frame-rate/native-compositor guarantees. No asynchronous renderer is justified b
 the ordinary/dense scene construction measurements. Physical navigation remains a
 review gate.
 
-## Physical-review checklist (pending)
+## Standalone physical review (accepted)
+
+Checkpoint 3, including the final focus correction at
+`78b09b806113c1399d7e295fbe7f47d27f66531c`, was accepted on Fedora 44 and Windows 11.
+The checklist below records its review coverage. Production workspace integration
+is a separate checkpoint; its physical acceptance is pending. See
+[workspace behavior and the checkpoint-4 checklist](schematic-workspaces.md).
 
 Record branch commit, OS/Qt version, font, screen scale and monitor configuration.
 On Fedora and Windows:
@@ -236,8 +246,9 @@ On Fedora and Windows:
 7. Switch fixtures repeatedly, select then replace, and exit with repaints pending.
    No crashes/stale inspector or scene items should remain.
 
-This preview cannot edit or run a circuit. Existing workbench behavior and project
-persistence must remain unchanged. Checkpoint 4 should reuse this measured/verified
-canvas through owned draft projections, with transient selection/zoom excluded from
-project dirty state. Workspace integration and any further physical findings require
-separate approval.
+This preview cannot edit or run a circuit. The workbench now embeds the same
+measured/verified canvas through owned draft projections. View selection, zoom,
+pan and entity selection remain transient and do not dirty the project. The
+standalone preview remains a non-shipping review tool. See the
+[workspace integration contract](schematic-workspaces.md) for refresh, ownership,
+execution and persistence boundaries.

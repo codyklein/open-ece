@@ -1,5 +1,6 @@
 // Release-only CI also runs this test beside the extracted runtime. It is not shipped.
 #include "branding.hpp"
+#include "circuit_presentation.hpp"
 #include "main_window.hpp"
 #include "transient_view.hpp"
 #include <QAction>
@@ -18,6 +19,7 @@
 #include <iostream>
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
+#include <schematic/qt/canvas.hpp>
 using namespace openece;
 using namespace openece::gui;
 void verify_packaged_branding();
@@ -115,9 +117,62 @@ void packaged_examples() {
     }
     std::cout << "PASS: all thirteen packaged examples restored inertly and round-tripped.\n";
 }
+void packaged_schematics() {
+    ProjectDocument doc;
+    auto& workspace = doc.workspace();
+    const auto before = workspace.capture();
+    workspace.resize(1280, 900);
+    workspace.show();
+    control<QListWidget>(workspace, "domain_navigation")->setCurrentRow(2);
+    auto* analyses = control<QTabWidget>(workspace, "circuits_analysis_tabs");
+    const int previous_analysis = analyses->currentIndex();
+    int analysis = 0;
+    for (const auto* prefix : {"dc", "ac", "transient"}) {
+        analyses->setCurrentIndex(analysis++);
+        const auto tabs =
+            QString(prefix) + (QString(prefix) == "transient" ? "_tabs" : "_view_tabs");
+        control<QTabWidget>(workspace, tabs.toUtf8().constData())->setCurrentIndex(0);
+        auto* panel = dynamic_cast<CircuitPresentation*>(
+            workspace.findChild<QWidget*>(QString(prefix) + "_presentation"));
+        require(panel != nullptr, "Missing packaged circuit presentation");
+        control<QComboBox>(workspace, (QString(prefix) + "_circuit_view").toUtf8().constData())
+            ->setCurrentIndex(1);
+        QElapsedTimer deadline;
+        deadline.start();
+        while ((!panel->canvas() || !panel->canvas()->diagram()) && deadline.elapsed() < 5000) {
+            QApplication::processEvents();
+            QThread::msleep(1);
+        }
+        require(panel->canvas() && panel->canvas()->diagram(),
+                "Packaged circuit schematic did not render");
+        const auto& snapshot = doc.workspace().draft();
+        const auto graph = analysis == 1 ? schematic::project_schematic(snapshot.circuits.dc)
+                           : analysis == 2
+                               ? schematic::project_schematic(snapshot.circuits.ac)
+                               : schematic::project_schematic(snapshot.circuits.transient);
+        require(schematic::verify_layout(
+                    graph, *panel->canvas()->diagram(),
+                    schematic::qt::measure_labels(graph, panel->canvas()->font()).metrics)
+                    .valid(),
+                "Packaged schematic differs from authoritative circuit");
+        control<QComboBox>(workspace, (QString(prefix) + "_circuit_view").toUtf8().constData())
+            ->setCurrentIndex(0);
+        inert(workspace);
+        require(!doc.dirty(), "Packaged schematic navigation dirtied project");
+    }
+    // Persisted analysis tabs have existing semantics; restore those selections
+    // before checking that the transient presentation controls added no state.
+    analyses->setCurrentIndex(previous_analysis);
+    control<QListWidget>(workspace, "domain_navigation")
+        ->setCurrentRow(0); // This probe starts with default_project() in Signals.
+    require(workspace.capture() == before, "Schematic viewing changed editable state");
+    workspace.hide();
+    std::cout << "PASS: packaged read-only DC/AC/Transient schematics and inert navigation.\n";
+}
 void run() {
     verify_packaged_branding();
     packaged_examples();
+    packaged_schematics();
     QTemporaryDir temp(QDir::currentPath() + "/OpenECE persistence π 名 XXXXXX");
     require(temp.isValid(), "Cannot create Unicode test workspace");
     const QString base = temp.filePath("editable π project"), path = base + ".openece";

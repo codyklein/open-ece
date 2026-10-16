@@ -196,6 +196,9 @@ if(OPENECE_BUILD_GUI)
 endif()
 
 if(WIN32 AND OPENECE_BUILD_GUI)
+    # The packaged workbench also checks actual schematic font measurement. Use
+    # Windows' native font database, matching the fresh-extraction runtime probe.
+    set_tests_properties(packaged_persistence_workflow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows")
     # These are development/test paths only; the ZIP is tested without them.
     set_tests_properties(transient_execution_workflow transient_editor_workflow branding_workflow ${example_tests} release_compatibility release_ux_scale_1 release_ux_scale_1.25 release_ux_scale_1.5 release_ux_scale_2 release_correctness_workflow packaged_persistence_workflow project_file_decisions project_file_editing project_file_session project_document_workflow project_gui_workflow gui_workflow digital_gui_workflow timing_gui_workflow circuit_gui_workflow ac_gui_workflow communications_gui_workflow phase_input PROPERTIES ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;PATH=path_list_prepend:$<TARGET_FILE_DIR:Qwt::Qwt>")

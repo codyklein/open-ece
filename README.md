@@ -29,6 +29,10 @@ Fedora 44 transient and GUI acceptance also passed. See the published release
 notes, [numerical conventions](docs/transient-analysis.md) and
 [execution workflow](docs/transient-execution.md).
 
+Development on `feature/v1.2.0` adds [read-only circuit schematics](docs/schematic-workspaces.md)
+to the DC, AC and Transient workspaces. This integration awaits physical review;
+it is not part of the published 1.1.0 package.
+
 ## Try it
 
 Follow the [first-session walkthrough](docs/first-session.md) and open an

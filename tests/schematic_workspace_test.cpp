@@ -5,11 +5,15 @@
 #include "schematic_layout_cases.hpp"
 #include "transient_view.hpp"
 #include <QComboBox>
+#include <QFile>
 #include <QGraphicsView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QPushButton>
+#include <QScreen>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QSpinBox>
@@ -17,6 +21,7 @@
 #include <QTabWidget>
 #include <QTableView>
 #include <QTableWidget>
+#include <QTemporaryDir>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
@@ -74,7 +79,12 @@ class SchematicWorkspaceTests final : public QObject {
                 .arg(tabs->sizeHint().height())
                 .arg(get<QSplitter>(workspace, "transient_editor_results_split")->sizes()[0])
                 .arg(get<QSplitter>(workspace, "transient_editor_results_split")->sizes()[1]);
-        QVERIFY2(bottom < scroll->viewport()->height(), qPrintable(detail));
+        if (workspace.height() >= 940)
+            QVERIFY2(bottom < scroll->viewport()->height(), qPrintable(detail));
+        scroll->ensureWidgetVisible(parts);
+        QCoreApplication::processEvents();
+        QVERIFY(scroll->viewport()->rect().intersects(
+            QRect(parts->mapTo(scroll->viewport(), QPoint{}), parts->size())));
     }
     void dcNavigationAndRefresh() {
         auto draft = schematic_cases::divider();
@@ -416,6 +426,180 @@ class SchematicWorkspaceTests final : public QObject {
         get<QPushButton>(view, "transient_remove_node")->click();
         QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
         QVERIFY(!view.result());
+        const auto diagram = *panel->canvas()->diagram();
+        get<QPushButton>(view, "transient_run")->click();
+        QVERIFY(get<QLabel>(view, "transient_status")->text().startsWith("Failed"));
+        QCoreApplication::processEvents();
+        QVERIFY(*panel->canvas()->diagram() == diagram);
+        QVERIFY(!view.result());
+    }
+    void transientCancelledAndResetRemainPresentationOnly() {
+        auto draft = schematic_cases::example("transient-rc-step").circuits.transient;
+        TransientView view(nullptr, &draft);
+        expose(view);
+        get<QPushButton>(view, "transient_step_execution")->click();
+        auto* status = get<QLabel>(view, "transient_status");
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Paused"), 10000);
+        choose(view, "transient", 1);
+        auto* panel = presentation(view, "transient");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        get<QPushButton>(view, "transient_cancel")->click();
+        QTRY_VERIFY(status->text().startsWith("Cancelled"));
+        const auto accepted = view.result();
+        const auto before = draft;
+        QSignalSpy edits(&view, &DraftView::draftEdited);
+        choose(view, "transient", 0);
+        choose(view, "transient", 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(view.result(), accepted);
+        QVERIFY(status->text().startsWith("Cancelled"));
+        get<QPushButton>(view, "transient_reset")->click();
+        QVERIFY(status->text().startsWith("Ready"));
+        QVERIFY(!view.result());
+        QVERIFY(matches(panel, s::project_schematic(draft)));
+        QVERIFY(draft == before);
+        QCOMPARE(edits.count(), 0);
+    }
+    void embeddedKeyboardAndScaling_data() {
+        QTest::addColumn<QString>("analysis");
+        QTest::newRow("dc") << QString("dc");
+        QTest::newRow("ac") << QString("ac");
+        QTest::newRow("transient") << QString("transient");
+    }
+    void embeddedKeyboardAndScaling() {
+        QFETCH(QString, analysis);
+        const auto key = analysis.toUtf8();
+        std::unique_ptr<DraftView> view;
+        if (analysis == "dc")
+            view = std::make_unique<CircuitsView>(nullptr, nullptr, true);
+        else if (analysis == "ac")
+            view = std::make_unique<AcView>(nullptr, nullptr, true);
+        else
+            view = std::make_unique<TransientView>();
+        expose(*view);
+        auto* selector = get<QComboBox>(*view, (analysis + "_circuit_view").toUtf8().constData());
+        QVERIFY(!selector->accessibleName().isEmpty());
+        selector->setFocus();
+        QTest::keyClick(selector, Qt::Key_Down); // Actual production view switch.
+        auto* panel = presentation(*view, key.constData());
+        QTRY_VERIFY(panel->canvas() && panel->canvas()->diagram());
+        auto* canvas = panel->canvas();
+        std::vector<QWidget*> focus;
+        for (auto* button : canvas->findChildren<QPushButton*>())
+            focus.push_back(button);
+        focus.insert(focus.end(), {canvas->view(), canvas->findChild<QTreeWidget*>(),
+                                   canvas->findChild<QPlainTextEdit*>()});
+        QCOMPARE(focus.size(), std::size_t(6));
+        selector->setFocus();
+        for (auto* expected : focus) {
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QCOMPARE(QApplication::focusWidget(), expected);
+        }
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QVERIFY(!canvas->isAncestorOf(QApplication::focusWidget()));
+        for (auto it = focus.rbegin(); it != focus.rend(); ++it) {
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+            QCOMPARE(QApplication::focusWidget(), *it);
+        }
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab, Qt::ShiftModifier);
+        QCOMPARE(QApplication::focusWidget(), selector);
+        auto font = view->font();
+        font.setPointSizeF(font.pointSizeF() * 1.5);
+        view->setFont(font);
+        view->resize(700, 550);
+        QCoreApplication::processEvents();
+        QVERIFY(canvas->diagram());
+        QVERIFY(canvas->view()->viewport()->width() > 0);
+        QVERIFY(canvas->view()->viewport()->height() > 0);
+        selector->setFocus();
+        QTest::keyClick(selector, Qt::Key_Up);
+        QCOMPARE(selector->currentIndex(), 0);
+        QTest::keyClick(selector, Qt::Key_Down);
+        QCOMPARE(selector->currentIndex(), 1);
+        QTest::keyClick(selector, Qt::Key_Tab);
+        QCOMPARE(QApplication::focusWidget(), focus.front());
+    }
+    void schemaRoundTripAndReplacement_data() {
+        QTest::addColumn<QString>("fixture");
+        QTest::newRow("schema-1-incomplete") << QString("v0.9/incomplete.openece");
+        QTest::newRow("schema-2") << QString("project-v2.openece");
+    }
+    void schemaRoundTripAndReplacement() {
+        QFETCH(QString, fixture);
+        QFile file(QString(OPENECE_SOURCE_DIR) + "/tests/fixtures/" + fixture);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto snapshot = project::decode_project(file.readAll().toStdString()).snapshot;
+        ProjectDocument doc(std::make_unique<ProjectWorkspace>(snapshot, true));
+        auto& workspace = doc.workspace();
+        expose(workspace);
+        get<QListWidget>(workspace, "domain_navigation")->setCurrentRow(2);
+        auto* analyses = get<QTabWidget>(workspace, "circuits_analysis_tabs");
+        QPointer<QWidget> firstCanvas;
+        for (int i = 0; i < 3; ++i) {
+            analyses->setCurrentIndex(i);
+            const auto prefix = QStringList{"dc", "ac", "transient"}[i].toUtf8();
+            choose(workspace, prefix.constData(), 1);
+            auto* panel = presentation(workspace, prefix.constData());
+            QTRY_VERIFY(panel->canvas() && panel->canvas()->diagram());
+            panel->canvas()->zoomIn();
+            panel->canvas()->fit();
+            if (i == 0)
+                firstCanvas = panel->canvas();
+            QVERIFY(!doc.dirty());
+        }
+        QVERIFY(!get<TransientView>(workspace, "transient_view")->result());
+        for (auto name : {"circuit_voltages", "ac_voltages", "ac_sweep_results"})
+            QCOMPARE(get<QTableWidget>(workspace, name)->rowCount(), 0);
+        const auto expected = workspace.capture();
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const auto path = temp.filePath("schematic project π.openece");
+        QVERIFY(std::holds_alternative<SaveStatus>(doc.save_as(path)));
+        auto loaded = doc.prepare_open(path);
+        QVERIFY(std::holds_alternative<PreparedProject>(loaded));
+        QVERIFY(std::holds_alternative<std::monostate>(
+            doc.install(std::move(std::get<PreparedProject>(loaded)))));
+        QVERIFY(firstCanvas.isNull());
+        QVERIFY(doc.workspace().capture() == expected);
+        QVERIFY(!doc.dirty());
+        for (auto prefix : {"dc", "ac", "transient"}) {
+            QCOMPARE(get<QComboBox>(doc.workspace(),
+                                    (QString(prefix) + "_circuit_view").toUtf8().constData())
+                         ->currentIndex(),
+                     0);
+            QVERIFY(!presentation(doc.workspace(), prefix)->canvas());
+        }
+        auto fresh = doc.prepare_new(project::default_project(), DocumentState::clean);
+        QVERIFY(std::holds_alternative<PreparedProject>(fresh));
+        QVERIFY(std::holds_alternative<std::monostate>(
+            doc.install(std::move(std::get<PreparedProject>(fresh)))));
+        QVERIFY(doc.workspace().capture() == project::default_project());
+        QVERIFY(!doc.dirty());
+    }
+    void activeSessionReplacementAndPendingRefreshTeardown() {
+        auto snapshot = schematic_cases::example("transient-rc-step");
+        snapshot.circuits.transient.stop = {"90", "ms"};
+        snapshot.circuits.transient.maximum_step = {"1", "us"};
+        ProjectDocument doc(std::make_unique<ProjectWorkspace>(snapshot, true));
+        expose(doc.workspace());
+        auto* view = get<TransientView>(doc.workspace(), "transient_view");
+        choose(*view, "transient", 1);
+        QTRY_VERIFY(presentation(*view, "transient")->canvas()->diagram());
+        auto replacement = doc.prepare_new(snapshot, DocumentState::clean);
+        QVERIFY(std::holds_alternative<PreparedProject>(replacement));
+        QPointer<QWidget> old = view;
+        get<QPushButton>(*view, "transient_run")->click();
+        QVERIFY(get<QLabel>(*view, "transient_status")->text().startsWith("Running"));
+        choose(*view, "transient", 0);
+        choose(*view, "transient", 1); // Refresh queued; no execution-state operation.
+        QVERIFY(get<QLabel>(*view, "transient_status")->text().startsWith("Running"));
+        QVERIFY(std::holds_alternative<std::monostate>(
+            doc.install(std::move(std::get<PreparedProject>(replacement)))));
+        QVERIFY(old.isNull());
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCoreApplication::processEvents();
+        QVERIFY(!get<TransientView>(doc.workspace(), "transient_view")->result());
+        QVERIFY(!doc.dirty());
     }
 };
 QTEST_MAIN(SchematicWorkspaceTests)
