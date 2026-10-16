@@ -263,7 +263,9 @@ Qt 6.8.3 at maximum-density Fit zoom. Labels now use Qt-shaped vector outlines
 below eight device pixels in transformed font height, retaining native simple-text
 painting at readable sizes. Text is not hidden; measurements, label bounds, elision,
 source metadata and inspection are unchanged. The device transform accounts for
-DPI and image-target scaling. This avoids the affected RGB glyph-cache path;
+DPI and image-target scaling. Each label retains at most 2,048 path-element slots
+for repeated painting; complex outlines are drawn without retention. Font/text
+changes invalidate the retained path, and scene teardown destroys it. This avoids the affected RGB glyph-cache path;
 [the evidence and upstream fix](v1.2-readiness.md) explain the scope. Automated
 rapid-replacement, settled and production-workspace painting fail on painter
 warnings. Exact-candidate physical review must still check overview/zoomed labels.

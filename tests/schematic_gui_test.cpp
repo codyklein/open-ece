@@ -196,6 +196,51 @@ class SchematicGuiTest final : public QObject {
         }
         QCOMPARE(labels, static_cast<int>(canvas.diagram()->labels.size()));
     }
+    void labelOutlineRefresh() {
+        QTest::failOnWarning(QRegularExpression("^QPainter::"));
+        q::SchematicCanvas canvas;
+        QVERIFY(canvas.setGraph(q::preview_cases().front().graph));
+        QGraphicsSimpleTextItem* label = nullptr;
+        for (auto* item : canvas.scene()->items())
+            if ((label = dynamic_cast<QGraphicsSimpleTextItem*>(item)))
+                break;
+        QVERIFY(label);
+        const auto original = label->text();
+        const auto originalFont = label->font();
+        const auto scale = 3.0 / QFontMetricsF(originalFont).height();
+        auto render = [&] {
+            QImage image(400, 100, QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.translate(8, 8);
+            painter.scale(scale, scale);
+            QStyleOptionGraphicsItem option;
+            label->paint(&painter, &option, nullptr);
+            painter.end();
+            return image;
+        };
+        const auto first = render();
+        QCOMPARE(render(), first); // Retained outline must draw identically.
+        label->setText("Changed label Ω αβ");
+        QVERIFY(render() != first);
+        label->setText(original);
+        QCOMPARE(render(), first);
+        auto font = originalFont;
+        font.setPointSizeF(font.pointSizeF() * 1.7);
+        label->setFont(font);
+        QVERIFY(render() != first);
+        label->setFont(originalFont);
+        QCOMPARE(render(), first);
+        // A complex label must still render when it exceeds the retention cap.
+        label->setText(QString("ΩW").repeated(300));
+        const auto complex = render();
+        QCOMPARE(render(), complex);
+        QVERIFY(complex != first);
+        label->setText(original);
+        QCOMPARE(render(), first);
+        QVERIFY(!QTest::currentTestFailed());
+    }
     void visibleNonconnectingCrossings() {
         const auto graph = s::project_schematic(schematic_cases::wheatstone());
         const auto d = std::get<s::LayoutDiagram>(s::layout_schematic(graph));

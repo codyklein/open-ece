@@ -100,14 +100,33 @@ class LabelItem final : public QGraphicsSimpleTextItem {
             // (upstream qtbase 9ab79b4b). Keep drawing every label, using glyph
             // outlines below 8 device pixels; do not hide text or filter warnings.
             // Display labels are single-line; addText uses the same font shaping.
-            QPainterPath outline;
-            outline.setFillRule(Qt::WindingFill);
-            outline.addText(QPointF(0, metrics.ascent()), font(), text());
-            painter->fillPath(outline, brush());
+            if (outline_ && (outlineFont_ != font() || outlineText_ != text()))
+                outline_.reset();
+            if (outline_) {
+                painter->fillPath(*outline_, brush());
+            } else {
+                QPainterPath outline;
+                outline.setFillRule(Qt::WindingFill);
+                outline.addText(QPointF(0, metrics.ascent()), font(), text());
+                // Reuse modest outlines during zoom/pan. Unusually complex glyphs
+                // are still drawn, but not retained: at most 2,048 retained path slots per
+                // label and 416 labels, independent of raw text length or IDs.
+                if (outline.capacity() <= 2048) {
+                    outline_ = outline;
+                    outlineFont_ = font();
+                    outlineText_ = text();
+                }
+                painter->fillPath(outline, brush());
+            }
         } else {
             QGraphicsSimpleTextItem::paint(painter, option, widget);
         }
     }
+
+  private:
+    std::optional<QPainterPath> outline_;
+    QFont outlineFont_;
+    QString outlineText_;
 };
 QString componentDetails(const Component& c) {
     QString text = QString("Component [%1] — %2\nKind: %3\nPositive terminal: %4\nNegative "
