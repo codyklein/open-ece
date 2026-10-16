@@ -48,6 +48,9 @@ $files = @(Get-ChildItem $root -Recurse -File)
 if ($files.Count -ne $entries.Count + 1) { throw 'Unmanifested package files.' }
 foreach ($file in $files) {
     $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
+    if ($file.Extension -ieq '.exe' -and $relative -notin @('openece.exe', 'vc_redist.x64.exe')) {
+        throw "Unexpected executable (test/preview tools are not shipped): $relative"
+    }
     if ($relative -ne 'SHA256SUMS.txt' -and !$seen.Contains($file.FullName)) { throw "Unmanifested file: $relative" }
     # Original license headers are notices, not build inputs.
     if (!$relative.StartsWith('licenses/') -and $relative -match '(?i)(\.(pdb|obj|lib|ilk|cmake|cpp|hpp|h|log)$|CMakeCache.txt|(^|/)(sources|build|CMakeFiles)/)') {
@@ -113,6 +116,13 @@ try {
                 throw 'Persistence probe did not report a completed round trip.'
             }
             $probeOutput = Get-Content "$Destination/persistence-stdout.log" -Raw
+            if ($probeOutput -notmatch 'PASS: all thirteen packaged examples restored inertly and round-tripped\.' -or
+                $probeOutput -notmatch 'PASS: packaged read-only DC/AC/Transient schematics and inert navigation\.') {
+                throw 'Packaged examples/schematic verification did not complete.'
+            }
+            if ((Get-Content "$Destination/persistence-stderr.log" -Raw) -match '\bQPainter::') {
+                throw 'Painter diagnostics occurred in the packaged production-workspace probe. Inspect persistence-stderr.log.'
+            }
             if ($probeOutput -notmatch "PASS: packaged branding: application icon and About OpenECE $([regex]::Escape($expectedVersion))\." -or
                 $probeOutput -notmatch 'PASS: executable icon: ten approved') {
                 throw 'Packaged About/icon verification did not complete.'

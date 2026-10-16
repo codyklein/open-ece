@@ -31,6 +31,16 @@ function New-TestSignature($Certificate, [string]$Status = 'Valid') {
         SignerCertificate = $Certificate; TimeStamperCertificate = $Certificate
     }
 }
+# CMake owns the version; workflow artifact paths and the protected stage guard
+# must agree. This check does not dispatch signing or access Azure credentials.
+$cmake = Get-Content "$PSScriptRoot/../../CMakeLists.txt" -Raw
+$version = [regex]::Match($cmake, 'project\(OpenECE VERSION ([0-9]+\.[0-9]+\.[0-9]+)').Groups[1].Value
+Assert-True (![string]::IsNullOrWhiteSpace($version)) 'Cannot read central application version.'
+$workflow = Get-Content "$PSScriptRoot/../../.github/workflows/build.yml" -Raw
+$packageNames = @([regex]::Matches($workflow, 'OpenECE-v[0-9]+\.[0-9]+\.[0-9]+-windows-x86_64') |
+    ForEach-Object { $_.Value } | Select-Object -Unique)
+Assert-True ($packageNames.Count -eq 1 -and $packageNames[0] -ceq "OpenECE-v$version-windows-x86_64") 'Workflow package names/stage guard disagree with CMake version.'
+
 $publisher = New-TestCertificate 'Cody Klein'
 $vendor = New-TestCertificate 'The Qt Company Oy'
 $wrong = New-TestCertificate 'Different Publisher'
