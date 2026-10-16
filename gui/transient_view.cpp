@@ -82,6 +82,18 @@ class TransientSplitter final : public QSplitter {
 
   protected:
     QSplitterHandle* createHandle() override { return new TransientSplitterHandle(this); }
+    void showEvent(QShowEvent* event) override {
+        QSplitter::showEvent(event);
+        if (!initialized_) {
+            initialized_ = true;
+            // Nested pages have their populated size hints after the first layout.
+            // Apply once: later view switching/resizing preserves the user's split.
+            QTimer::singleShot(0, this, [this] {
+                if (count() == 2)
+                    setSizes({widget(0)->sizeHint().height(), widget(1)->sizeHint().height()});
+            });
+        }
+    }
     void changeEvent(QEvent* event) override {
         QSplitter::changeEvent(event);
         if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
@@ -89,6 +101,7 @@ class TransientSplitter final : public QSplitter {
     }
 
   private:
+    bool initialized_ = false;
     void fit_handle() {
         setHandleWidth(std::max(12, fontMetrics().height()));
         if (count() > 0)
@@ -309,9 +322,13 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         return l;
     };
     auto* circuit = page("Circuit");
+    circuit->setContentsMargins(0, 0, 0, 0);
     auto* table_page = new QWidget(circuit->parentWidget());
     auto* editor = new QVBoxLayout(table_page);
     editor->setContentsMargins(0, 0, 0, 0);
+    // Pay for the view selector with spare padding, retaining the existing
+    // compact table heights and the initial editor/results viewport budget.
+    editor->setSpacing(2);
     circuit->addWidget(new CircuitPresentation(
         this, table_page, "transient",
         [this] { return schematic::project_schematic(state_.get()); }, circuit->parentWidget()));

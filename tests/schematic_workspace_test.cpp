@@ -10,6 +10,7 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QSplitter>
@@ -54,6 +55,27 @@ void expose(QWidget& view) {
 class SchematicWorkspaceTests final : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void transientProductionLayout() {
+        auto snapshot = schematic_cases::example("transient-rc-step");
+        ProjectWorkspace workspace(snapshot, true);
+        workspace.resize(1800, 940);
+        workspace.show();
+        QTest::qWait(30);
+        auto* scroll = get<QScrollArea>(workspace, "transient_editor_scroll");
+        auto* parts = get<QTableWidget>(workspace, "transient_components");
+        const int bottom = parts->mapTo(scroll->viewport(), parts->rect().bottomLeft()).y();
+        auto* tabs = get<QTabWidget>(workspace, "transient_tabs");
+        const auto detail =
+            QString("component bottom %1, editor viewport %2, scroll hint %3, "
+                    "tabs hint %4, split sizes %5/%6")
+                .arg(bottom)
+                .arg(scroll->viewport()->height())
+                .arg(scroll->sizeHint().height())
+                .arg(tabs->sizeHint().height())
+                .arg(get<QSplitter>(workspace, "transient_editor_results_split")->sizes()[0])
+                .arg(get<QSplitter>(workspace, "transient_editor_results_split")->sizes()[1]);
+        QVERIFY2(bottom < scroll->viewport()->height(), qPrintable(detail));
+    }
     void dcNavigationAndRefresh() {
         auto draft = schematic_cases::divider();
         CircuitsView view(nullptr, &draft, true);
