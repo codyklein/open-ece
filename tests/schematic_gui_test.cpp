@@ -15,6 +15,7 @@
 #include <QPainterPathStroker>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QScrollBar>
 #include <QStyleOptionComboBox>
@@ -704,6 +705,40 @@ class SchematicGuiTest final : public QObject {
             QVERIFY(canvas.grab().save(directory + QString("/schematic-%1.png").arg(i)));
         }
     }
+    void settledViewportRendering() {
+        // Production-like visible/settled rendering is a strict gate. Keep the
+        // separate no-event-loop replacement stress test and its warnings intact.
+        QTest::failOnWarning(QRegularExpression("^QPainter::"));
+        q::SchematicCanvas canvas;
+        canvas.resize(1200, 800);
+        canvas.show();
+        canvas.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&canvas));
+        for (const auto& c : q::preview_cases()) {
+            qInfo().noquote() << "Settled render:" << c.name;
+            QVERIFY(canvas.setGraph(c.graph));
+            QApplication::processEvents();
+            canvas.fit();
+            QImage image(800, 600, QImage::Format_ARGB32_Premultiplied);
+            QVERIFY(!image.isNull());
+            for (int phase = 0; phase < 3; ++phase) {
+                if (phase == 1) {
+                    canvas.zoomIn();
+                    canvas.view()->verticalScrollBar()->setValue(40);
+                } else if (phase == 2 && !canvas.diagram()->nets.empty()) {
+                    QVERIFY(canvas.select(canvas.diagram()->nets.front().source.key));
+                }
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                QVERIFY(painter.isActive());
+                canvas.view()->render(&painter);
+                QVERIFY(painter.end());
+                QVERIFY(!QTest::currentTestFailed());
+                QVERIFY(canvas.diagram());
+                QCOMPARE(canvas.diagram()->components.size(), c.graph.components().size());
+            }
+        }
+    }
     void replacementFailureAndDensity() {
         q::SchematicCanvas canvas;
         canvas.resize(1200, 800);
@@ -711,6 +746,7 @@ class SchematicGuiTest final : public QObject {
         const auto cases = q::preview_cases();
         for (int pass = 0; pass < 2; ++pass)
             for (const auto& c : cases) {
+                qInfo().noquote() << "Replacement stress: pass" << pass << c.name << "install";
                 QVERIFY2(canvas.setGraph(c.graph),
                          qPrintable(c.name + ": " + canvas.status() +
                                     "; font=" + canvas.font().toString()));
@@ -718,10 +754,16 @@ class SchematicGuiTest final : public QObject {
                 QCOMPARE(canvas.diagram()->nets.size(), c.graph.nodes().size());
                 QVERIFY(canvas.scene()->items().size() < 650);
                 QImage image(800, 600, QImage::Format_ARGB32_Premultiplied);
+                QVERIFY(!image.isNull());
                 image.fill(Qt::transparent);
                 QPainter painter(&image);
+                QVERIFY(painter.isActive());
+                qInfo() << "Replacement stress: render; viewport"
+                        << canvas.view()->viewport()->size() << "scale"
+                        << canvas.view()->transform().m11();
                 canvas.view()->render(&painter);
-                painter.end();
+                QVERIFY(painter.end());
+                qInfo() << "Replacement stress: render complete";
             }
         QCOMPARE(canvas.diagram()->crossings.size(), std::size_t(7936));
         canvas.showFailure("<b>literal</b> — Ω");
@@ -730,6 +772,7 @@ class SchematicGuiTest final : public QObject {
         QVERIFY(!canvas.selection());
         QVERIFY(canvas.setGraph(cases.front().graph));
         for (int i = 0; i < 3; ++i) {
+            qInfo() << "Replacement stress: hidden temporary" << i;
             auto temporary = std::make_unique<q::SchematicCanvas>();
             QVERIFY(temporary->setGraph(cases[4].graph));
         }

@@ -13,6 +13,7 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QScrollArea>
 #include <QSignalSpy>
@@ -60,6 +61,7 @@ void expose(QWidget& view) {
 class SchematicWorkspaceTests final : public QObject {
     Q_OBJECT
   private Q_SLOTS:
+    void init() { QTest::failOnWarning(QRegularExpression("^QPainter::")); }
     void transientProductionLayout() {
         auto snapshot = schematic_cases::example("transient-rc-step");
         ProjectWorkspace workspace(snapshot, true);
