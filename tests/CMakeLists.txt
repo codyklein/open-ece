@@ -60,12 +60,16 @@ if(OPENECE_BUILD_GUI)
     foreach(scale IN ITEMS 1 1.25 1.5 2)
         add_test(NAME schematic_render_scale_${scale} COMMAND openece_schematic_gui_tests
             -o "${CMAKE_CURRENT_BINARY_DIR}/schematic-render-${scale}-$<CONFIG>.log,txt" -o "-,txt")
-        set_tests_properties(schematic_render_scale_${scale} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_SCALE_FACTOR=${scale}" TIMEOUT 120)
+        # A fresh process separates cold visible rendering from rapid replacement;
+        # neither primes or hides the other's warnings.
+        add_test(NAME schematic_settled_scale_${scale} COMMAND openece_schematic_gui_tests settledViewportRendering
+            -o "${CMAKE_CURRENT_BINARY_DIR}/schematic-render-settled-${scale}-$<CONFIG>.log,txt" -o "-,txt")
+        set_tests_properties(schematic_render_scale_${scale} schematic_settled_scale_${scale} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_SCALE_FACTOR=${scale}" TIMEOUT 120)
         if(WIN32)
             # The offscreen plugin has no Windows system-font database. Use the native
             # backend for measured text and Graphics View painting on this runner.
-            set_tests_properties(schematic_render_scale_${scale} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows;QT_SCALE_FACTOR=${scale}")
-            set_tests_properties(schematic_render_scale_${scale} PROPERTIES ENVIRONMENT_MODIFICATION
+            set_tests_properties(schematic_render_scale_${scale} schematic_settled_scale_${scale} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows;QT_SCALE_FACTOR=${scale}")
+            set_tests_properties(schematic_render_scale_${scale} schematic_settled_scale_${scale} PROPERTIES ENVIRONMENT_MODIFICATION
                 "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>")
         endif()
     endforeach()

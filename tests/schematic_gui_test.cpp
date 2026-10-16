@@ -705,40 +705,6 @@ class SchematicGuiTest final : public QObject {
             QVERIFY(canvas.grab().save(directory + QString("/schematic-%1.png").arg(i)));
         }
     }
-    void settledViewportRendering() {
-        // Production-like visible/settled rendering is a strict gate. Keep the
-        // separate no-event-loop replacement stress test and its warnings intact.
-        QTest::failOnWarning(QRegularExpression("^QPainter::"));
-        q::SchematicCanvas canvas;
-        canvas.resize(1200, 800);
-        canvas.show();
-        canvas.activateWindow();
-        QVERIFY(QTest::qWaitForWindowActive(&canvas));
-        for (const auto& c : q::preview_cases()) {
-            qInfo().noquote() << "Settled render:" << c.name;
-            QVERIFY(canvas.setGraph(c.graph));
-            QApplication::processEvents();
-            canvas.fit();
-            QImage image(800, 600, QImage::Format_ARGB32_Premultiplied);
-            QVERIFY(!image.isNull());
-            for (int phase = 0; phase < 3; ++phase) {
-                if (phase == 1) {
-                    canvas.zoomIn();
-                    canvas.view()->verticalScrollBar()->setValue(40);
-                } else if (phase == 2 && !canvas.diagram()->nets.empty()) {
-                    QVERIFY(canvas.select(canvas.diagram()->nets.front().source.key));
-                }
-                image.fill(Qt::transparent);
-                QPainter painter(&image);
-                QVERIFY(painter.isActive());
-                canvas.view()->render(&painter);
-                QVERIFY(painter.end());
-                QVERIFY(!QTest::currentTestFailed());
-                QVERIFY(canvas.diagram());
-                QCOMPARE(canvas.diagram()->components.size(), c.graph.components().size());
-            }
-        }
-    }
     void replacementFailureAndDensity() {
         q::SchematicCanvas canvas;
         canvas.resize(1200, 800);
@@ -777,6 +743,40 @@ class SchematicGuiTest final : public QObject {
             QVERIFY(temporary->setGraph(cases[4].graph));
         }
         QApplication::processEvents();
+    }
+    void settledViewportRendering() {
+        // Production-like visible/settled rendering is a strict gate. Keep the
+        // separate no-event-loop replacement stress test and its warnings intact.
+        QTest::failOnWarning(QRegularExpression("^QPainter::"));
+        q::SchematicCanvas canvas;
+        canvas.resize(1200, 800);
+        canvas.show();
+        canvas.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&canvas));
+        for (const auto& c : q::preview_cases()) {
+            qInfo().noquote() << "Settled render:" << c.name;
+            QVERIFY(canvas.setGraph(c.graph));
+            QApplication::processEvents();
+            canvas.fit();
+            QImage image(800, 600, QImage::Format_ARGB32_Premultiplied);
+            QVERIFY(!image.isNull());
+            for (int phase = 0; phase < 3; ++phase) {
+                if (phase == 1) {
+                    canvas.zoomIn();
+                    canvas.view()->verticalScrollBar()->setValue(40);
+                } else if (phase == 2 && !canvas.diagram()->nets.empty()) {
+                    QVERIFY(canvas.select(canvas.diagram()->nets.front().source.key));
+                }
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                QVERIFY(painter.isActive());
+                canvas.view()->render(&painter);
+                QVERIFY(painter.end());
+                QVERIFY(!QTest::currentTestFailed());
+                QVERIFY(canvas.diagram());
+                QCOMPARE(canvas.diagram()->components.size(), c.graph.components().size());
+            }
+        }
     }
 };
 QTEST_MAIN(SchematicGuiTest)
