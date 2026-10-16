@@ -1,5 +1,6 @@
 #include "transient_view.hpp"
 #include "circuit_draft_rows.hpp"
+#include "circuit_presentation.hpp"
 #include "transient_results.hpp"
 #include <QEvent>
 #include <QFormLayout>
@@ -307,7 +308,13 @@ TransientView::TransientView(QWidget* parent, project::TransientDraft* draft)
         tabs->addTab(w, title);
         return l;
     };
-    auto* editor = page("Circuit");
+    auto* circuit = page("Circuit");
+    auto* table_page = new QWidget(circuit->parentWidget());
+    auto* editor = new QVBoxLayout(table_page);
+    editor->setContentsMargins(0, 0, 0, 0);
+    circuit->addWidget(new CircuitPresentation(
+        this, table_page, "transient",
+        [this] { return schematic::project_schematic(state_.get()); }, circuit->parentWidget()));
     auto* node_actions = new QHBoxLayout;
     editor->addLayout(node_actions);
     nodes_ = table(this, "transient_nodes", {"ID", "Name"});

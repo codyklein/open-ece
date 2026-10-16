@@ -3,6 +3,7 @@
 #include "circuits_view.hpp"
 #include "project_document.hpp"
 #include "schematic_layout_cases.hpp"
+#include "transient_view.hpp"
 #include <QComboBox>
 #include <QGraphicsView>
 #include <QLabel>
@@ -11,7 +12,9 @@
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QTabWidget>
+#include <QTableView>
 #include <QTableWidget>
 #include <QTimer>
 #include <QTreeWidget>
@@ -289,6 +292,108 @@ class SchematicWorkspaceTests final : public QObject {
         choose(view, "ac", 1);
         QCoreApplication::processEvents();
         QCOMPARE(get<QLabel>(view, "ac_status")->text(), cancelled);
+    }
+    void transientPausedCompleteAndStaleResults() {
+        auto draft = schematic_cases::example("transient-rc-step").circuits.transient;
+        draft.maximum_step = {"100", "us"};
+        TransientView view(nullptr, &draft);
+        expose(view);
+        auto* tabs = get<QTabWidget>(view, "transient_tabs");
+        QCOMPARE(tabs->count(), 5);
+        get<QPushButton>(view, "transient_step_execution")->click();
+        auto* status = get<QLabel>(view, "transient_status");
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Paused"), 10000);
+        const auto paused = view.result();
+        QVERIFY(paused);
+        auto* trace = get<QTableView>(view, "transient_trace");
+        const int rows = trace->model()->rowCount();
+        QSignalSpy resets(trace->model(), &QAbstractItemModel::modelReset);
+        QSignalSpy edits(&view, &DraftView::draftEdited);
+        const auto original = draft;
+        choose(view, "transient", 1);
+        auto* panel = presentation(view, "transient");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        panel->canvas()->fit();
+        panel->canvas()->zoomIn();
+        choose(view, "transient", 0);
+        choose(view, "transient", 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(view.result(), paused);
+        QCOMPARE(trace->model()->rowCount(), rows);
+        QCOMPARE(resets.count(), 0);
+        QCOMPARE(edits.count(), 0);
+        QVERIFY(draft == original);
+        QVERIFY(status->text().startsWith("Paused"));
+        auto* split = get<QSplitter>(view, "transient_editor_results_split");
+        split->setSizes({1, 10000});
+        QCoreApplication::processEvents();
+        QVERIFY(split->sizes()[0] > 0 && split->sizes()[1] > 0);
+        split->setSizes({10000, 1});
+        QCoreApplication::processEvents();
+        QVERIFY(split->sizes()[0] > 0 && split->sizes()[1] > 0);
+        QCOMPARE(view.result(), paused);
+        get<QPushButton>(view, "transient_pause")->click(); // Resume accepted prefix.
+        choose(view, "transient", 0);
+        choose(view, "transient", 1);
+        QVERIFY(!status->text().startsWith("Stale"));
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Complete"), 10000);
+        auto complete = view.result();
+        const auto label = view.result_probes().front().label;
+        choose(view, "transient", 0);
+        choose(view, "transient", 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(view.result(), complete);
+        QCOMPARE(edits.count(), 0);
+        auto* parts = get<QTableWidget>(view, "transient_components");
+        parts->item(1, 5)->setText(" 1e- ");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        QVERIFY(status->text().startsWith("Stale"));
+        QCOMPARE(view.result(), complete);
+        QCOMPARE(view.result_probes().front().label, label);
+        QVERIFY(panel->canvas()->select(
+            s::ComponentKey{s::Analysis::transient, draft.components[1].id.value}));
+        QVERIFY(panel->canvas()->inspection().contains(" 1e- "));
+        choose(view, "transient", 0);
+        QCOMPARE(parts->item(1, 5)->text(), QString(" 1e- "));
+    }
+    void transientPendingDraftAndTopology() {
+        auto draft = schematic_cases::example("transient-rc-step").circuits.transient;
+        draft.components[0].source.mode = "piecewise_linear";
+        draft.components[0].source.points = {{{"1e-", "ms"}, "  broken π "}};
+        draft.components[1].negative = project::Id{999};
+        draft.ground.reset();
+        TransientView view(nullptr, &draft);
+        expose(view);
+        auto* parts = get<QTableWidget>(view, "transient_components");
+        auto* item = parts->item(1, 5);
+        parts->setCurrentItem(item);
+        parts->editItem(item);
+        QCoreApplication::processEvents();
+        auto* editor = qobject_cast<QLineEdit*>(QApplication::focusWidget());
+        QVERIFY(editor);
+        editor->setText(" 1e- ");
+        choose(view, "transient", 1);
+        auto* panel = presentation(view, "transient");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        QVERIFY(!view.result());
+        QVERIFY(panel->canvas()->select(s::ComponentKey{s::Analysis::transient, 10}));
+        QVERIFY(panel->canvas()->inspection().contains("  broken π "));
+        choose(view, "transient", 0);
+        QCOMPARE(parts->item(1, 5)->text(), QString(" 1e- "));
+        get<QPushButton>(view, "transient_add_node")->click();
+        get<QPushButton>(view, "transient_add_component")->click();
+        auto* nodes = get<QTableWidget>(view, "transient_nodes");
+        nodes->item(nodes->rowCount() - 1, 1)->setText("new <b>Ω</b>");
+        auto* positive = static_cast<QComboBox*>(parts->cellWidget(parts->rowCount() - 1, 3));
+        positive->setCurrentIndex(positive->findData(draft.nodes.back().id.value));
+        auto* ground = get<QComboBox>(view, "transient_ground");
+        ground->setCurrentIndex(ground->findData(draft.nodes.back().id.value));
+        choose(view, "transient", 1);
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        nodes->setCurrentCell(nodes->rowCount() - 1, 1);
+        get<QPushButton>(view, "transient_remove_node")->click();
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        QVERIFY(!view.result());
     }
 };
 QTEST_MAIN(SchematicWorkspaceTests)
