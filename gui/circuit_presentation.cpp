@@ -30,9 +30,6 @@ CircuitPresentation::CircuitPresentation(DraftView* owner, QWidget* tables, cons
     pages_ = new QStackedWidget(this);
     pages_->addWidget(tables);
     layout->addWidget(pages_, 1);
-    refresh_ = new QTimer(this);
-    refresh_->setSingleShot(true);
-    connect(refresh_, &QTimer::timeout, this, &CircuitPresentation::refresh);
     connect(owner_, &DraftView::draftEdited, this, &CircuitPresentation::schedule_refresh);
     connect(choice_, &QComboBox::currentIndexChanged, this, [this, prefix](int index) {
         // Exact text only, before hiding an active editor. No validation or execution.
@@ -62,7 +59,6 @@ CircuitPresentation::CircuitPresentation(DraftView* owner, QWidget* tables, cons
     });
 }
 CircuitPresentation::~CircuitPresentation() {
-    refresh_->stop();
     choice_->blockSignals(true);
     disconnect(choice_, nullptr, this, nullptr);
 }
@@ -71,8 +67,15 @@ void CircuitPresentation::showEvent(QShowEvent* event) {
     schedule_refresh();
 }
 void CircuitPresentation::schedule_refresh() {
-    if (choice_->currentIndex() == 1 && isVisible() && !refresh_->isActive())
-        refresh_->start(0); // Coalesce edits; wait for real viewport/layout geometry.
+    if (choice_->currentIndex() == 1 && isVisible() && !refresh_pending_) {
+        refresh_pending_ = true;
+        // Presentation work is separate from execution timers. The context cancels
+        // this callback on destruction, including during project replacement.
+        QTimer::singleShot(0, this, [this] {
+            refresh_pending_ = false;
+            refresh();
+        });
+    }
 }
 void CircuitPresentation::refresh() {
     if (choice_->currentIndex() != 1 || !isVisible() || !canvas_)

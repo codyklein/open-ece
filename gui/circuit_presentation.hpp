@@ -5,7 +5,6 @@
 #include <schematic/model.hpp>
 class QComboBox;
 class QStackedWidget;
-class QTimer;
 namespace openece::schematic::qt {
 class SchematicCanvas;
 }
@@ -30,7 +29,7 @@ class CircuitPresentation final : public QWidget {
     Project project_;
     QComboBox* choice_;
     QStackedWidget* pages_;
-    QTimer* refresh_;
+    bool refresh_pending_ = false;
     schematic::qt::SchematicCanvas* canvas_ = nullptr;
     std::optional<schematic::SchematicGraph> graph_;
 };
