@@ -1,3 +1,4 @@
+#include "ac_view.hpp"
 #include "circuit_presentation.hpp"
 #include "circuits_view.hpp"
 #include "project_document.hpp"
@@ -9,8 +10,10 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QtTest>
 #include <schematic/qt/canvas.hpp>
@@ -197,6 +200,95 @@ class SchematicWorkspaceTests final : public QObject {
         choose(view, "dc", 0);
         QCOMPARE(value->text(), QString(" 1e- "));
         QCOMPARE(parts->item(1, 1)->text(), QString("  pending Ω  "));
+    }
+    void acRawDraftAndSolvedResults() {
+        auto draft = schematic_cases::example("rc-lowpass").circuits.ac;
+        AcView view(nullptr, &draft, true);
+        expose(view);
+        auto* tabs = get<QTabWidget>(view, "ac_view_tabs");
+        QCOMPARE(tabs->count(), 4);
+        choose(view, "ac", 1);
+        auto* panel = presentation(view, "ac");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        get<QPushButton>(view, "ac_solve")->click();
+        auto* volts = get<QTableWidget>(view, "ac_voltages");
+        QCOMPARE(volts->rowCount(), 3);
+        const auto result = volts->item(2, 4)->text();
+        tabs->setCurrentIndex(0);
+        QSignalSpy edits(&view, &DraftView::draftEdited);
+        const auto before = draft;
+        choose(view, "ac", 0);
+        choose(view, "ac", 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(edits.count(), 0);
+        QVERIFY(draft == before);
+        QCOMPARE(volts->item(2, 4)->text(), result);
+        auto* parts = get<QTableWidget>(view, "ac_components");
+        static_cast<QLineEdit*>(parts->cellWidget(0, 7))->setText(" phase <b>π</b> ");
+        static_cast<QLineEdit*>(parts->cellWidget(0, 5))->setText(" 1e- ");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        QVERIFY(panel->canvas()->select(
+            s::ComponentKey{s::Analysis::ac, draft.components[0].id.value}));
+        QVERIFY(panel->canvas()->inspection().contains(" phase <b>π</b> "));
+        QVERIFY(panel->canvas()->inspection().contains(" 1e- "));
+        QCOMPARE(volts->rowCount(), 0);
+        choose(view, "ac", 0);
+        QCOMPARE(static_cast<QLineEdit*>(parts->cellWidget(0, 7))->text(),
+                 QString(" phase <b>π</b> "));
+        get<QPushButton>(view, "ac_add_node")->click();
+        auto* nodes = get<QTableWidget>(view, "ac_nodes");
+        nodes->item(nodes->rowCount() - 1, 1)->setText("unused Ω");
+        get<QPushButton>(view, "ac_add_component")->click();
+        auto* positive = static_cast<QComboBox*>(parts->cellWidget(parts->rowCount() - 1, 3));
+        positive->setCurrentIndex(positive->findData(draft.nodes.back().id.value));
+        get<QComboBox>(view, "ac_ground")->setCurrentIndex(0);
+        choose(view, "ac", 1);
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        nodes->setCurrentCell(nodes->rowCount() - 1, 1);
+        get<QPushButton>(view, "ac_remove_node")->click();
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+    }
+    void acSweepDoesNotDriveSchematicOrStopOnNavigation() {
+        auto draft = schematic_cases::example("rc-lowpass").circuits.ac;
+        AcView view(nullptr, &draft, true);
+        expose(view);
+        auto* tabs = get<QTabWidget>(view, "ac_view_tabs");
+        get<QSpinBox>(view, "ac_point_count")->setValue(41);
+        choose(view, "ac", 1);
+        auto* panel = presentation(view, "ac");
+        QTRY_VERIFY(matches(panel, s::project_schematic(draft)));
+        panel->canvas()->zoomIn();
+        const auto transform = panel->canvas()->view()->transform();
+        QSignalSpy edits(&view, &DraftView::draftEdited);
+        get<QPushButton>(view, "ac_run_sweep")->click();
+        auto* timer = view.findChildren<QTimer*>(QString{}, Qt::FindDirectChildrenOnly).front();
+        QVERIFY(timer->isActive());
+        tabs->setCurrentIndex(0);
+        choose(view, "ac", 0);
+        choose(view, "ac", 1);
+        QVERIFY(timer->isActive());
+        QTRY_VERIFY_WITH_TIMEOUT(
+            get<QLabel>(view, "ac_status")->text().startsWith("Sweep complete"), 10000);
+        QCOMPARE(panel->canvas()->view()->transform(), transform);
+        QCOMPARE(edits.count(), 0);
+        const auto complete = get<QLabel>(view, "ac_status")->text();
+        choose(view, "ac", 0);
+        choose(view, "ac", 1);
+        QCOMPARE(get<QLabel>(view, "ac_status")->text(), complete);
+        get<QSpinBox>(view, "ac_point_count")->setValue(1001);
+        get<QPushButton>(view, "ac_run_sweep")->click();
+        tabs->setCurrentIndex(0);
+        QTimer::singleShot(0, &view, [&] {
+            choose(view, "ac", 0);
+            choose(view, "ac", 1);
+            get<QPushButton>(view, "ac_cancel")->click();
+        });
+        QTRY_VERIFY(get<QLabel>(view, "ac_status")->text().startsWith("Sweep cancelled"));
+        const auto cancelled = get<QLabel>(view, "ac_status")->text();
+        choose(view, "ac", 0);
+        choose(view, "ac", 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(get<QLabel>(view, "ac_status")->text(), cancelled);
     }
 };
 QTEST_MAIN(SchematicWorkspaceTests)

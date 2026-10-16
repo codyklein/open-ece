@@ -1,5 +1,6 @@
 #include "ac_view.hpp"
 #include "ac_response_plot.hpp"
+#include "circuit_presentation.hpp"
 #include "circuit_value.hpp"
 #include <QComboBox>
 #include <QHeaderView>
@@ -85,8 +86,13 @@ AcView::AcView(QWidget* parent, project::AcDraft* draft, bool inert)
     tabs_ = new QTabWidget(this);
     tabs_->setObjectName("ac_view_tabs");
     layout->addWidget(tabs_);
-    auto* editor = new QWidget(tabs_);
-    tabs_->addTab(editor, "Circuit");
+    auto* circuit_page = new QWidget(tabs_);
+    tabs_->addTab(circuit_page, "Circuit");
+    auto* circuit_layout = new QVBoxLayout(circuit_page);
+    auto* editor = new QWidget(circuit_page);
+    circuit_layout->addWidget(new CircuitPresentation(
+        this, editor, "ac", [this] { return schematic::project_schematic(this->draft()); },
+        circuit_page));
     auto* edit_layout = new QVBoxLayout(editor);
     auto* tables = new QHBoxLayout;
     edit_layout->addLayout(tables);
