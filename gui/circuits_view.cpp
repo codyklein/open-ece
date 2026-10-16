@@ -1,4 +1,5 @@
 #include "circuits_view.hpp"
+#include "circuit_presentation.hpp"
 #include "circuit_value.hpp"
 #include <QComboBox>
 #include <QGroupBox>
@@ -55,8 +56,15 @@ CircuitsView::CircuitsView(QWidget* parent, project::DcDraft* draft, bool inert)
     auto* editor = new QWidget(tabs);
     tabs->addTab(editor, "Circuit and results");
     auto* body = new QVBoxLayout(editor);
+    auto* table_page = new QWidget(editor);
+    auto* table_layout = new QVBoxLayout(table_page);
+    table_layout->setContentsMargins(0, 0, 0, 0);
+    body->addWidget(new CircuitPresentation(
+                        this, table_page, "dc",
+                        [this] { return schematic::project_schematic(this->draft()); }, editor),
+                    2);
     auto* editors = new QHBoxLayout;
-    body->addLayout(editors, 2);
+    table_layout->addLayout(editors);
     auto* node_group = new QGroupBox("Nodes and reference", editor);
     auto* nl = new QVBoxLayout(node_group);
     nodes_ = table("circuit_nodes", {"ID", "Name"}, node_group);
